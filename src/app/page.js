@@ -11,6 +11,7 @@ export default function Home() {
         "Ideal para principiantes",
         "Material de estudio en PDF",
         "Base para avanzar a módulos K9",
+        "Orientación progresiva",
       ],
       mensaje:
         "Hola SERVICAN, quiero información del Curso Básico Integral para Guías Caninos",
@@ -24,6 +25,7 @@ export default function Home() {
         "Enfoque profesional K9",
         "Trabajo de detección",
         "Contenido teórico y práctico",
+        "Preparación para escenarios operativos",
       ],
       mensaje:
         "Hola SERVICAN, quiero información del Módulo 2 K9 Antinarcóticos",
@@ -95,6 +97,9 @@ export default function Home() {
             <a href="#cursos" className="hover:text-yellow-500">
               Cursos
             </a>
+            <a href="#precios" className="hover:text-yellow-500">
+              Inscripción
+            </a>
             <a href="#videos" className="hover:text-yellow-500">
               Videos
             </a>
@@ -106,6 +111,7 @@ export default function Home() {
           <a
             href={linkWhatsApp("Hola SERVICAN, quiero consultar por los cursos")}
             target="_blank"
+            rel="noopener noreferrer"
             className="rounded-full bg-yellow-500 px-5 py-3 text-sm font-bold text-black hover:bg-yellow-400"
           >
             WhatsApp
@@ -152,6 +158,7 @@ export default function Home() {
                 "Hola SERVICAN, quiero inscribirme a un curso"
               )}
               target="_blank"
+              rel="noopener noreferrer"
               className="rounded-full bg-yellow-500 px-9 py-4 font-black text-black transition hover:bg-yellow-400"
             >
               Inscribirme
@@ -162,6 +169,7 @@ export default function Home() {
                 "Hola SERVICAN, quiero consultar precios, cupos y fechas"
               )}
               target="_blank"
+              rel="noopener noreferrer"
               className="rounded-full border border-yellow-500 px-9 py-4 font-black text-yellow-500 transition hover:bg-yellow-500 hover:text-black"
             >
               Consultar por WhatsApp
@@ -276,6 +284,7 @@ export default function Home() {
                 <a
                   href={linkWhatsApp(curso.mensaje)}
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="mt-8 inline-block rounded-full bg-yellow-500 px-7 py-4 font-black text-black hover:bg-yellow-400"
                 >
                   Consultar este curso
@@ -286,56 +295,76 @@ export default function Home() {
         </div>
       </section>
 
-      {/* MODALIDAD Y PAGOS */}
-      <section className="border-y border-yellow-500/20 bg-gradient-to-br from-yellow-500 to-yellow-700 px-6 py-20 text-black">
-        <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-2 md:items-center">
-          <div>
+      {/* PRECIOS / INSCRIPCIÓN */}
+      <section
+        id="precios"
+        className="border-y border-yellow-500/20 bg-gradient-to-br from-yellow-500 to-yellow-700 px-6 py-20 text-black"
+      >
+        <div className="mx-auto max-w-7xl">
+          <div className="mx-auto max-w-3xl text-center">
             <p className="mb-3 text-sm font-black uppercase tracking-[0.35em]">
-              Cursos pagos
+              Inscripción
             </p>
             <h2 className="text-4xl font-black md:text-6xl">
-              Consultá precios, cupos y próximas fechas
+              Cursos pagos con cupos limitados
             </h2>
             <p className="mt-5 text-lg leading-8 text-black/75">
-              Los cursos SERVICAN son pagos. La información de precios,
-              modalidad, requisitos y materiales incluidos se coordina
-              directamente por WhatsApp.
+              Los precios, próximas fechas y modalidad se coordinan directamente
+              por WhatsApp para dar información actualizada a cada alumno.
             </p>
           </div>
 
-          <div className="rounded-[2rem] bg-black p-8 text-white shadow-2xl">
-            <h3 className="text-2xl font-black text-yellow-500">
-              Información de inscripción
-            </h3>
+          <div className="mt-12 grid gap-8 md:grid-cols-2">
+            {cursos.map((curso) => (
+              <div
+                key={curso.titulo}
+                className="rounded-[2rem] bg-black p-8 text-white shadow-2xl"
+              >
+                <p className="mb-3 text-sm font-black uppercase tracking-[0.25em] text-yellow-500">
+                  {curso.etiqueta}
+                </p>
 
-            <div className="mt-6 space-y-4 text-zinc-300">
-              <p>
-                <span className="font-bold text-white">Modalidad:</span>{" "}
-                presencial, online o mixta.
-              </p>
-              <p>
-                <span className="font-bold text-white">Precios:</span>{" "}
-                consultar por WhatsApp.
-              </p>
-              <p>
-                <span className="font-bold text-white">Material:</span> PDF,
-                videos y recursos de apoyo.
-              </p>
-              <p>
-                <span className="font-bold text-white">Cupos:</span> sujetos a
-                disponibilidad.
-              </p>
-            </div>
+                <h3 className="text-3xl font-black">{curso.titulo}</h3>
 
-            <a
-              href={linkWhatsApp(
-                "Hola SERVICAN, quiero consultar precios, modalidad y próximas fechas"
-              )}
-              target="_blank"
-              className="mt-8 inline-block w-full rounded-full bg-yellow-500 px-7 py-4 text-center font-black text-black hover:bg-yellow-400"
-            >
-              Consultar inscripción
-            </a>
+                <div className="mt-6 rounded-3xl border border-yellow-500/30 bg-yellow-500/10 p-6">
+                  <p className="text-sm uppercase tracking-[0.25em] text-zinc-400">
+                    Precio
+                  </p>
+                  <p className="mt-2 text-4xl font-black text-yellow-500">
+                    Consultar
+                  </p>
+                  <p className="mt-2 text-sm text-zinc-400">
+                    Se informa por WhatsApp según modalidad, fecha y cupo.
+                  </p>
+                </div>
+
+                <div className="mt-6 space-y-3 text-zinc-300">
+                  <p>
+                    <span className="font-bold text-white">Modalidad:</span>{" "}
+                    presencial, online o mixta.
+                  </p>
+                  <p>
+                    <span className="font-bold text-white">Material:</span> PDF,
+                    videos y recursos de apoyo.
+                  </p>
+                  <p>
+                    <span className="font-bold text-white">Cupos:</span>{" "}
+                    sujetos a disponibilidad.
+                  </p>
+                </div>
+
+                <a
+                  href={linkWhatsApp(
+                    `Hola SERVICAN, quiero consultar precio, cupos y fechas de: ${curso.titulo}`
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-8 inline-block w-full rounded-full bg-yellow-500 px-7 py-4 text-center font-black text-black hover:bg-yellow-400"
+                >
+                  Consultar inscripción
+                </a>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -501,6 +530,7 @@ export default function Home() {
                 "Hola SERVICAN, quiero inscribirme a un curso"
               )}
               target="_blank"
+              rel="noopener noreferrer"
               className="rounded-full bg-black px-9 py-4 font-black text-white hover:bg-zinc-800"
             >
               Inscribirme
@@ -511,6 +541,7 @@ export default function Home() {
                 "Hola SERVICAN, quiero consultar por los cursos pagos"
               )}
               target="_blank"
+              rel="noopener noreferrer"
               className="rounded-full border-2 border-black px-9 py-4 font-black text-black hover:bg-black hover:text-white"
             >
               Consultar por WhatsApp
@@ -529,6 +560,18 @@ export default function Home() {
           © 2026 SERVICAN. Todos los derechos reservados.
         </p>
       </footer>
+
+      {/* BOTÓN FLOTANTE WHATSAPP */}
+      <a
+        href={linkWhatsApp(
+          "Hola SERVICAN, quiero consultar por los cursos disponibles"
+        )}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-5 right-5 z-50 rounded-full bg-green-500 px-5 py-4 font-black text-white shadow-2xl transition hover:bg-green-400"
+      >
+        WhatsApp
+      </a>
     </main>
   );
 }
