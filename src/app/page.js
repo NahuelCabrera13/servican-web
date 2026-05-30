@@ -1,78 +1,46 @@
 export default function Home() {
   const whatsapp = "59898188257";
 
+  const linkWhatsApp = (mensaje) =>
+    `https://wa.me/${whatsapp}?text=${encodeURIComponent(mensaje)}`;
+
   const servicios = [
     {
-      titulo: "Formación para guías caninos",
-      texto: "Capacitación progresiva para personas que quieren aprender manejo, comunicación, obediencia y trabajo responsable con perros.",
+      titulo: "Formación canina",
+      texto: "Capacitación para guías, propietarios e interesados en el trabajo responsable con perros.",
       icono: "🎓",
     },
     {
       titulo: "Adiestramiento y manejo",
-      texto: "Base de trabajo orientada al vínculo guía-perro, control, bienestar animal y desarrollo de conductas útiles.",
+      texto: "Trabajo orientado al vínculo, obediencia, control, comunicación y bienestar animal.",
       icono: "🐕",
     },
     {
       titulo: "Especialización K9",
-      texto: "Módulos orientados a formación técnica, detección, olfato, búsqueda, motivación y preparación profesional.",
+      texto: "Preparación técnica para avanzar hacia áreas profesionales del trabajo canino.",
       icono: "🛡️",
     },
     {
-      titulo: "Cursos y talleres",
-      texto: "Programas pagos, materiales PDF, videos de apoyo y futuras áreas privadas para alumnos.",
-      icono: "📘",
+      titulo: "Asesoramiento",
+      texto: "Orientación para personas, equipos o instituciones que buscan mejorar su trabajo con perros.",
+      icono: "📋",
     },
   ];
 
-  const cursos = [
+  const perros = [
     {
-      etiqueta: "Desde cero",
-      titulo: "Curso Básico Integral para Guías Caninos",
-      descripcion:
-        "Formación inicial para aprender manejo, comunicación, obediencia básica, bienestar, vínculo y preparación para módulos profesionales.",
-      detalles: [
-        "Ideal para principiantes",
-        "Material de estudio en PDF",
-        "Base para avanzar a módulos K9",
-        "Modalidad presencial, online o mixta",
-      ],
-      url: "/cursos/guia-canino-desde-cero",
+      nombre: "Equipo canino SERVICAN",
+      texto: "Espacio preparado para colocar fotos reales de los perros que forman parte del equipo.",
     },
     {
-      etiqueta: "Especialización K9",
-      titulo: "Módulo 2 K9 Antinarcóticos",
-      descripcion:
-        "Curso orientado al trabajo con perros detectores: olfato, imprinting, alerta, búsquedas, control de contaminación, pruebas ciegas y mantenimiento operativo.",
-      detalles: [
-        "Enfoque profesional K9",
-        "Trabajo de detección",
-        "Contenido teórico y práctico",
-        "Preparación para escenarios operativos",
-      ],
-      url: "/cursos/k9-antinarcoticos",
+      nombre: "Entrenamiento y vínculo",
+      texto: "Imágenes de prácticas, ejercicios, obediencia, socialización y trabajo en campo.",
+    },
+    {
+      nombre: "Trabajo profesional",
+      texto: "Registro visual de actividades, jornadas, formación y desarrollo del binomio guía-perro.",
     },
   ];
-
-  const equipo = [
-    {
-      nombre: "Perros SERVICAN",
-      rol: "Equipo canino",
-      texto: "Espacio reservado para fotos reales de los perros del equipo SERVICAN.",
-    },
-    {
-      nombre: "Guías y entrenamiento",
-      rol: "Trabajo en campo",
-      texto: "Espacio reservado para imágenes de prácticas, entrenamientos y jornadas.",
-    },
-    {
-      nombre: "Formación profesional",
-      rol: "Academia SERVICAN",
-      texto: "Espacio reservado para fotos institucionales, clases y actividades.",
-    },
-  ];
-
-  const linkWhatsApp = (mensaje) =>
-    `https://wa.me/${whatsapp}?text=${encodeURIComponent(mensaje)}`;
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -97,16 +65,16 @@ export default function Home() {
           </a>
 
           <nav className="hidden gap-6 text-sm font-semibold text-zinc-300 md:flex">
-            <a href="#inicio" className="hover:text-yellow-500">
-              Inicio
+            <a href="#quienes-somos" className="hover:text-yellow-500">
+              Quiénes somos
+            </a>
+            <a href="#perros" className="hover:text-yellow-500">
+              Nuestros perros
             </a>
             <a href="#servicios" className="hover:text-yellow-500">
               Servicios
             </a>
-            <a href="#equipo" className="hover:text-yellow-500">
-              Equipo
-            </a>
-            <a href="#cursos" className="hover:text-yellow-500">
+            <a href="/cursos" className="hover:text-yellow-500">
               Cursos
             </a>
             <a href="#contacto" className="hover:text-yellow-500">
@@ -115,68 +83,91 @@ export default function Home() {
           </nav>
 
           <a
-            href="/inscripcion"
+            href={linkWhatsApp("Hola SERVICAN, quiero consultar información")}
+            target="_blank"
+            rel="noopener noreferrer"
             className="rounded-full bg-yellow-500 px-5 py-3 text-sm font-bold text-black hover:bg-yellow-400"
           >
-            Inscribirme
+            Contactar
           </a>
         </div>
       </header>
 
-      {/* PORTADA INSTITUCIONAL */}
+      {/* HERO INSTITUCIONAL */}
       <section
         id="inicio"
-        className="relative overflow-hidden px-6 py-24 text-center md:py-32"
+        className="relative overflow-hidden px-6 py-24 md:py-32"
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#3f3210_0%,#111_35%,#000_78%)]" />
 
-        <div className="relative mx-auto max-w-6xl">
-          <div className="mb-8 flex justify-center">
-            <img
-              src="/logo-servican.jpeg"
-              alt="Logo SERVICAN"
-              className="h-36 w-36 rounded-full object-contain shadow-2xl"
-            />
+        <div className="relative mx-auto grid max-w-7xl gap-12 md:grid-cols-2 md:items-center">
+          <div>
+            <p className="mb-5 text-sm font-black uppercase tracking-[0.45em] text-yellow-500">
+              Empresa de formación y trabajo canino
+            </p>
+
+            <h1 className="text-5xl font-black leading-tight md:text-7xl">
+              SERVICAN
+            </h1>
+
+            <p className="mt-5 text-2xl font-bold text-yellow-500">
+              Nuestro olfato nos define
+            </p>
+
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-300">
+              SERVICAN es una propuesta dedicada al desarrollo del vínculo
+              guía-perro, la formación canina, el manejo responsable y la
+              preparación progresiva hacia áreas profesionales del trabajo
+              canino.
+            </p>
+
+            <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+              <a
+                href="#quienes-somos"
+                className="rounded-full bg-yellow-500 px-9 py-4 text-center font-black text-black transition hover:bg-yellow-400"
+              >
+                Conocer SERVICAN
+              </a>
+
+              <a
+                href="/cursos"
+                className="rounded-full border border-yellow-500 px-9 py-4 text-center font-black text-yellow-500 transition hover:bg-yellow-500 hover:text-black"
+              >
+                Ver cursos
+              </a>
+            </div>
           </div>
 
-          <p className="mb-5 text-sm font-black uppercase tracking-[0.45em] text-yellow-500">
-            Formación canina profesional
-          </p>
+          <div className="rounded-[2rem] border border-yellow-500/30 bg-zinc-950 p-8 shadow-2xl">
+            <div className="flex aspect-[4/3] items-center justify-center rounded-[1.5rem] bg-zinc-900 text-center text-zinc-500">
+              Foto principal SERVICAN
+              <br />
+              Perros / equipo / entrenamiento
+            </div>
 
-          <h1 className="mx-auto max-w-5xl text-5xl font-black leading-tight md:text-7xl">
-            SERVICAN: entrenamiento, formación y trabajo canino responsable
-          </h1>
-
-          <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-zinc-300">
-            Una propuesta orientada a guías, alumnos e instituciones que buscan
-            formación seria, progresiva y enfocada en el vínculo guía-perro, el
-            bienestar animal y la preparación profesional.
-          </p>
-
-          <p className="mt-5 text-2xl font-bold text-yellow-500">
-            Nuestro olfato nos define
-          </p>
-
-          <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
-            <a
-              href="#servicios"
-              className="rounded-full bg-yellow-500 px-9 py-4 font-black text-black transition hover:bg-yellow-400"
-            >
-              Conocer SERVICAN
-            </a>
-
-            <a
-              href="/inscripcion"
-              className="rounded-full border border-yellow-500 px-9 py-4 font-black text-yellow-500 transition hover:bg-yellow-500 hover:text-black"
-            >
-              Inscribirme / Consultar
-            </a>
+            <div className="mt-6 grid grid-cols-3 gap-3 text-center">
+              <div className="rounded-2xl bg-black p-4">
+                <p className="text-2xl font-black text-yellow-500">K9</p>
+                <p className="text-xs text-zinc-500">Formación</p>
+              </div>
+              <div className="rounded-2xl bg-black p-4">
+                <p className="text-2xl font-black text-yellow-500">PDF</p>
+                <p className="text-xs text-zinc-500">Material</p>
+              </div>
+              <div className="rounded-2xl bg-black p-4">
+                <p className="text-2xl font-black text-yellow-500">UY</p>
+                <p className="text-xs text-zinc-500">Uruguay</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* QUIÉNES SOMOS */}
-      <section className="border-y border-zinc-800 bg-zinc-950 px-6 py-20">
+      <section
+        id="quienes-somos"
+        className="border-y border-zinc-800 bg-zinc-950 px-6 py-20"
+      >
         <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-2 md:items-center">
           <div>
             <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
@@ -189,37 +180,80 @@ export default function Home() {
 
           <div className="space-y-5 text-lg leading-8 text-zinc-300">
             <p>
-              SERVICAN nace como una propuesta de formación canina orientada a
-              personas que buscan aprender desde una base clara, práctica y
-              profesional.
+              SERVICAN trabaja sobre una base de respeto, comunicación,
+              estructura y bienestar animal. La idea es formar personas capaces
+              de entender al perro, guiarlo correctamente y desarrollar un
+              trabajo ordenado.
             </p>
             <p>
-              El objetivo es construir conocimiento real sobre manejo,
-              comunicación, obediencia, bienestar y preparación hacia áreas más
-              técnicas como el trabajo K9.
+              La empresa combina formación, asesoramiento, entrenamiento y
+              desarrollo progresivo de habilidades, con una visión profesional y
+              seria del trabajo guía-perro.
             </p>
             <p>
-              La web está pensada para crecer: primero como página institucional
-              y de cursos, y luego como plataforma completa con alumnos, roles,
-              pagos y contenido privado.
+              Esta página está pensada para crecer junto con la marca:
+              presentación institucional, servicios, perros del equipo, cursos,
+              galería, alumnos y futura plataforma privada.
             </p>
           </div>
         </div>
       </section>
 
+      {/* NUESTROS PERROS */}
+      <section id="perros" className="px-6 py-20">
+        <div className="mx-auto max-w-7xl">
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
+              Nuestros perros
+            </p>
+            <h2 className="text-4xl font-black md:text-5xl">
+              El equipo canino de SERVICAN
+            </h2>
+            <p className="mt-4 text-zinc-300">
+              Esta sección será una de las más importantes de la web: acá se
+              mostrarán fotos reales de los perros, entrenamientos y actividades
+              del equipo.
+            </p>
+          </div>
+
+          <div className="mt-12 grid gap-8 md:grid-cols-3">
+            {perros.map((item) => (
+              <div
+                key={item.nombre}
+                className="overflow-hidden rounded-[2rem] border border-zinc-800 bg-zinc-950 shadow-2xl"
+              >
+                <div className="flex aspect-[4/3] items-center justify-center bg-zinc-900 text-center text-zinc-500">
+                  Foto real
+                  <br />
+                  Próximamente
+                </div>
+
+                <div className="p-7">
+                  <h3 className="text-2xl font-black text-yellow-500">
+                    {item.nombre}
+                  </h3>
+                  <p className="mt-3 leading-7 text-zinc-300">{item.texto}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* SERVICIOS */}
-      <section id="servicios" className="px-6 py-20">
+      <section id="servicios" className="bg-zinc-950 px-6 py-20">
         <div className="mx-auto max-w-7xl">
           <div className="mx-auto max-w-3xl text-center">
             <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
               Servicios
             </p>
             <h2 className="text-4xl font-black md:text-5xl">
-              Más que cursos: una plataforma para desarrollar SERVICAN
+              Áreas de trabajo SERVICAN
             </h2>
             <p className="mt-4 text-zinc-300">
-              La página está preparada para mostrar servicios, cursos,
-              actividades, videos, galería y futuras áreas privadas para alumnos.
+              SERVICAN no se limita a cursos. La marca puede crecer hacia
+              servicios, asesoramiento, talleres, formación, actividades y
+              trabajo institucional.
             </p>
           </div>
 
@@ -227,7 +261,7 @@ export default function Home() {
             {servicios.map((item) => (
               <div
                 key={item.titulo}
-                className="rounded-3xl border border-zinc-800 bg-zinc-950 p-7 transition hover:border-yellow-500/60 hover:bg-zinc-900"
+                className="rounded-3xl border border-zinc-800 bg-black p-7 transition hover:border-yellow-500/60"
               >
                 <p className="mb-4 text-4xl">{item.icono}</p>
                 <h3 className="text-xl font-black text-yellow-500">
@@ -240,194 +274,71 @@ export default function Home() {
         </div>
       </section>
 
-      {/* EQUIPO / PERROS */}
-      <section id="equipo" className="bg-zinc-950 px-6 py-20">
-        <div className="mx-auto max-w-7xl">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
-              Equipo SERVICAN
-            </p>
-            <h2 className="text-4xl font-black md:text-5xl">
-              Perros, guías y trabajo en equipo
-            </h2>
-            <p className="mt-4 text-zinc-300">
-              Esta sección queda preparada para colocar fotos reales de los
-              perros, entrenamientos, guías y actividades de SERVICAN.
-            </p>
-          </div>
-
-          <div className="mt-12 grid gap-8 md:grid-cols-3">
-            {equipo.map((item) => (
-              <div
-                key={item.nombre}
-                className="overflow-hidden rounded-[2rem] border border-zinc-800 bg-black shadow-2xl"
-              >
-                <div className="flex aspect-[4/3] items-center justify-center bg-zinc-900 text-center text-zinc-500">
-                  Foto SERVICAN
-                  <br />
-                  Próximamente
-                </div>
-
-                <div className="p-7">
-                  <p className="mb-2 text-sm font-black uppercase tracking-[0.25em] text-yellow-500">
-                    {item.rol}
-                  </p>
-                  <h3 className="text-2xl font-black">{item.nombre}</h3>
-                  <p className="mt-3 leading-7 text-zinc-300">{item.texto}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CURSOS */}
-      <section id="cursos" className="px-6 py-20">
-        <div className="mx-auto max-w-7xl">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
-              Cursos pagos
-            </p>
-            <h2 className="text-4xl font-black md:text-5xl">
-              Programas disponibles
-            </h2>
-            <p className="mt-4 text-zinc-300">
-              Los cursos son una parte de la propuesta SERVICAN. Cada programa
-              tiene su propia página con contenido, modalidad e inscripción.
-            </p>
-          </div>
-
-          <div className="mt-12 grid gap-8 md:grid-cols-2">
-            {cursos.map((curso) => (
-              <div
-                key={curso.titulo}
-                className="rounded-[2rem] border border-zinc-800 bg-zinc-950 p-8 shadow-2xl transition hover:border-yellow-500/60"
-              >
-                <p className="mb-4 inline-block rounded-full bg-yellow-500/10 px-4 py-2 text-sm font-black uppercase tracking-widest text-yellow-500">
-                  {curso.etiqueta}
-                </p>
-
-                <h3 className="text-3xl font-black">{curso.titulo}</h3>
-
-                <p className="mt-5 leading-7 text-zinc-300">
-                  {curso.descripcion}
-                </p>
-
-                <ul className="mt-6 space-y-3">
-                  {curso.detalles.map((item) => (
-                    <li key={item} className="flex gap-3 text-zinc-300">
-                      <span className="font-black text-yellow-500">✓</span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                  <a
-                    href={curso.url}
-                    className="rounded-full bg-yellow-500 px-7 py-4 text-center font-black text-black hover:bg-yellow-400"
-                  >
-                    Ver programa
-                  </a>
-
-                  <a
-                    href="/inscripcion"
-                    className="rounded-full border border-yellow-500 px-7 py-4 text-center font-black text-yellow-500 hover:bg-yellow-500 hover:text-black"
-                  >
-                    Inscribirme
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* GALERÍA / FUTURO */}
-      <section className="bg-zinc-950 px-6 py-20">
+      {/* GALERÍA */}
+      <section className="px-6 py-20">
         <div className="mx-auto max-w-7xl">
           <div className="rounded-[2rem] border border-yellow-500/30 bg-gradient-to-br from-zinc-950 to-black p-8 md:p-12">
             <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
-              Galería y contenido
+              Galería
             </p>
 
             <h2 className="text-4xl font-black md:text-5xl">
-              Fotos, videos y materiales para mostrar el trabajo real
+              Fotos, actividades y trabajo real
             </h2>
 
             <p className="mt-5 max-w-4xl leading-8 text-zinc-300">
-              Más adelante podremos agregar una galería editable desde el panel
-              administrador, con imágenes reales de entrenamientos, perros,
-              equipo, clases, jornadas y actividades de SERVICAN.
+              Más adelante esta sección será editable desde el panel
+              administrador para cargar fotos de entrenamientos, perros,
+              jornadas, clases, equipo y actividades institucionales.
             </p>
 
-            <div className="mt-8 grid gap-5 md:grid-cols-3">
-              <div className="rounded-3xl bg-zinc-900 p-6">
-                <h3 className="font-black text-yellow-500">Fotos reales</h3>
-                <p className="mt-2 text-sm text-zinc-400">
-                  Perros, equipo, entrenamientos y jornadas.
-                </p>
-              </div>
-
-              <div className="rounded-3xl bg-zinc-900 p-6">
-                <h3 className="font-black text-yellow-500">Videos</h3>
-                <p className="mt-2 text-sm text-zinc-400">
-                  YouTube público o no listado integrado en la web.
-                </p>
-              </div>
-
-              <div className="rounded-3xl bg-zinc-900 p-6">
-                <h3 className="font-black text-yellow-500">Panel editable</h3>
-                <p className="mt-2 text-sm text-zinc-400">
-                  Futuro panel para modificar contenido sin tocar código.
-                </p>
-              </div>
+            <div className="mt-8 grid gap-5 md:grid-cols-4">
+              {[1, 2, 3, 4].map((item) => (
+                <div
+                  key={item}
+                  className="flex aspect-square items-center justify-center rounded-3xl bg-zinc-900 text-center text-zinc-500"
+                >
+                  Foto {item}
+                  <br />
+                  Próximamente
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* FAQ */}
-      <section className="px-6 py-20">
-        <div className="mx-auto max-w-4xl">
-          <p className="mb-3 text-center text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
-            Preguntas frecuentes
-          </p>
-          <h2 className="text-center text-4xl font-black md:text-5xl">
-            Información importante
-          </h2>
+      {/* CURSOS RESUMEN */}
+      <section className="bg-zinc-950 px-6 py-20">
+        <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-2 md:items-center">
+          <div>
+            <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
+              Formación
+            </p>
+            <h2 className="text-4xl font-black md:text-5xl">
+              Cursos y programas de capacitación
+            </h2>
+            <p className="mt-5 leading-8 text-zinc-300">
+              Los cursos tienen su propia sección para mantener la página
+              principal institucional, ordenada y enfocada en la empresa.
+            </p>
+          </div>
 
-          <div className="mt-10 space-y-5">
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6">
-              <h3 className="text-xl font-black text-yellow-500">
-                ¿SERVICAN solo ofrece cursos?
-              </h3>
-              <p className="mt-2 text-zinc-300">
-                No. La web está pensada para crecer como página institucional de
-                empresa, servicios, cursos, galería, alumnos y plataforma
-                privada.
-              </p>
-            </div>
+          <div className="rounded-[2rem] border border-zinc-800 bg-black p-8">
+            <h3 className="text-2xl font-black text-yellow-500">
+              Ver cursos SERVICAN
+            </h3>
+            <p className="mt-4 leading-7 text-zinc-300">
+              Accedé a la sección de cursos para ver los programas disponibles,
+              contenidos, modalidad e inscripción.
+            </p>
 
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6">
-              <h3 className="text-xl font-black text-yellow-500">
-                ¿Los cursos son pagos?
-              </h3>
-              <p className="mt-2 text-zinc-300">
-                Sí. Los precios, cupos y fechas se consultan completando la
-                inscripción o por WhatsApp.
-              </p>
-            </div>
-
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6">
-              <h3 className="text-xl font-black text-yellow-500">
-                ¿La página será editable?
-              </h3>
-              <p className="mt-2 text-zinc-300">
-                Sí. La siguiente etapa será construir un panel administrador
-                para modificar cursos, servicios, fotos, textos e inscripciones.
-              </p>
-            </div>
+            <a
+              href="/cursos"
+              className="mt-8 inline-block rounded-full bg-yellow-500 px-8 py-4 font-black text-black hover:bg-yellow-400"
+            >
+              Ir a cursos
+            </a>
           </div>
         </div>
       </section>
@@ -440,8 +351,8 @@ export default function Home() {
           </h2>
 
           <p className="mx-auto mt-5 max-w-2xl text-lg leading-8">
-            Consultá por cursos, servicios, formación, modalidad, cupos,
-            materiales y próximas fechas.
+            Consultá por formación, servicios, cursos, actividades o futuras
+            propuestas de la empresa.
           </p>
 
           <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
@@ -449,13 +360,11 @@ export default function Home() {
               href="/inscripcion"
               className="rounded-full bg-black px-9 py-4 font-black text-white hover:bg-zinc-800"
             >
-              Completar inscripción
+              Completar consulta
             </a>
 
             <a
-              href={linkWhatsApp(
-                "Hola SERVICAN, quiero consultar por cursos y servicios"
-              )}
+              href={linkWhatsApp("Hola SERVICAN, quiero hacer una consulta")}
               target="_blank"
               rel="noopener noreferrer"
               className="rounded-full border-2 border-black px-9 py-4 font-black text-black hover:bg-black hover:text-white"
@@ -479,9 +388,7 @@ export default function Home() {
 
       {/* BOTÓN FLOTANTE WHATSAPP */}
       <a
-        href={linkWhatsApp(
-          "Hola SERVICAN, quiero consultar por cursos y servicios"
-        )}
+        href={linkWhatsApp("Hola SERVICAN, quiero hacer una consulta")}
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-5 right-5 z-50 rounded-full bg-green-500 px-5 py-4 font-black text-white shadow-2xl transition hover:bg-green-400"
