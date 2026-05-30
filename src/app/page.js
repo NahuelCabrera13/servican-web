@@ -15,6 +15,7 @@ export default function Home() {
       ],
       mensaje:
         "Hola SERVICAN, quiero información del Curso Básico Integral para Guías Caninos",
+      url: "/cursos/guia-canino-desde-cero",
     },
     {
       etiqueta: "Especialización K9",
@@ -29,6 +30,7 @@ export default function Home() {
       ],
       mensaje:
         "Hola SERVICAN, quiero información del Módulo 2 K9 Antinarcóticos",
+      url: "/cursos/k9-antinarcoticos",
     },
   ];
 
@@ -281,14 +283,23 @@ export default function Home() {
                   ))}
                 </ul>
 
-                <a
-                  href={linkWhatsApp(curso.mensaje)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-8 inline-block rounded-full bg-yellow-500 px-7 py-4 font-black text-black hover:bg-yellow-400"
-                >
-                  Consultar este curso
-                </a>
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                  <a
+                    href={curso.url}
+                    className="inline-block rounded-full bg-yellow-500 px-7 py-4 text-center font-black text-black hover:bg-yellow-400"
+                  >
+                    Ver detalles
+                  </a>
+
+                  <a
+                    href={linkWhatsApp(curso.mensaje)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block rounded-full border border-yellow-500 px-7 py-4 text-center font-black text-yellow-500 hover:bg-yellow-500 hover:text-black"
+                  >
+                    Consultar
+                  </a>
+                </div>
               </div>
             ))}
           </div>
@@ -353,16 +364,25 @@ export default function Home() {
                   </p>
                 </div>
 
-                <a
-                  href={linkWhatsApp(
-                    `Hola SERVICAN, quiero consultar precio, cupos y fechas de: ${curso.titulo}`
-                  )}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-8 inline-block w-full rounded-full bg-yellow-500 px-7 py-4 text-center font-black text-black hover:bg-yellow-400"
-                >
-                  Consultar inscripción
-                </a>
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                  <a
+                    href={curso.url}
+                    className="inline-block rounded-full border border-yellow-500 px-7 py-4 text-center font-black text-yellow-500 hover:bg-yellow-500 hover:text-black"
+                  >
+                    Ver programa
+                  </a>
+
+                  <a
+                    href={linkWhatsApp(
+                      `Hola SERVICAN, quiero consultar precio, cupos y fechas de: ${curso.titulo}`
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block rounded-full bg-yellow-500 px-7 py-4 text-center font-black text-black hover:bg-yellow-400"
+                  >
+                    Consultar inscripción
+                  </a>
+                </div>
               </div>
             ))}
           </div>
