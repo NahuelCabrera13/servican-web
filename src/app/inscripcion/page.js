@@ -1,6 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function Inscripcion() {
   const whatsapp = "59898188257";
@@ -14,6 +20,9 @@ export default function Inscripcion() {
     mensaje: "",
   });
 
+  const [enviando, setEnviando] = useState(false);
+  const [aviso, setAviso] = useState("");
+
   const actualizarCampo = (campo, valor) => {
     setFormulario({
       ...formulario,
@@ -21,28 +30,59 @@ export default function Inscripcion() {
     });
   };
 
-  const enviarWhatsApp = (e) => {
+  const enviarFormulario = async (e) => {
     e.preventDefault();
+    setEnviando(true);
+    setAviso("");
 
-    const mensaje = `
+    const datosParaGuardar = {
+      nombre: formulario.nombre,
+      telefono: formulario.telefono,
+      email: formulario.email || null,
+      curso: formulario.curso,
+      modalidad: formulario.modalidad,
+      mensaje: formulario.mensaje || null,
+      estado: "interesado",
+    };
+
+    const { error } = await supabase
+      .from("inscripciones")
+      .insert([datosParaGuardar]);
+
+    if (error) {
+      console.error("Error al guardar inscripción:", error);
+      setAviso(
+        "Hubo un problema al guardar la inscripción. Revisá la conexión con Supabase."
+      );
+      setEnviando(false);
+      return;
+    }
+
+    const mensajeWhatsApp = `
 Hola SERVICAN, quiero inscribirme o consultar por un curso.
 
 Nombre: ${formulario.nombre}
 Teléfono: ${formulario.telefono}
-Email: ${formulario.email}
+Email: ${formulario.email || "No especificado"}
 Curso de interés: ${formulario.curso}
 Modalidad preferida: ${formulario.modalidad}
-Mensaje adicional: ${formulario.mensaje}
+Mensaje adicional: ${formulario.mensaje || "Sin mensaje adicional"}
 `;
 
-    const url = `https://wa.me/${whatsapp}?text=${encodeURIComponent(mensaje)}`;
+    const url = `https://wa.me/${whatsapp}?text=${encodeURIComponent(
+      mensajeWhatsApp
+    )}`;
+
+    setAviso("Inscripción guardada correctamente. Se abrirá WhatsApp.");
+    setEnviando(false);
+
     window.open(url, "_blank");
   };
 
   return (
     <main className="min-h-screen bg-black text-white">
       {/* MENÚ */}
-      <header className="border-b border-yellow-500/20 bg-black px-6 py-5">
+      <header className="sticky top-0 z-50 border-b border-yellow-500/20 bg-black/90 px-6 py-5 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <a href="/" className="flex items-center gap-3">
             <img
@@ -82,8 +122,8 @@ Mensaje adicional: ${formulario.mensaje}
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-zinc-300">
-            Completá tus datos y se abrirá WhatsApp con el mensaje ya armado
-            para enviarlo directamente a SERVICAN.
+            Completá tus datos. La inscripción quedará guardada en el sistema y
+            también se abrirá WhatsApp con el mensaje listo para enviar.
           </p>
         </div>
       </section>
@@ -101,12 +141,17 @@ Mensaje adicional: ${formulario.mensaje}
             </h2>
 
             <p className="mt-4 leading-7 text-zinc-300">
-              Este formulario todavía no guarda datos en una base de datos. Por
-              ahora genera un mensaje automático de WhatsApp con toda la
-              información cargada.
+              Al enviar, los datos se guardan en Supabase y luego se abre
+              WhatsApp para que puedas mandar la consulta directamente.
             </p>
 
-            <form onSubmit={enviarWhatsApp} className="mt-8 space-y-5">
+            {aviso && (
+              <div className="mt-6 rounded-2xl border border-yellow-500/40 bg-yellow-500/10 p-4 text-sm font-bold text-yellow-500">
+                {aviso}
+              </div>
+            )}
+
+            <form onSubmit={enviarFormulario} className="mt-8 space-y-5">
               <div>
                 <label className="mb-2 block text-sm font-bold text-zinc-300">
                   Nombre completo
@@ -194,9 +239,12 @@ Mensaje adicional: ${formulario.mensaje}
 
               <button
                 type="submit"
-                className="w-full rounded-full bg-yellow-500 px-8 py-4 font-black text-black hover:bg-yellow-400"
+                disabled={enviando}
+                className="w-full rounded-full bg-yellow-500 px-8 py-4 font-black text-black hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Enviar consulta por WhatsApp
+                {enviando
+                  ? "Guardando inscripción..."
+                  : "Guardar y enviar por WhatsApp"}
               </button>
             </form>
           </div>
@@ -214,7 +262,7 @@ Mensaje adicional: ${formulario.mensaje}
                 </p>
                 <p>
                   <span className="font-bold text-white">Precios:</span> se
-                  consultan directamente por WhatsApp.
+                  consultan directamente.
                 </p>
                 <p>
                   <span className="font-bold text-white">Modalidad:</span>{" "}
@@ -238,20 +286,20 @@ Mensaje adicional: ${formulario.mensaje}
 
               <ol className="mt-6 space-y-4 text-zinc-300">
                 <li>
-                  <span className="font-black text-yellow-500">1.</span> Se abre
+                  <span className="font-black text-yellow-500">1.</span> Tus
+                  datos quedan guardados en la base de datos de SERVICAN.
+                </li>
+                <li>
+                  <span className="font-black text-yellow-500">2.</span> Se abre
                   WhatsApp con tu consulta ya escrita.
                 </li>
                 <li>
-                  <span className="font-black text-yellow-500">2.</span> Revisás
+                  <span className="font-black text-yellow-500">3.</span> Revisás
                   el mensaje antes de enviarlo.
                 </li>
                 <li>
-                  <span className="font-black text-yellow-500">3.</span>{" "}
+                  <span className="font-black text-yellow-500">4.</span>{" "}
                   SERVICAN responde con precios, fechas y modalidad.
-                </li>
-                <li>
-                  <span className="font-black text-yellow-500">4.</span> Si te
-                  sirve, se coordina la inscripción.
                 </li>
               </ol>
             </div>
