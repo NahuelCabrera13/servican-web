@@ -385,16 +385,6 @@ export default function Home() {
           © 2026 SERVICAN. Todos los derechos reservados.
         </p>
       </footer>
-
-      {/* BOTÓN FLOTANTE WHATSAPP */}
-      <a
-        href={linkWhatsApp("Hola SERVICAN, quiero hacer una consulta")}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-5 right-5 z-50 rounded-full bg-green-500 px-5 py-4 font-black text-white shadow-2xl transition hover:bg-green-400"
-      >
-        WhatsApp
-      </a>
     </main>
   );
 }

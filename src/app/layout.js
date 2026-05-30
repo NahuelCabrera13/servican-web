@@ -1,26 +1,20 @@
 import "./globals.css";
+import AuthAccessMenu from "@/components/AuthAccessMenu";
 
 export const metadata = {
   metadataBase: new URL("https://servican-web.vercel.app"),
-  title: "SERVICAN | Cursos Profesionales para Guías Caninos",
+  title: "SERVICAN | Formación y trabajo canino en Uruguay",
   description:
-    "SERVICAN ofrece cursos pagos de adiestramiento, manejo canino y especialización K9. Formación clara, seria y progresiva para guías caninos.",
-  keywords: [
-    "SERVICAN",
-    "cursos caninos",
-    "adiestramiento canino",
-    "guías caninos",
-    "K9",
-    "perros detectores",
-    "curso K9",
-    "formación canina",
-    "Uruguay",
-  ],
-  authors: [{ name: "SERVICAN" }],
+    "SERVICAN es una empresa de formación y trabajo canino en Uruguay. Cursos, entrenamiento, servicios K9 y capacitación especializada.",
+  icons: {
+    icon: "/logo-servican.jpeg",
+    shortcut: "/logo-servican.jpeg",
+    apple: "/logo-servican.jpeg",
+  },
   openGraph: {
-    title: "SERVICAN | Cursos Profesionales para Guías Caninos",
+    title: "SERVICAN | Formación y trabajo canino en Uruguay",
     description:
-      "Cursos pagos de adiestramiento, manejo canino y especialización K9. Nuestro olfato nos define.",
+      "Formación, entrenamiento y trabajo canino profesional en Uruguay.",
     url: "https://servican-web.vercel.app",
     siteName: "SERVICAN",
     images: [
@@ -34,17 +28,15 @@ export const metadata = {
     locale: "es_UY",
     type: "website",
   },
-  icons: {
-    icon: "/logo-servican.jpeg",
-    shortcut: "/logo-servican.jpeg",
-    apple: "/logo-servican.jpeg",
-  },
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="es">
-      <body>{children}</body>
+      <body>
+        {children}
+        <AuthAccessMenu />
+      </body>
     </html>
   );
 }

@@ -316,18 +316,6 @@ Mensaje adicional: ${formulario.mensaje || "Sin mensaje adicional"}
           </div>
         </div>
       </section>
-
-      {/* BOTÓN FLOTANTE */}
-      <a
-        href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(
-          "Hola SERVICAN, quiero consultar por los cursos disponibles"
-        )}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-5 right-5 z-50 rounded-full bg-green-500 px-5 py-4 font-black text-white shadow-2xl transition hover:bg-green-400"
-      >
-        WhatsApp
-      </a>
     </main>
   );
 }
