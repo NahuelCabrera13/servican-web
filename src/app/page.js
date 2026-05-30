@@ -104,12 +104,10 @@ export default function Home() {
           </nav>
 
           <a
-            href={linkWhatsApp("Hola SERVICAN, quiero consultar por los cursos")}
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/inscripcion"
             className="rounded-full bg-yellow-500 px-5 py-3 text-sm font-bold text-black hover:bg-yellow-400"
           >
-            Consultar
+            Inscribirme
           </a>
         </div>
       </header>
@@ -156,14 +154,10 @@ export default function Home() {
             </a>
 
             <a
-              href={linkWhatsApp(
-                "Hola SERVICAN, quiero consultar precios, cupos y fechas"
-              )}
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/inscripcion"
               className="rounded-full border border-yellow-500 px-9 py-4 font-black text-yellow-500 transition hover:bg-yellow-500 hover:text-black"
             >
-              Consultar por WhatsApp
+              Inscribirme / Consultar
             </a>
           </div>
         </div>
@@ -271,12 +265,21 @@ export default function Home() {
                   ))}
                 </ul>
 
-                <a
-                  href={curso.url}
-                  className="mt-8 inline-block rounded-full bg-yellow-500 px-7 py-4 text-center font-black text-black hover:bg-yellow-400"
-                >
-                  Ver programa del curso
-                </a>
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                  <a
+                    href={curso.url}
+                    className="rounded-full bg-yellow-500 px-7 py-4 text-center font-black text-black hover:bg-yellow-400"
+                  >
+                    Ver programa
+                  </a>
+
+                  <a
+                    href="/inscripcion"
+                    className="rounded-full border border-yellow-500 px-7 py-4 text-center font-black text-yellow-500 hover:bg-yellow-500 hover:text-black"
+                  >
+                    Inscribirme
+                  </a>
+                </div>
               </div>
             ))}
           </div>
@@ -372,8 +375,8 @@ export default function Home() {
                 ¿Los cursos son pagos?
               </h3>
               <p className="mt-2 text-zinc-300">
-                Sí. Los precios, cupos y fechas se consultan directamente por
-                WhatsApp.
+                Sí. Los precios, cupos y fechas se consultan completando la
+                inscripción o por WhatsApp.
               </p>
             </div>
 
@@ -408,19 +411,15 @@ export default function Home() {
           </h2>
 
           <p className="mx-auto mt-5 max-w-2xl text-lg leading-8">
-            Escribinos por WhatsApp para recibir información actualizada sobre
-            modalidad, costo, materiales incluidos e inscripción.
+            Completá el formulario de inscripción para enviar tu consulta con
+            todos los datos necesarios.
           </p>
 
           <a
-            href={linkWhatsApp(
-              "Hola SERVICAN, quiero consultar precios, cupos y próximas fechas"
-            )}
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/inscripcion"
             className="mt-10 inline-block rounded-full bg-black px-9 py-4 font-black text-white hover:bg-zinc-800"
           >
-            Consultar por WhatsApp
+            Completar inscripción
           </a>
         </div>
       </section>
