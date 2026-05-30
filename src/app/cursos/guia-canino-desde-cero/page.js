@@ -4,10 +4,35 @@ export default function CursoGuiaCanino() {
   const linkWhatsApp = (mensaje) =>
     `https://wa.me/${whatsapp}?text=${encodeURIComponent(mensaje)}`;
 
+  const contenidos = [
+    "Comunicación y lectura corporal canina.",
+    "Manejo seguro del perro en distintos contextos.",
+    "Obediencia básica y construcción del vínculo guía-perro.",
+    "Bienestar animal, motivación y trabajo progresivo.",
+    "Errores comunes del guía principiante.",
+    "Base necesaria para avanzar a módulos K9.",
+  ];
+
+  const beneficios = [
+    {
+      titulo: "Nivel inicial",
+      texto: "Pensado para alumnos que quieren comenzar desde cero, sin necesidad de experiencia previa.",
+    },
+    {
+      titulo: "Material de estudio",
+      texto: "Incluye material PDF, guías, apuntes y recursos de apoyo para acompañar el aprendizaje.",
+    },
+    {
+      titulo: "Formación progresiva",
+      texto: "El curso prepara al alumno para avanzar luego hacia módulos profesionales y especializaciones K9.",
+    },
+  ];
+
   return (
     <main className="min-h-screen bg-black text-white">
-      <header className="border-b border-yellow-500/20 bg-black px-6 py-5">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
+      {/* MENÚ */}
+      <header className="sticky top-0 z-50 border-b border-yellow-500/20 bg-black/90 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <a href="/" className="flex items-center gap-3">
             <img
               src="/logo-servican.jpeg"
@@ -23,114 +48,163 @@ export default function CursoGuiaCanino() {
           </a>
 
           <a
-            href={linkWhatsApp(
-              "Hola SERVICAN, quiero consultar por el Curso Básico Integral para Guías Caninos"
-            )}
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/inscripcion"
             className="rounded-full bg-yellow-500 px-5 py-3 text-sm font-black text-black hover:bg-yellow-400"
           >
-            Consultar
+            Inscribirme
           </a>
         </div>
       </header>
 
-      <section className="relative overflow-hidden px-6 py-20">
+      {/* PORTADA */}
+      <section className="relative overflow-hidden px-6 py-20 md:py-28">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#3f3210_0%,#111_38%,#000_80%)]" />
 
-        <div className="relative mx-auto max-w-6xl">
-          <p className="mb-4 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
-            Curso desde cero
-          </p>
+        <div className="relative mx-auto max-w-7xl">
+          <div className="max-w-5xl">
+            <p className="mb-4 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
+              Curso desde cero
+            </p>
 
-          <h1 className="max-w-5xl text-5xl font-black leading-tight md:text-7xl">
-            Curso Básico Integral para Guías Caninos
-          </h1>
+            <h1 className="text-5xl font-black leading-tight md:text-7xl">
+              Curso Básico Integral para Guías Caninos
+            </h1>
 
-          <p className="mt-6 max-w-3xl text-lg leading-8 text-zinc-300">
-            Formación inicial para aprender manejo, comunicación, obediencia
-            básica, bienestar, vínculo guía-perro y preparación para avanzar a
-            módulos profesionales.
-          </p>
+            <p className="mt-6 max-w-3xl text-lg leading-8 text-zinc-300">
+              Formación inicial para aprender manejo, comunicación, obediencia
+              básica, bienestar, vínculo guía-perro y preparación para avanzar a
+              módulos profesionales.
+            </p>
 
-          <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-            <a
-              href={linkWhatsApp(
-                "Hola SERVICAN, quiero inscribirme al Curso Básico Integral para Guías Caninos"
-              )}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-full bg-yellow-500 px-8 py-4 text-center font-black text-black hover:bg-yellow-400"
-            >
-              Inscribirme
-            </a>
+            <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+              <a
+                href="/inscripcion"
+                className="rounded-full bg-yellow-500 px-8 py-4 text-center font-black text-black hover:bg-yellow-400"
+              >
+                Inscribirme / Consultar
+              </a>
 
-            <a
-              href="/"
-              className="rounded-full border border-yellow-500 px-8 py-4 text-center font-black text-yellow-500 hover:bg-yellow-500 hover:text-black"
-            >
-              Volver al inicio
-            </a>
+              <a
+                href="/"
+                className="rounded-full border border-yellow-500 px-8 py-4 text-center font-black text-yellow-500 hover:bg-yellow-500 hover:text-black"
+              >
+                Volver al inicio
+              </a>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="px-6 py-16">
-        <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-3">
-          <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-7">
-            <h2 className="text-2xl font-black text-yellow-500">
-              Objetivo del curso
-            </h2>
-            <p className="mt-4 leading-7 text-zinc-300">
-              Darle al alumno una base clara para comprender al perro, manejarlo
-              de forma segura, construir vínculo y comenzar un proceso de
-              formación responsable.
+      {/* RESUMEN */}
+      <section className="border-y border-zinc-800 bg-zinc-950 px-6 py-16">
+        <div className="mx-auto grid max-w-7xl gap-6 md:grid-cols-4">
+          <div className="rounded-3xl bg-black p-6">
+            <p className="text-sm uppercase tracking-[0.25em] text-zinc-500">
+              Nivel
+            </p>
+            <p className="mt-2 text-xl font-black text-yellow-500">
+              Principiante
             </p>
           </div>
 
-          <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-7">
-            <h2 className="text-2xl font-black text-yellow-500">
+          <div className="rounded-3xl bg-black p-6">
+            <p className="text-sm uppercase tracking-[0.25em] text-zinc-500">
               Modalidad
-            </h2>
-            <p className="mt-4 leading-7 text-zinc-300">
-              Puede adaptarse a modalidad presencial, online o mixta. Los cupos,
-              fechas y precios se consultan directamente por WhatsApp.
+            </p>
+            <p className="mt-2 text-xl font-black text-yellow-500">
+              A consultar
             </p>
           </div>
 
-          <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-7">
-            <h2 className="text-2xl font-black text-yellow-500">
-              Material incluido
-            </h2>
-            <p className="mt-4 leading-7 text-zinc-300">
-              Material PDF, recursos de apoyo, explicaciones por módulos y
-              posibilidad de incorporar videos dentro de la plataforma.
+          <div className="rounded-3xl bg-black p-6">
+            <p className="text-sm uppercase tracking-[0.25em] text-zinc-500">
+              Material
+            </p>
+            <p className="mt-2 text-xl font-black text-yellow-500">
+              PDF + recursos
+            </p>
+          </div>
+
+          <div className="rounded-3xl bg-black p-6">
+            <p className="text-sm uppercase tracking-[0.25em] text-zinc-500">
+              Precio
+            </p>
+            <p className="mt-2 text-xl font-black text-yellow-500">
+              Consultar
             </p>
           </div>
         </div>
       </section>
 
-      <section className="bg-zinc-950 px-6 py-16">
+      {/* OBJETIVO */}
+      <section className="px-6 py-20">
+        <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-2 md:items-center">
+          <div>
+            <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
+              Objetivo del curso
+            </p>
+            <h2 className="text-4xl font-black md:text-5xl">
+              Construir una base sólida para trabajar correctamente con perros.
+            </h2>
+          </div>
+
+          <div className="space-y-5 text-lg leading-8 text-zinc-300">
+            <p>
+              Este curso está pensado para que el alumno entienda al perro,
+              aprenda a manejarlo de forma segura y construya una relación de
+              trabajo basada en comunicación, vínculo, respeto y progresión.
+            </p>
+            <p>
+              Es la base recomendada antes de avanzar hacia módulos de
+              especialización, entrenamiento técnico o formación K9.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* BENEFICIOS */}
+      <section className="bg-zinc-950 px-6 py-20">
+        <div className="mx-auto max-w-7xl">
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
+              Qué incluye
+            </p>
+            <h2 className="text-4xl font-black md:text-5xl">
+              Una formación clara y progresiva
+            </h2>
+          </div>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            {beneficios.map((item) => (
+              <div
+                key={item.titulo}
+                className="rounded-3xl border border-zinc-800 bg-black p-7"
+              >
+                <h3 className="text-2xl font-black text-yellow-500">
+                  {item.titulo}
+                </h3>
+                <p className="mt-4 leading-7 text-zinc-300">{item.texto}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CONTENIDO */}
+      <section className="px-6 py-20">
         <div className="mx-auto max-w-7xl">
           <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
-            Contenido
+            Programa
           </p>
           <h2 className="text-4xl font-black md:text-5xl">
             Qué vas a aprender
           </h2>
 
           <div className="mt-10 grid gap-5 md:grid-cols-2">
-            {[
-              "Comunicación y lectura corporal canina.",
-              "Manejo seguro del perro en distintos contextos.",
-              "Obediencia básica y construcción del vínculo.",
-              "Bienestar animal, motivación y trabajo progresivo.",
-              "Errores comunes del guía principiante.",
-              "Base necesaria para avanzar a módulos K9.",
-            ].map((item) => (
+            {contenidos.map((item) => (
               <div
                 key={item}
-                className="rounded-3xl border border-zinc-800 bg-black p-6"
+                className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6"
               >
                 <p className="text-zinc-300">
                   <span className="font-black text-yellow-500">✓ </span>
@@ -142,12 +216,13 @@ export default function CursoGuiaCanino() {
         </div>
       </section>
 
-      <section className="px-6 py-16">
+      {/* MATERIAL */}
+      <section className="bg-zinc-950 px-6 py-20">
         <div className="mx-auto max-w-7xl rounded-[2rem] border border-yellow-500/30 bg-gradient-to-br from-zinc-950 to-black p-8 md:p-12">
           <h2 className="text-4xl font-black">Videos y material del curso</h2>
           <p className="mt-4 max-w-3xl leading-8 text-zinc-300">
-            En esta sección luego podemos insertar videos de YouTube no listados
-            y enlaces a los PDFs del curso para alumnos.
+            Esta sección queda preparada para integrar videos de YouTube,
+            materiales PDF y recursos privados para alumnos en una etapa futura.
           </p>
 
           <div className="mt-8 grid gap-8 md:grid-cols-2">
@@ -163,37 +238,46 @@ export default function CursoGuiaCanino() {
               <h3 className="text-2xl font-black text-yellow-500">
                 PDF del curso
               </h3>
-              <p className="mt-3 text-zinc-300">
-                Acá vamos a colocar el material descargable o privado según la
-                etapa del proyecto.
+              <p className="mt-3 leading-7 text-zinc-300">
+                El material puede entregarse luego de la inscripción o
+                integrarse en una futura área privada para alumnos.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="bg-yellow-500 px-6 py-16 text-black">
+      {/* CTA */}
+      <section className="bg-yellow-500 px-6 py-20 text-black">
         <div className="mx-auto max-w-5xl text-center">
-          <h2 className="text-4xl font-black md:text-5xl">
-            Consultá precio, cupos y fechas
+          <h2 className="text-4xl font-black md:text-6xl">
+            Consultá precio, cupos y próximas fechas
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg">
-            Escribinos por WhatsApp para recibir información actualizada sobre
-            modalidad, costo, materiales incluidos e inscripción.
+          <p className="mx-auto mt-5 max-w-2xl text-lg leading-8">
+            Completá el formulario de inscripción y se generará un mensaje de
+            WhatsApp con tus datos para enviar a SERVICAN.
           </p>
 
           <a
-            href={linkWhatsApp(
-              "Hola SERVICAN, quiero consultar precio, cupos y fechas del Curso Básico Integral"
-            )}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-8 inline-block rounded-full bg-black px-9 py-4 font-black text-white hover:bg-zinc-800"
+            href="/inscripcion"
+            className="mt-10 inline-block rounded-full bg-black px-9 py-4 font-black text-white hover:bg-zinc-800"
           >
-            Consultar por WhatsApp
+            Completar inscripción
           </a>
         </div>
       </section>
+
+      {/* BOTÓN FLOTANTE */}
+      <a
+        href={linkWhatsApp(
+          "Hola SERVICAN, quiero consultar por el Curso Básico Integral para Guías Caninos"
+        )}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-5 right-5 z-50 rounded-full bg-green-500 px-5 py-4 font-black text-white shadow-2xl transition hover:bg-green-400"
+      >
+        WhatsApp
+      </a>
     </main>
   );
 }
