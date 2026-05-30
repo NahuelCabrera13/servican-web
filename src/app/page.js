@@ -11,10 +11,8 @@ export default function Home() {
         "Ideal para principiantes",
         "Material de estudio en PDF",
         "Base para avanzar a módulos K9",
-        "Orientación progresiva",
+        "Modalidad presencial, online o mixta",
       ],
-      mensaje:
-        "Hola SERVICAN, quiero información del Curso Básico Integral para Guías Caninos",
       url: "/cursos/guia-canino-desde-cero",
     },
     {
@@ -28,8 +26,6 @@ export default function Home() {
         "Contenido teórico y práctico",
         "Preparación para escenarios operativos",
       ],
-      mensaje:
-        "Hola SERVICAN, quiero información del Módulo 2 K9 Antinarcóticos",
       url: "/cursos/k9-antinarcoticos",
     },
   ];
@@ -38,32 +34,32 @@ export default function Home() {
     {
       icono: "📘",
       titulo: "Material PDF",
-      texto: "Guías, apuntes y material organizado para estudiar cada módulo.",
+      texto: "Guías y apuntes organizados para estudiar cada módulo.",
     },
     {
       icono: "🎥",
       titulo: "Videos del curso",
-      texto: "Fragmentos, presentaciones y clases que pueden visualizarse desde la propia página.",
+      texto: "Fragmentos, presentaciones y clases que pueden integrarse a la web.",
     },
     {
       icono: "🐕",
       titulo: "Enfoque guía-perro",
-      texto: "Contenido orientado al trabajo responsable del binomio, la comunicación y el bienestar animal.",
+      texto: "Contenido orientado al trabajo responsable del binomio.",
     },
     {
       icono: "🏅",
       titulo: "Certificado",
-      texto: "Posibilidad de entregar constancia o certificado según la modalidad del curso.",
+      texto: "Posibilidad de entregar constancia o certificado según modalidad.",
     },
     {
       icono: "📍",
       titulo: "Modalidad flexible",
-      texto: "Preparada para adaptarse a modalidad presencial, online o mixta.",
+      texto: "Preparada para modalidad presencial, online o mixta.",
     },
     {
       icono: "🛡️",
       titulo: "Proyección K9",
-      texto: "Base para avanzar hacia módulos profesionales y especialidades futuras.",
+      texto: "Base para avanzar hacia módulos profesionales y especialidades.",
     },
   ];
 
@@ -75,7 +71,7 @@ export default function Home() {
       {/* MENÚ */}
       <header className="sticky top-0 z-50 border-b border-yellow-500/20 bg-black/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
+          <a href="#inicio" className="flex items-center gap-3">
             <img
               src="/logo-servican.jpeg"
               alt="Logo SERVICAN"
@@ -90,7 +86,7 @@ export default function Home() {
                 Nuestro olfato nos define
               </p>
             </div>
-          </div>
+          </a>
 
           <nav className="hidden gap-6 text-sm font-semibold text-zinc-300 md:flex">
             <a href="#inicio" className="hover:text-yellow-500">
@@ -98,9 +94,6 @@ export default function Home() {
             </a>
             <a href="#cursos" className="hover:text-yellow-500">
               Cursos
-            </a>
-            <a href="#precios" className="hover:text-yellow-500">
-              Inscripción
             </a>
             <a href="#videos" className="hover:text-yellow-500">
               Videos
@@ -116,7 +109,7 @@ export default function Home() {
             rel="noopener noreferrer"
             className="rounded-full bg-yellow-500 px-5 py-3 text-sm font-bold text-black hover:bg-yellow-400"
           >
-            WhatsApp
+            Consultar
           </a>
         </div>
       </header>
@@ -146,8 +139,8 @@ export default function Home() {
           </h1>
 
           <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-zinc-300">
-            SERVICAN ofrece cursos pagos de adiestramiento, manejo canino y
-            especialización K9, con una formación clara, seria y progresiva.
+            SERVICAN ofrece formación paga en adiestramiento, manejo canino y
+            especialización K9, con una estructura clara, seria y progresiva.
           </p>
 
           <p className="mt-5 text-2xl font-bold text-yellow-500">
@@ -156,14 +149,10 @@ export default function Home() {
 
           <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
             <a
-              href={linkWhatsApp(
-                "Hola SERVICAN, quiero inscribirme a un curso"
-              )}
-              target="_blank"
-              rel="noopener noreferrer"
+              href="#cursos"
               className="rounded-full bg-yellow-500 px-9 py-4 font-black text-black transition hover:bg-yellow-400"
             >
-              Inscribirme
+              Ver cursos
             </a>
 
             <a
@@ -216,12 +205,11 @@ export default function Home() {
               Qué incluye
             </p>
             <h2 className="text-4xl font-black md:text-5xl">
-              Una formación pensada para aprender y avanzar
+              Una formación práctica, ordenada y progresiva
             </h2>
             <p className="mt-4 text-zinc-300">
-              SERVICAN combina material de estudio, orientación práctica y una
-              estructura progresiva para que cada alumno pueda formarse con una
-              base sólida.
+              La web está preparada para mostrar cursos, materiales, videos,
+              modalidad, inscripciones y futuras áreas privadas para alumnos.
             </p>
           </div>
 
@@ -253,8 +241,8 @@ export default function Home() {
               Programas disponibles
             </h2>
             <p className="mt-4 text-zinc-300">
-              Consultá por fechas, modalidad, precios, materiales incluidos y
-              requisitos de inscripción.
+              Cada curso tiene su propia página con programa, modalidad,
+              contenido y consulta de inscripción.
             </p>
           </div>
 
@@ -283,106 +271,12 @@ export default function Home() {
                   ))}
                 </ul>
 
-                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                  <a
-                    href={curso.url}
-                    className="inline-block rounded-full bg-yellow-500 px-7 py-4 text-center font-black text-black hover:bg-yellow-400"
-                  >
-                    Ver detalles
-                  </a>
-
-                  <a
-                    href={linkWhatsApp(curso.mensaje)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block rounded-full border border-yellow-500 px-7 py-4 text-center font-black text-yellow-500 hover:bg-yellow-500 hover:text-black"
-                  >
-                    Consultar
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* PRECIOS / INSCRIPCIÓN */}
-      <section
-        id="precios"
-        className="border-y border-yellow-500/20 bg-gradient-to-br from-yellow-500 to-yellow-700 px-6 py-20 text-black"
-      >
-        <div className="mx-auto max-w-7xl">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="mb-3 text-sm font-black uppercase tracking-[0.35em]">
-              Inscripción
-            </p>
-            <h2 className="text-4xl font-black md:text-6xl">
-              Cursos pagos con cupos limitados
-            </h2>
-            <p className="mt-5 text-lg leading-8 text-black/75">
-              Los precios, próximas fechas y modalidad se coordinan directamente
-              por WhatsApp para dar información actualizada a cada alumno.
-            </p>
-          </div>
-
-          <div className="mt-12 grid gap-8 md:grid-cols-2">
-            {cursos.map((curso) => (
-              <div
-                key={curso.titulo}
-                className="rounded-[2rem] bg-black p-8 text-white shadow-2xl"
-              >
-                <p className="mb-3 text-sm font-black uppercase tracking-[0.25em] text-yellow-500">
-                  {curso.etiqueta}
-                </p>
-
-                <h3 className="text-3xl font-black">{curso.titulo}</h3>
-
-                <div className="mt-6 rounded-3xl border border-yellow-500/30 bg-yellow-500/10 p-6">
-                  <p className="text-sm uppercase tracking-[0.25em] text-zinc-400">
-                    Precio
-                  </p>
-                  <p className="mt-2 text-4xl font-black text-yellow-500">
-                    Consultar
-                  </p>
-                  <p className="mt-2 text-sm text-zinc-400">
-                    Se informa por WhatsApp según modalidad, fecha y cupo.
-                  </p>
-                </div>
-
-                <div className="mt-6 space-y-3 text-zinc-300">
-                  <p>
-                    <span className="font-bold text-white">Modalidad:</span>{" "}
-                    presencial, online o mixta.
-                  </p>
-                  <p>
-                    <span className="font-bold text-white">Material:</span> PDF,
-                    videos y recursos de apoyo.
-                  </p>
-                  <p>
-                    <span className="font-bold text-white">Cupos:</span>{" "}
-                    sujetos a disponibilidad.
-                  </p>
-                </div>
-
-                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                  <a
-                    href={curso.url}
-                    className="inline-block rounded-full border border-yellow-500 px-7 py-4 text-center font-black text-yellow-500 hover:bg-yellow-500 hover:text-black"
-                  >
-                    Ver programa
-                  </a>
-
-                  <a
-                    href={linkWhatsApp(
-                      `Hola SERVICAN, quiero consultar precio, cupos y fechas de: ${curso.titulo}`
-                    )}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block rounded-full bg-yellow-500 px-7 py-4 text-center font-black text-black hover:bg-yellow-400"
-                  >
-                    Consultar inscripción
-                  </a>
-                </div>
+                <a
+                  href={curso.url}
+                  className="mt-8 inline-block rounded-full bg-yellow-500 px-7 py-4 text-center font-black text-black hover:bg-yellow-400"
+                >
+                  Ver programa del curso
+                </a>
               </div>
             ))}
           </div>
@@ -390,18 +284,18 @@ export default function Home() {
       </section>
 
       {/* VIDEOS */}
-      <section id="videos" className="bg-zinc-950 px-6 py-20">
+      <section id="videos" className="px-6 py-20">
         <div className="mx-auto max-w-7xl">
           <div className="mx-auto max-w-3xl text-center">
             <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
-              Videos del curso
+              Videos
             </p>
             <h2 className="text-4xl font-black md:text-5xl">
-              Fragmentos y presentación
+              Presentación y fragmentos del curso
             </h2>
             <p className="mt-4 text-zinc-300">
-              Acá vamos a insertar videos de YouTube. Pueden ser públicos o no
-              listados.
+              Más adelante podremos insertar videos de YouTube directamente en
+              esta sección o dentro de cada curso.
             </p>
           </div>
 
@@ -414,10 +308,10 @@ export default function Home() {
               </div>
               <div className="p-6">
                 <h3 className="text-xl font-black text-yellow-500">
-                  Presentación del curso
+                  Presentación institucional
                 </h3>
                 <p className="mt-2 text-zinc-300">
-                  En esta sección se mostrará un video introductorio del curso.
+                  Espacio reservado para un video general de SERVICAN.
                 </p>
               </div>
             </div>
@@ -433,7 +327,7 @@ export default function Home() {
                   Fragmento de entrenamiento
                 </h3>
                 <p className="mt-2 text-zinc-300">
-                  Luego podemos insertar videos reales subidos a YouTube.
+                  Espacio reservado para mostrar avances o demostraciones.
                 </p>
               </div>
             </div>
@@ -442,7 +336,7 @@ export default function Home() {
       </section>
 
       {/* MATERIAL */}
-      <section className="px-6 py-20">
+      <section className="bg-zinc-950 px-6 py-20">
         <div className="mx-auto max-w-7xl">
           <div className="rounded-[2rem] border border-yellow-500/30 bg-gradient-to-br from-zinc-950 to-black p-8 md:p-12">
             <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
@@ -454,41 +348,16 @@ export default function Home() {
             </h2>
 
             <p className="mt-5 max-w-3xl leading-8 text-zinc-300">
-              La página podrá mostrar materiales descargables o privados según
-              la etapa del proyecto. En la primera versión podemos colocar los
-              PDFs como vista pública o entregarlos después de la inscripción.
+              En esta primera etapa la web muestra la información pública. Más
+              adelante se puede agregar acceso privado para alumnos, materiales
+              descargables, videos por módulo y panel administrativo.
             </p>
-
-            <div className="mt-8 grid gap-5 md:grid-cols-3">
-              <div className="rounded-3xl bg-zinc-900 p-6">
-                <h3 className="font-black text-yellow-500">PDF del curso</h3>
-                <p className="mt-2 text-sm text-zinc-400">
-                  Material organizado para estudiar.
-                </p>
-              </div>
-
-              <div className="rounded-3xl bg-zinc-900 p-6">
-                <h3 className="font-black text-yellow-500">Videos de apoyo</h3>
-                <p className="mt-2 text-sm text-zinc-400">
-                  Fragmentos o clases completas embebidas.
-                </p>
-              </div>
-
-              <div className="rounded-3xl bg-zinc-900 p-6">
-                <h3 className="font-black text-yellow-500">
-                  Acceso de alumnos
-                </h3>
-                <p className="mt-2 text-sm text-zinc-400">
-                  Esto se agregará en la segunda etapa.
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       </section>
 
       {/* FAQ */}
-      <section className="bg-zinc-950 px-6 py-20">
+      <section className="px-6 py-20">
         <div className="mx-auto max-w-4xl">
           <p className="mb-3 text-center text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
             Preguntas frecuentes
@@ -498,34 +367,33 @@ export default function Home() {
           </h2>
 
           <div className="mt-10 space-y-5">
-            <div className="rounded-3xl border border-zinc-800 bg-black p-6">
+            <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6">
               <h3 className="text-xl font-black text-yellow-500">
                 ¿Los cursos son pagos?
               </h3>
               <p className="mt-2 text-zinc-300">
-                Sí. Los cursos SERVICAN son pagos. Los precios, cupos y fechas
-                se consultan directamente por WhatsApp.
+                Sí. Los precios, cupos y fechas se consultan directamente por
+                WhatsApp.
               </p>
             </div>
 
-            <div className="rounded-3xl border border-zinc-800 bg-black p-6">
+            <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6">
               <h3 className="text-xl font-black text-yellow-500">
                 ¿Necesito experiencia previa?
               </h3>
               <p className="mt-2 text-zinc-300">
                 Para el curso básico no. Para módulos K9 puede ser recomendable
-                tener conocimientos previos o haber realizado una formación
-                inicial.
+                contar con conocimientos previos o formación inicial.
               </p>
             </div>
 
-            <div className="rounded-3xl border border-zinc-800 bg-black p-6">
+            <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6">
               <h3 className="text-xl font-black text-yellow-500">
-                ¿Se pueden ver videos dentro de la página?
+                ¿Los videos pueden verse dentro de la web?
               </h3>
               <p className="mt-2 text-zinc-300">
-                Sí. Los videos pueden subirse a YouTube como no listados y
-                mostrarse dentro de la página.
+                Sí. Se pueden subir videos a YouTube como no listados y
+                mostrarlos dentro de la página.
               </p>
             </div>
           </div>
@@ -536,37 +404,24 @@ export default function Home() {
       <section id="contacto" className="bg-yellow-500 px-6 py-20 text-black">
         <div className="mx-auto max-w-5xl text-center">
           <h2 className="text-4xl font-black md:text-6xl">
-            Empezá tu formación con SERVICAN
+            Consultá precios, cupos y próximas fechas
           </h2>
 
           <p className="mx-auto mt-5 max-w-2xl text-lg leading-8">
-            Consultá precios, cupos, fechas, modalidad y materiales incluidos.
-            Te respondemos directamente por WhatsApp.
+            Escribinos por WhatsApp para recibir información actualizada sobre
+            modalidad, costo, materiales incluidos e inscripción.
           </p>
 
-          <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
-            <a
-              href={linkWhatsApp(
-                "Hola SERVICAN, quiero inscribirme a un curso"
-              )}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-full bg-black px-9 py-4 font-black text-white hover:bg-zinc-800"
-            >
-              Inscribirme
-            </a>
-
-            <a
-              href={linkWhatsApp(
-                "Hola SERVICAN, quiero consultar por los cursos pagos"
-              )}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-full border-2 border-black px-9 py-4 font-black text-black hover:bg-black hover:text-white"
-            >
-              Consultar por WhatsApp
-            </a>
-          </div>
+          <a
+            href={linkWhatsApp(
+              "Hola SERVICAN, quiero consultar precios, cupos y próximas fechas"
+            )}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-10 inline-block rounded-full bg-black px-9 py-4 font-black text-white hover:bg-zinc-800"
+          >
+            Consultar por WhatsApp
+          </a>
         </div>
       </section>
 
