@@ -8,13 +8,27 @@ function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const redirectTo = searchParams.get("redirect") || "/admin";
+  const redirectTo = searchParams.get("redirect");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
+
+  async function obtenerDestinoPorRol(supabase, userId) {
+    const { data: perfil } = await supabase
+      .from("perfiles")
+      .select("role")
+      .eq("user_id", userId)
+      .single();
+
+    if (perfil?.role === "admin") {
+      return "/admin";
+    }
+
+    return "/panel";
+  }
 
   async function iniciarSesion(event) {
     event.preventDefault();
@@ -24,7 +38,7 @@ function LoginContent() {
 
     const supabase = createClient();
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -35,7 +49,9 @@ function LoginContent() {
       return;
     }
 
-    router.push(redirectTo);
+    const destino = redirectTo || (await obtenerDestinoPorRol(supabase, data.user.id));
+
+    router.push(destino);
     router.refresh();
   }
 
