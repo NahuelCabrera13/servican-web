@@ -2,13 +2,24 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+const ESTADOS = [
+  "pendiente",
+  "contactado",
+  "interesado",
+  "pagó",
+  "rechazado",
+];
+
 export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [isLogged, setIsLogged] = useState(false);
   const [inscripciones, setInscripciones] = useState([]);
   const [busqueda, setBusqueda] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("todos");
   const [cargando, setCargando] = useState(false);
+  const [accionandoId, setAccionandoId] = useState(null);
   const [error, setError] = useState("");
+  const [mensaje, setMensaje] = useState("");
 
   useEffect(() => {
     const savedPassword = localStorage.getItem("servican_admin_password");
@@ -22,6 +33,7 @@ export default function AdminPage() {
   async function cargarInscripciones(passwordToUse = password, guardar = true) {
     setCargando(true);
     setError("");
+    setMensaje("");
 
     try {
       const respuesta = await fetch("/api/admin/inscripciones", {
@@ -58,13 +70,98 @@ export default function AdminPage() {
     }
   }
 
+  async function cambiarEstado(id, nuevoEstado) {
+    setAccionandoId(id);
+    setError("");
+    setMensaje("");
+
+    try {
+      const respuesta = await fetch("/api/admin/inscripciones", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          password,
+          id,
+          estado: nuevoEstado,
+        }),
+      });
+
+      const data = await respuesta.json();
+
+      if (!respuesta.ok) {
+        setError(data?.error || "No se pudo cambiar el estado.");
+        return;
+      }
+
+      setInscripciones((actuales) =>
+        actuales.map((inscripcion) =>
+          inscripcion.id === id
+            ? { ...inscripcion, estado: nuevoEstado }
+            : inscripcion
+        )
+      );
+
+      setMensaje("Estado actualizado correctamente.");
+    } catch (error) {
+      setError("Error de conexión al cambiar el estado.");
+    } finally {
+      setAccionandoId(null);
+    }
+  }
+
+  async function eliminarInscripcion(id) {
+    const confirmar = window.confirm(
+      "¿Seguro que querés eliminar esta inscripción? Esta acción no se puede deshacer."
+    );
+
+    if (!confirmar) return;
+
+    setAccionandoId(id);
+    setError("");
+    setMensaje("");
+
+    try {
+      const respuesta = await fetch("/api/admin/inscripciones", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          password,
+          id,
+        }),
+      });
+
+      const data = await respuesta.json();
+
+      if (!respuesta.ok) {
+        setError(data?.error || "No se pudo eliminar la inscripción.");
+        return;
+      }
+
+      setInscripciones((actuales) =>
+        actuales.filter((inscripcion) => inscripcion.id !== id)
+      );
+
+      setMensaje("Inscripción eliminada correctamente.");
+    } catch (error) {
+      setError("Error de conexión al eliminar la inscripción.");
+    } finally {
+      setAccionandoId(null);
+    }
+  }
+
   function cerrarSesion() {
     localStorage.removeItem("servican_admin_password");
     setPassword("");
     setIsLogged(false);
     setInscripciones([]);
     setBusqueda("");
+    setFiltroEstado("todos");
     setError("");
+    setMensaje("");
   }
 
   function formatearValor(valor) {
@@ -90,47 +187,54 @@ export default function AdminPage() {
     return String(valor);
   }
 
+  function claseEstado(estado) {
+    if (estado === "pagó") {
+      return "border-green-500/30 bg-green-500/10 text-green-200";
+    }
+
+    if (estado === "contactado") {
+      return "border-blue-500/30 bg-blue-500/10 text-blue-200";
+    }
+
+    if (estado === "interesado") {
+      return "border-yellow-500/30 bg-yellow-500/10 text-yellow-200";
+    }
+
+    if (estado === "rechazado") {
+      return "border-red-500/30 bg-red-500/10 text-red-200";
+    }
+
+    return "border-white/10 bg-white/10 text-neutral-200";
+  }
+
   const inscripcionesFiltradas = useMemo(() => {
     const texto = busqueda.toLowerCase().trim();
 
-    if (!texto) return inscripciones;
-
     return inscripciones.filter((inscripcion) => {
-      return Object.values(inscripcion).some((valor) =>
-        String(valor || "").toLowerCase().includes(texto)
-      );
+      const coincideTexto = !texto
+        ? true
+        : Object.values(inscripcion).some((valor) =>
+            String(valor || "").toLowerCase().includes(texto)
+          );
+
+      const coincideEstado =
+        filtroEstado === "todos"
+          ? true
+          : (inscripcion.estado || "pendiente") === filtroEstado;
+
+      return coincideTexto && coincideEstado;
     });
-  }, [busqueda, inscripciones]);
+  }, [busqueda, filtroEstado, inscripciones]);
 
-  const columnas = useMemo(() => {
-    if (!inscripcionesFiltradas.length) return [];
+  const resumenEstados = useMemo(() => {
+    return ESTADOS.reduce((acc, estado) => {
+      acc[estado] = inscripciones.filter(
+        (inscripcion) => (inscripcion.estado || "pendiente") === estado
+      ).length;
 
-    const columnasDetectadas = Object.keys(inscripcionesFiltradas[0]);
-
-    const ordenPreferido = [
-      "id",
-      "nombre",
-      "apellido",
-      "telefono",
-      "email",
-      "correo",
-      "curso",
-      "mensaje",
-      "estado",
-      "created_at",
-      "fecha",
-    ];
-
-    const primero = ordenPreferido.filter((columna) =>
-      columnasDetectadas.includes(columna)
-    );
-
-    const resto = columnasDetectadas.filter(
-      (columna) => !primero.includes(columna)
-    );
-
-    return [...primero, ...resto];
-  }, [inscripcionesFiltradas]);
+      return acc;
+    }, {});
+  }, [inscripciones]);
 
   if (!isLogged) {
     return (
@@ -219,7 +323,7 @@ export default function AdminPage() {
               </h1>
 
               <p className="mt-1 text-sm text-neutral-300">
-                Gestión inicial de inscripciones guardadas en Supabase.
+                Gestión de inscripciones guardadas en Supabase.
               </p>
             </div>
           </div>
@@ -242,11 +346,39 @@ export default function AdminPage() {
           </div>
         </header>
 
-        <section className="mb-6 grid gap-4 md:grid-cols-3">
+        <section className="mb-6 grid gap-4 md:grid-cols-3 lg:grid-cols-6">
           <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-            <p className="text-sm text-neutral-400">Total de inscripciones</p>
+            <p className="text-sm text-neutral-400">Total</p>
             <p className="mt-2 text-4xl font-bold text-yellow-400">
               {inscripciones.length}
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+            <p className="text-sm text-neutral-400">Pendientes</p>
+            <p className="mt-2 text-4xl font-bold">
+              {resumenEstados.pendiente || 0}
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+            <p className="text-sm text-neutral-400">Contactados</p>
+            <p className="mt-2 text-4xl font-bold">
+              {resumenEstados.contactado || 0}
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+            <p className="text-sm text-neutral-400">Interesados</p>
+            <p className="mt-2 text-4xl font-bold">
+              {resumenEstados.interesado || 0}
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+            <p className="text-sm text-neutral-400">Pagaron</p>
+            <p className="mt-2 text-4xl font-bold text-green-300">
+              {resumenEstados["pagó"] || 0}
             </p>
           </div>
 
@@ -256,28 +388,48 @@ export default function AdminPage() {
               {inscripcionesFiltradas.length}
             </p>
           </div>
+        </section>
 
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-            <p className="text-sm text-neutral-400">Próxima mejora</p>
-            <p className="mt-2 text-lg font-semibold">
-              Estados, eliminar y editar
-            </p>
+        <section className="mb-6 grid gap-4 rounded-3xl border border-white/10 bg-white/5 p-5 md:grid-cols-2">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-neutral-200">
+              Buscar inscripción
+            </label>
+
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(event) => setBusqueda(event.target.value)}
+              placeholder="Buscar por nombre, teléfono, email, curso, mensaje..."
+              className="w-full rounded-2xl border border-white/10 bg-neutral-900 px-4 py-3 text-white outline-none transition focus:border-yellow-400"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-neutral-200">
+              Filtrar por estado
+            </label>
+
+            <select
+              value={filtroEstado}
+              onChange={(event) => setFiltroEstado(event.target.value)}
+              className="w-full rounded-2xl border border-white/10 bg-neutral-900 px-4 py-3 text-white outline-none transition focus:border-yellow-400"
+            >
+              <option value="todos">Todos los estados</option>
+              {ESTADOS.map((estado) => (
+                <option key={estado} value={estado}>
+                  {estado}
+                </option>
+              ))}
+            </select>
           </div>
         </section>
 
-        <section className="mb-6 rounded-3xl border border-white/10 bg-white/5 p-5">
-          <label className="mb-2 block text-sm font-medium text-neutral-200">
-            Buscar inscripción
-          </label>
-
-          <input
-            type="text"
-            value={busqueda}
-            onChange={(event) => setBusqueda(event.target.value)}
-            placeholder="Buscar por nombre, teléfono, email, curso, mensaje..."
-            className="w-full rounded-2xl border border-white/10 bg-neutral-900 px-4 py-3 text-white outline-none transition focus:border-yellow-400"
-          />
-        </section>
+        {mensaje && (
+          <div className="mb-6 rounded-2xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-200">
+            {mensaje}
+          </div>
+        )}
 
         {error && (
           <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
@@ -296,40 +448,103 @@ export default function AdminPage() {
             </p>
           </section>
         ) : (
-          <section className="overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-xl">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] border-collapse text-left text-sm">
-                <thead className="bg-white/10 text-xs uppercase tracking-wide text-neutral-300">
-                  <tr>
-                    {columnas.map((columna) => (
-                      <th key={columna} className="px-4 py-4">
-                        {columna.replaceAll("_", " ")}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
+          <section className="grid gap-4">
+            {inscripcionesFiltradas.map((inscripcion) => {
+              const estadoActual = inscripcion.estado || "pendiente";
 
-                <tbody>
-                  {inscripcionesFiltradas.map((inscripcion, index) => (
-                    <tr
-                      key={inscripcion.id || index}
-                      className="border-t border-white/10 transition hover:bg-white/5"
-                    >
-                      {columnas.map((columna) => (
-                        <td
-                          key={columna}
-                          className="max-w-[260px] px-4 py-4 align-top text-neutral-200"
+              return (
+                <article
+                  key={inscripcion.id}
+                  className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-xl"
+                >
+                  <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="flex-1">
+                      <div className="mb-4 flex flex-wrap items-center gap-3">
+                        <span className="rounded-full bg-yellow-500 px-3 py-1 text-xs font-bold uppercase tracking-wide text-neutral-950">
+                          #{inscripcion.id}
+                        </span>
+
+                        <span
+                          className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${claseEstado(
+                            estadoActual
+                          )}`}
                         >
-                          <span className="line-clamp-4">
-                            {formatearValor(inscripcion[columna])}
+                          {estadoActual}
+                        </span>
+
+                        {inscripcion.created_at && (
+                          <span className="text-sm text-neutral-400">
+                            {formatearValor(inscripcion.created_at)}
                           </span>
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        )}
+                      </div>
+
+                      <h2 className="text-2xl font-bold">
+                        {inscripcion.nombre ||
+                          inscripcion.name ||
+                          "Sin nombre"}
+                      </h2>
+
+                      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                        {Object.entries(inscripcion)
+                          .filter(([campo]) => {
+                            return ![
+                              "id",
+                              "created_at",
+                              "estado",
+                            ].includes(campo);
+                          })
+                          .map(([campo, valor]) => (
+                            <div
+                              key={campo}
+                              className="rounded-2xl border border-white/10 bg-neutral-950/60 p-4"
+                            >
+                              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                                {campo.replaceAll("_", " ")}
+                              </p>
+
+                              <p className="break-words text-sm text-neutral-200">
+                                {formatearValor(valor)}
+                              </p>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+
+                    <div className="w-full rounded-2xl border border-white/10 bg-neutral-950/60 p-4 lg:w-72">
+                      <label className="mb-2 block text-sm font-medium text-neutral-200">
+                        Cambiar estado
+                      </label>
+
+                      <select
+                        value={estadoActual}
+                        disabled={accionandoId === inscripcion.id}
+                        onChange={(event) =>
+                          cambiarEstado(inscripcion.id, event.target.value)
+                        }
+                        className="mb-3 w-full rounded-2xl border border-white/10 bg-neutral-900 px-4 py-3 text-white outline-none transition focus:border-yellow-400 disabled:opacity-60"
+                      >
+                        {ESTADOS.map((estado) => (
+                          <option key={estado} value={estado}>
+                            {estado}
+                          </option>
+                        ))}
+                      </select>
+
+                      <button
+                        onClick={() => eliminarInscripcion(inscripcion.id)}
+                        disabled={accionandoId === inscripcion.id}
+                        className="w-full rounded-2xl bg-red-500 px-4 py-3 text-sm font-bold text-white transition hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {accionandoId === inscripcion.id
+                          ? "Procesando..."
+                          : "Eliminar inscripción"}
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
           </section>
         )}
       </section>
