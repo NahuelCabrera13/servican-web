@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import AdminPanel from "./AdminPanel";
+import UsuariosPanel from "./UsuariosPanel";
 
-export default async function AdminPage() {
+export default async function AdminUsuariosPage() {
   const supabase = await createClient();
 
   const {
@@ -10,7 +10,7 @@ export default async function AdminPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login?redirect=/admin");
+    redirect("/login?redirect=/admin/usuarios");
   }
 
   const { data: perfil, error } = await supabase
@@ -27,5 +27,5 @@ export default async function AdminPage() {
     redirect("/acceso-denegado");
   }
 
-  return <AdminPanel usuario={user} perfil={perfil} />;
+  return <UsuariosPanel usuarioActual={user} perfilActual={perfil} />;
 }

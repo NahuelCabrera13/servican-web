@@ -1,8 +1,49 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient as createSupabaseServerClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
 
-function validarPassword(password) {
-  return password && password === process.env.ADMIN_PASSWORD;
+const ESTADOS_PERMITIDOS = [
+  "pendiente",
+  "contactado",
+  "interesado",
+  "pagó",
+  "rechazado",
+];
+
+async function verificarAdmin() {
+  const supabase = await createSupabaseServerClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      ok: false,
+      status: 401,
+      error: "No has iniciado sesión.",
+    };
+  }
+
+  const { data: perfil, error } = await supabase
+    .from("perfiles")
+    .select("role")
+    .eq("user_id", user.id)
+    .single();
+
+  if (error || !perfil || perfil.role !== "admin") {
+    return {
+      ok: false,
+      status: 403,
+      error: "No tenés permisos de administrador.",
+    };
+  }
+
+  return {
+    ok: true,
+    user,
+    perfil,
+  };
 }
 
 function crearSupabaseAdmin() {
@@ -13,18 +54,17 @@ function crearSupabaseAdmin() {
     throw new Error("Faltan variables de entorno de Supabase.");
   }
 
-  return createClient(supabaseUrl, serviceRoleKey);
+  return createSupabaseAdminClient(supabaseUrl, serviceRoleKey);
 }
 
-export async function POST(request) {
+export async function GET() {
   try {
-    const body = await request.json();
-    const password = body?.password;
+    const admin = await verificarAdmin();
 
-    if (!validarPassword(password)) {
+    if (!admin.ok) {
       return NextResponse.json(
-        { error: "Contraseña incorrecta." },
-        { status: 401 }
+        { error: admin.error },
+        { status: admin.status }
       );
     }
 
@@ -56,17 +96,18 @@ export async function POST(request) {
 
 export async function PATCH(request) {
   try {
-    const body = await request.json();
-    const password = body?.password;
-    const id = body?.id;
-    const estado = body?.estado;
+    const admin = await verificarAdmin();
 
-    if (!validarPassword(password)) {
+    if (!admin.ok) {
       return NextResponse.json(
-        { error: "Contraseña incorrecta." },
-        { status: 401 }
+        { error: admin.error },
+        { status: admin.status }
       );
     }
+
+    const body = await request.json();
+    const id = body?.id;
+    const estado = body?.estado;
 
     if (!id) {
       return NextResponse.json(
@@ -82,15 +123,7 @@ export async function PATCH(request) {
       );
     }
 
-    const estadosPermitidos = [
-      "pendiente",
-      "contactado",
-      "interesado",
-      "pagó",
-      "rechazado",
-    ];
-
-    if (!estadosPermitidos.includes(estado)) {
+    if (!ESTADOS_PERMITIDOS.includes(estado)) {
       return NextResponse.json(
         { error: "Estado no permitido." },
         { status: 400 }
@@ -127,16 +160,17 @@ export async function PATCH(request) {
 
 export async function DELETE(request) {
   try {
-    const body = await request.json();
-    const password = body?.password;
-    const id = body?.id;
+    const admin = await verificarAdmin();
 
-    if (!validarPassword(password)) {
+    if (!admin.ok) {
       return NextResponse.json(
-        { error: "Contraseña incorrecta." },
-        { status: 401 }
+        { error: admin.error },
+        { status: admin.status }
       );
     }
+
+    const body = await request.json();
+    const id = body?.id;
 
     if (!id) {
       return NextResponse.json(
