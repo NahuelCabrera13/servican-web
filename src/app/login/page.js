@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -113,5 +113,37 @@ export default function LoginPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+function LoginLoading() {
+  return (
+    <main className="min-h-screen bg-neutral-950 text-white">
+      <section className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16">
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center shadow-2xl">
+          <img
+            src="/logo-servican.jpeg"
+            alt="Logo SERVICAN"
+            className="mx-auto mb-5 h-24 w-24 rounded-full object-cover ring-4 ring-yellow-500/30"
+          />
+
+          <p className="mb-2 text-sm font-semibold uppercase tracking-[0.3em] text-yellow-400">
+            SERVICAN
+          </p>
+
+          <h1 className="text-3xl font-bold">
+            Cargando acceso...
+          </h1>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginLoading />}>
+      <LoginContent />
+    </Suspense>
   );
 }
