@@ -4,6 +4,8 @@ export default function Home() {
   const linkWhatsApp = (mensaje) =>
     `https://wa.me/${whatsapp}?text=${encodeURIComponent(mensaje)}`;
 
+  const fotoPortada = "/fotos/portada-servican.jpeg";
+
   const servicios = [
     {
       titulo: "Formación canina",
@@ -30,15 +32,18 @@ export default function Home() {
   const perros = [
     {
       nombre: "Equipo canino SERVICAN",
-      texto: "Espacio preparado para colocar fotos reales de los perros que forman parte del equipo.",
+      texto: "Perros que forman parte de la identidad visual y del trabajo profesional de SERVICAN.",
+      imagen: fotoPortada,
     },
     {
       nombre: "Entrenamiento y vínculo",
       texto: "Imágenes de prácticas, ejercicios, obediencia, socialización y trabajo en campo.",
+      imagen: fotoPortada,
     },
     {
       nombre: "Trabajo profesional",
       texto: "Registro visual de actividades, jornadas, formación y desarrollo del binomio guía-perro.",
+      imagen: fotoPortada,
     },
   ];
 
@@ -96,29 +101,36 @@ export default function Home() {
       {/* HERO INSTITUCIONAL */}
       <section
         id="inicio"
-        className="relative overflow-hidden px-6 py-24 md:py-32"
+        className="relative min-h-[88vh] overflow-hidden px-6 py-24 md:py-32"
       >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#3f3210_0%,#111_35%,#000_78%)]" />
+        <img
+          src={fotoPortada}
+          alt="Perros del equipo SERVICAN"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
 
-        <div className="relative mx-auto grid max-w-7xl gap-12 md:grid-cols-2 md:items-center">
-          <div>
+        <div className="absolute inset-0 bg-black/60" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/75 to-black/20" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/30" />
+
+        <div className="relative mx-auto flex min-h-[65vh] max-w-7xl items-center">
+          <div className="max-w-3xl">
             <p className="mb-5 text-sm font-black uppercase tracking-[0.45em] text-yellow-500">
               Empresa de formación y trabajo canino
             </p>
 
-            <h1 className="text-5xl font-black leading-tight md:text-7xl">
+            <h1 className="text-5xl font-black leading-tight md:text-8xl">
               SERVICAN
             </h1>
 
-            <p className="mt-5 text-2xl font-bold text-yellow-500">
+            <p className="mt-5 text-2xl font-bold text-yellow-500 md:text-3xl">
               Nuestro olfato nos define
             </p>
 
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-300">
-              SERVICAN es una propuesta dedicada al desarrollo del vínculo
-              guía-perro, la formación canina, el manejo responsable y la
-              preparación progresiva hacia áreas profesionales del trabajo
-              canino.
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-200">
+              Formación, entrenamiento y trabajo canino profesional en Uruguay.
+              Desarrollamos el vínculo guía-perro con disciplina, respeto,
+              estructura y una visión seria del mundo canino.
             </p>
 
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
@@ -135,29 +147,6 @@ export default function Home() {
               >
                 Ver cursos
               </a>
-            </div>
-          </div>
-
-          <div className="rounded-[2rem] border border-yellow-500/30 bg-zinc-950 p-8 shadow-2xl">
-            <div className="flex aspect-[4/3] items-center justify-center rounded-[1.5rem] bg-zinc-900 text-center text-zinc-500">
-              Foto principal SERVICAN
-              <br />
-              Perros / equipo / entrenamiento
-            </div>
-
-            <div className="mt-6 grid grid-cols-3 gap-3 text-center">
-              <div className="rounded-2xl bg-black p-4">
-                <p className="text-2xl font-black text-yellow-500">K9</p>
-                <p className="text-xs text-zinc-500">Formación</p>
-              </div>
-              <div className="rounded-2xl bg-black p-4">
-                <p className="text-2xl font-black text-yellow-500">PDF</p>
-                <p className="text-xs text-zinc-500">Material</p>
-              </div>
-              <div className="rounded-2xl bg-black p-4">
-                <p className="text-2xl font-black text-yellow-500">UY</p>
-                <p className="text-xs text-zinc-500">Uruguay</p>
-              </div>
             </div>
           </div>
         </div>
@@ -210,9 +199,8 @@ export default function Home() {
               El equipo canino de SERVICAN
             </h2>
             <p className="mt-4 text-zinc-300">
-              Esta sección será una de las más importantes de la web: acá se
-              mostrarán fotos reales de los perros, entrenamientos y actividades
-              del equipo.
+              Esta sección muestra la identidad visual del equipo canino, los
+              perros, el entrenamiento y el trabajo real detrás de SERVICAN.
             </p>
           </div>
 
@@ -222,10 +210,12 @@ export default function Home() {
                 key={item.nombre}
                 className="overflow-hidden rounded-[2rem] border border-zinc-800 bg-zinc-950 shadow-2xl"
               >
-                <div className="flex aspect-[4/3] items-center justify-center bg-zinc-900 text-center text-zinc-500">
-                  Foto real
-                  <br />
-                  Próximamente
+                <div className="aspect-[4/3] overflow-hidden bg-zinc-900">
+                  <img
+                    src={item.imagen}
+                    alt={item.nombre}
+                    className="h-full w-full object-cover transition duration-500 hover:scale-105"
+                  />
                 </div>
 
                 <div className="p-7">
@@ -296,11 +286,13 @@ export default function Home() {
               {[1, 2, 3, 4].map((item) => (
                 <div
                   key={item}
-                  className="flex aspect-square items-center justify-center rounded-3xl bg-zinc-900 text-center text-zinc-500"
+                  className="group aspect-square overflow-hidden rounded-3xl bg-zinc-900"
                 >
-                  Foto {item}
-                  <br />
-                  Próximamente
+                  <img
+                    src={fotoPortada}
+                    alt={`Galería SERVICAN ${item}`}
+                    className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                  />
                 </div>
               ))}
             </div>
@@ -324,21 +316,29 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="rounded-[2rem] border border-zinc-800 bg-black p-8">
-            <h3 className="text-2xl font-black text-yellow-500">
-              Ver cursos SERVICAN
-            </h3>
-            <p className="mt-4 leading-7 text-zinc-300">
-              Accedé a la sección de cursos para ver los programas disponibles,
-              contenidos, modalidad e inscripción.
-            </p>
+          <div className="overflow-hidden rounded-[2rem] border border-zinc-800 bg-black">
+            <img
+              src={fotoPortada}
+              alt="Cursos SERVICAN"
+              className="h-64 w-full object-cover"
+            />
 
-            <a
-              href="/cursos"
-              className="mt-8 inline-block rounded-full bg-yellow-500 px-8 py-4 font-black text-black hover:bg-yellow-400"
-            >
-              Ir a cursos
-            </a>
+            <div className="p-8">
+              <h3 className="text-2xl font-black text-yellow-500">
+                Ver cursos SERVICAN
+              </h3>
+              <p className="mt-4 leading-7 text-zinc-300">
+                Accedé a la sección de cursos para ver los programas
+                disponibles, contenidos, modalidad e inscripción.
+              </p>
+
+              <a
+                href="/cursos"
+                className="mt-8 inline-block rounded-full bg-yellow-500 px-8 py-4 font-black text-black hover:bg-yellow-400"
+              >
+                Ir a cursos
+              </a>
+            </div>
           </div>
         </div>
       </section>
