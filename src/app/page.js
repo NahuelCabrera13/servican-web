@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export default function Home() {
   const whatsapp = "59898188257";
 
@@ -31,16 +33,99 @@ export default function Home() {
 
   const perros = [
     {
-      nombre: "Equipo canino SERVICAN",
-      texto: "Espacio preparado para colocar fotos reales de los perros que forman parte del equipo.",
+      nombre: "Apolo",
+      imagen: "/fotos/apolo-pastor-aleman-cachorro.webp",
+      datos: "3 meses · 6 kg · Macho · Pastor alemán",
+      especialidad: "En formación",
+      texto: "Cachorro pastor alemán en etapa inicial de formación. Trabaja sus primeras bases de vínculo, socialización y aprendizaje dentro del equipo SERVICAN.",
     },
     {
-      nombre: "Entrenamiento y vínculo",
-      texto: "Imágenes de prácticas, ejercicios, obediencia, socialización y trabajo en campo.",
+      nombre: "Bruno",
+      imagen: "/fotos/bruno-labrador-deteccion.webp",
+      datos: "4 años · 27 kg · Macho · Labrador retriever",
+      especialidad: "Detección de droga",
+      texto: "Labrador retriever preparado para tareas de detección, con trabajo orientado a concentración, búsqueda, obediencia y respuesta guiada.",
     },
     {
-      nombre: "Trabajo profesional",
-      texto: "Registro visual de actividades, jornadas, formación y desarrollo del binomio guía-perro.",
+      nombre: "Salime",
+      imagen: "/fotos/salime-labrador-deteccion.webp",
+      datos: "3 años y medio · 29 kg · Macho · Labrador retriever",
+      especialidad: "Detección de droga",
+      texto: "Perro de trabajo con perfil activo y enfocado, orientado a detección de droga y desarrollo del binomio guía-perro.",
+    },
+    {
+      nombre: "Ken",
+      imagen: "/fotos/ken-malinois-deteccion.webp",
+      datos: "7 años · 33 kg · Macho · Pastor belga malinois",
+      especialidad: "Detección de droga",
+      texto: "Pastor belga malinois con experiencia y presencia operativa, enfocado en tareas de detección y trabajo controlado.",
+    },
+    {
+      nombre: "Graf",
+      imagen: "/fotos/graf-malinois-deteccion.webp",
+      datos: "2 años · 30 kg · Macho · Pastor belga malinois",
+      especialidad: "Detección de droga",
+      texto: "Ejemplar joven de pastor belga malinois, con entrenamiento orientado a obediencia, búsqueda, control y detección.",
+    },
+    {
+      nombre: "Mara",
+      imagen: "/fotos/mara-malinois-deteccion.webp",
+      datos: "2 años · 30 kg · Hembra · Pastor belga malinois",
+      especialidad: "Detección de droga",
+      texto: "Pastora belga malinois en trabajo de detección, con desarrollo físico, técnico y conductual dentro del equipo SERVICAN.",
+    },
+  ];
+
+  const galeria = [
+    {
+      imagen: "/fotos/galeria-deteccion-bodega-labrador-1.webp",
+      titulo: "Trabajo de detección",
+      texto: "Ejercicio de búsqueda en zona de carga y pallets.",
+    },
+    {
+      imagen: "/fotos/galeria-deteccion-bodega-labrador-2.webp",
+      titulo: "Marcación controlada",
+      texto: "Perro guiado durante práctica de detección en bodega.",
+    },
+    {
+      imagen: "/fotos/galeria-deteccion-bodega-malinois-1.webp",
+      titulo: "Búsqueda en estanterías",
+      texto: "Trabajo técnico en ambiente industrial.",
+    },
+    {
+      imagen: "/fotos/galeria-deteccion-bodega-malinois-2.webp",
+      titulo: "Detección operativa",
+      texto: "Ejercicio con guía en zona de depósito.",
+    },
+    {
+      imagen: "/fotos/galeria-deteccion-bodega-malinois-3.webp",
+      titulo: "Indicación de olor",
+      texto: "Perro trabajando sobre punto de interés.",
+    },
+    {
+      imagen: "/fotos/galeria-deteccion-bodega-labrador-3.webp",
+      titulo: "Trabajo sobre carga",
+      texto: "Búsqueda en mercadería y pallets.",
+    },
+    {
+      imagen: "/fotos/galeria-deteccion-exterior-labrador.webp",
+      titulo: "Práctica exterior",
+      texto: "Ejercicio de detección en espacio abierto.",
+    },
+    {
+      imagen: "/fotos/galeria-entrenamiento-control-malinois.webp",
+      titulo: "Control y manejo",
+      texto: "Entrenamiento de obediencia y control con guía.",
+    },
+    {
+      imagen: "/fotos/galeria-trabajo-operativo-labrador.webp",
+      titulo: "Equipo SERVICAN",
+      texto: "Perro equipado durante jornada de trabajo.",
+    },
+    {
+      imagen: "/fotos/galeria-deteccion-industrial-labrador.webp",
+      titulo: "Entorno industrial",
+      texto: "Búsqueda guiada en zona de trabajo real.",
     },
   ];
 
@@ -50,9 +135,12 @@ export default function Home() {
       <header className="sticky top-0 z-50 border-b border-yellow-500/20 bg-black/90 backdrop-blur">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <a href="#inicio" className="flex items-center gap-3">
-            <img
+            <Image
               src="/logo-servican.jpeg"
               alt="Logo SERVICAN"
+              width={56}
+              height={56}
+              priority
               className="h-14 w-14 rounded-full object-contain"
             />
 
@@ -103,10 +191,13 @@ export default function Home() {
         id="inicio"
         className="relative min-h-[86vh] overflow-hidden bg-black"
       >
-        <img
+        <Image
           src={fotoPortada}
           alt="Perros del equipo SERVICAN"
-          className="absolute inset-0 h-full w-full object-cover object-[38%_center]"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-[38%_center]"
         />
 
         <div className="absolute inset-0 bg-black/10" />
@@ -178,16 +269,6 @@ export default function Home() {
             </div>
           </div>
         </div>
-
-        <div className="absolute bottom-6 left-1/2 hidden -translate-x-1/2 text-center md:block">
-          <a
-            href="#quienes-somos"
-            className="inline-flex flex-col items-center gap-2 text-xs font-bold uppercase tracking-[0.25em] text-zinc-300 transition hover:text-yellow-500"
-          >
-            Deslizar
-            <span className="h-8 w-px bg-yellow-500" />
-          </a>
-        </div>
       </section>
 
       {/* QUIÉNES SOMOS */}
@@ -220,7 +301,7 @@ export default function Home() {
             <p>
               Esta página está pensada para crecer junto con la marca:
               presentación institucional, servicios, perros del equipo, cursos,
-              galería, alumnos y futura plataforma privada.
+              galería, alumnos y plataforma privada.
             </p>
           </div>
         </div>
@@ -237,31 +318,46 @@ export default function Home() {
               El equipo canino de SERVICAN
             </h2>
             <p className="mt-4 text-zinc-300">
-              Esta sección será una de las más importantes de la web: acá se
-              mostrarán fotos reales de los perros, entrenamientos y actividades
-              del equipo.
+              Perros de trabajo, formación y detección que integran el equipo
+              SERVICAN. Cada uno cumple un rol dentro del desarrollo técnico,
+              operativo y formativo de la empresa.
             </p>
           </div>
 
-          <div className="mt-12 grid gap-8 md:grid-cols-3">
-            {perros.map((item) => (
-              <div
-                key={item.nombre}
-                className="overflow-hidden rounded-[2rem] border border-zinc-800 bg-zinc-950 shadow-2xl"
+          <div className="mt-12 grid gap-8 md:grid-cols-2 xl:grid-cols-3">
+            {perros.map((perro) => (
+              <article
+                key={perro.nombre}
+                className="overflow-hidden rounded-[2rem] border border-zinc-800 bg-zinc-950 shadow-2xl transition hover:-translate-y-1 hover:border-yellow-500/50"
               >
-                <div className="flex aspect-[4/3] items-center justify-center bg-zinc-900 text-center text-zinc-500">
-                  Foto real
-                  <br />
-                  Próximamente
+                <div className="relative aspect-[4/3] bg-zinc-900">
+                  <Image
+                    src={perro.imagen}
+                    alt={`${perro.nombre} - ${perro.especialidad}`}
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                    className="object-cover"
+                  />
                 </div>
 
                 <div className="p-7">
-                  <h3 className="text-2xl font-black text-yellow-500">
-                    {item.nombre}
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-3 py-1 text-xs font-black uppercase tracking-wide text-yellow-300">
+                      {perro.especialidad}
+                    </span>
+                  </div>
+
+                  <h3 className="text-3xl font-black text-yellow-500">
+                    {perro.nombre}
                   </h3>
-                  <p className="mt-3 leading-7 text-zinc-300">{item.texto}</p>
+
+                  <p className="mt-2 text-sm font-bold text-zinc-400">
+                    {perro.datos}
+                  </p>
+
+                  <p className="mt-4 leading-7 text-zinc-300">{perro.texto}</p>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         </div>
@@ -310,25 +406,40 @@ export default function Home() {
             </p>
 
             <h2 className="text-4xl font-black md:text-5xl">
-              Fotos, actividades y trabajo real
+              Trabajo real en campo y entorno operativo
             </h2>
 
             <p className="mt-5 max-w-4xl leading-8 text-zinc-300">
-              Más adelante esta sección será editable desde el panel
-              administrador para cargar fotos de entrenamientos, perros,
-              jornadas, clases, equipo y actividades institucionales.
+              Registro visual de ejercicios de detección, control, búsqueda,
+              manejo con guía y trabajo canino en depósitos, zonas industriales
+              y espacios de práctica.
             </p>
 
-            <div className="mt-8 grid gap-5 md:grid-cols-4">
-              {[1, 2, 3, 4].map((item) => (
-                <div
-                  key={item}
-                  className="flex aspect-square items-center justify-center rounded-3xl bg-zinc-900 text-center text-zinc-500"
+            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {galeria.map((item) => (
+                <article
+                  key={`${item.titulo}-${item.imagen}`}
+                  className="group overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950"
                 >
-                  Foto {item}
-                  <br />
-                  Próximamente
-                </div>
+                  <div className="relative aspect-square bg-zinc-900">
+                    <Image
+                      src={item.imagen}
+                      alt={item.titulo}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="object-cover transition duration-500 group-hover:scale-105"
+                    />
+
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/60 to-transparent p-5">
+                      <h3 className="text-2xl font-black text-yellow-400">
+                        {item.titulo}
+                      </h3>
+                      <p className="mt-1 text-sm text-zinc-200">
+                        {item.texto}
+                      </p>
+                    </div>
+                  </div>
+                </article>
               ))}
             </div>
           </div>
