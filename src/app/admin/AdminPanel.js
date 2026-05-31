@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 const ESTADOS = [
@@ -65,14 +66,14 @@ export default function AdminPanel({ usuario, perfil }) {
 
       if (!respuesta.ok) {
         setInscripciones([]);
-        setError(data?.error || "No se pudieron cargar las inscripciones.");
+        setError(data?.error || "No se pudieron cargar las consultas.");
         return false;
       }
 
       setInscripciones(data.inscripciones || []);
       return true;
     } catch (error) {
-      setError("Error de conexión al cargar inscripciones.");
+      setError("Error de conexión al cargar consultas.");
       setInscripciones([]);
       return false;
     }
@@ -143,7 +144,7 @@ export default function AdminPanel({ usuario, perfil }) {
 
   async function eliminarInscripcion(id) {
     const confirmar = window.confirm(
-      "¿Seguro que querés eliminar esta inscripción? Esta acción no se puede deshacer."
+      "¿Seguro que querés eliminar esta consulta? Esta acción no se puede deshacer."
     );
 
     if (!confirmar) return;
@@ -166,7 +167,7 @@ export default function AdminPanel({ usuario, perfil }) {
       const data = await respuesta.json();
 
       if (!respuesta.ok) {
-        setError(data?.error || "No se pudo eliminar la inscripción.");
+        setError(data?.error || "No se pudo eliminar la consulta.");
         return;
       }
 
@@ -174,9 +175,9 @@ export default function AdminPanel({ usuario, perfil }) {
         actuales.filter((inscripcion) => inscripcion.id !== id)
       );
 
-      setMensaje("Inscripción eliminada correctamente.");
+      setMensaje("Consulta eliminada correctamente.");
     } catch (error) {
-      setError("Error de conexión al eliminar la inscripción.");
+      setError("Error de conexión al eliminar la consulta.");
     } finally {
       setAccionandoId(null);
     }
@@ -455,29 +456,36 @@ export default function AdminPanel({ usuario, perfil }) {
           </div>
         </header>
 
-        <nav className="mb-6 flex flex-col gap-3 rounded-3xl border border-white/10 bg-white/5 p-3 sm:flex-row">
-          <button
-            onClick={() => setTabActiva("inscripciones")}
-            className={`rounded-2xl px-5 py-3 text-sm font-bold transition ${
-              tabActiva === "inscripciones"
-                ? "bg-yellow-500 text-neutral-950"
-                : "bg-white/10 text-white hover:bg-white/20"
-            }`}
-          >
-            Inscripciones
-          </button>
+<nav className="mb-6 flex flex-col gap-3 rounded-3xl border border-white/10 bg-white/5 p-3 sm:flex-row">
+  <button
+    onClick={() => setTabActiva("inscripciones")}
+    className={`rounded-2xl px-5 py-3 text-sm font-bold transition ${
+      tabActiva === "inscripciones"
+        ? "bg-yellow-500 text-neutral-950"
+        : "bg-white/10 text-white hover:bg-white/20"
+    }`}
+  >
+    Consultas
+  </button>
 
-          <button
-            onClick={() => setTabActiva("cursos")}
-            className={`rounded-2xl px-5 py-3 text-sm font-bold transition ${
-              tabActiva === "cursos"
-                ? "bg-yellow-500 text-neutral-950"
-                : "bg-white/10 text-white hover:bg-white/20"
-            }`}
-          >
-            Cursos
-          </button>
-        </nav>
+  <button
+    onClick={() => setTabActiva("cursos")}
+    className={`rounded-2xl px-5 py-3 text-sm font-bold transition ${
+      tabActiva === "cursos"
+        ? "bg-yellow-500 text-neutral-950"
+        : "bg-white/10 text-white hover:bg-white/20"
+    }`}
+  >
+    Cursos
+  </button>
+
+  <Link
+    href="/admin/usuarios"
+    className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 px-5 py-3 text-center text-sm font-bold text-yellow-100 transition hover:bg-yellow-500/20"
+  >
+    Usuarios y roles
+  </Link>
+</nav>
 
         {mensaje && (
           <div className="mb-6 rounded-2xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-200">
@@ -540,7 +548,7 @@ export default function AdminPanel({ usuario, perfil }) {
             <section className="mb-6 grid gap-4 rounded-3xl border border-white/10 bg-white/5 p-5 md:grid-cols-2">
               <div>
                 <label className="mb-2 block text-sm font-medium text-neutral-200">
-                  Buscar inscripción
+                  Buscar Consultas
                 </label>
 
                 <input
@@ -575,11 +583,11 @@ export default function AdminPanel({ usuario, perfil }) {
             {!inscripcionesFiltradas.length ? (
               <section className="rounded-3xl border border-white/10 bg-white/5 p-10 text-center">
                 <h2 className="text-2xl font-bold">
-                  No hay inscripciones para mostrar
+                  No hay consultas para mostrar
                 </h2>
 
                 <p className="mt-3 text-neutral-300">
-                  Cuando alguien complete el formulario de inscripción, aparecerá acá.
+                  Cuando alguien complete el formulario de contacto o consulta, aparecerá acá.
                 </p>
               </section>
             ) : (
@@ -675,7 +683,7 @@ export default function AdminPanel({ usuario, perfil }) {
                           >
                             {accionandoId === inscripcion.id
                               ? "Procesando..."
-                              : "Eliminar inscripción"}
+                              : "Eliminar consulta"}
                           </button>
                         </div>
                       </div>
