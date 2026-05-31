@@ -48,7 +48,7 @@ export default function Home() {
     <main className="min-h-screen bg-black text-white">
       {/* MENÚ */}
       <header className="sticky top-0 z-50 border-b border-yellow-500/20 bg-black/90 backdrop-blur">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-[1600px] items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <a href="#inicio" className="flex items-center gap-3">
             <img
               src="/logo-servican.jpeg"
@@ -88,7 +88,7 @@ export default function Home() {
             href={linkWhatsApp("Hola SERVICAN, quiero consultar información")}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-full bg-yellow-500 px-5 py-3 text-sm font-bold text-black hover:bg-yellow-400"
+            className="rounded-full bg-yellow-500 px-5 py-3 text-sm font-bold text-black transition hover:bg-yellow-400"
           >
             Contactar
           </a>
@@ -98,54 +98,91 @@ export default function Home() {
       {/* HERO INSTITUCIONAL */}
       <section
         id="inicio"
-        className="relative min-h-[92vh] overflow-hidden"
+        className="relative min-h-[86vh] overflow-hidden bg-black"
       >
         <img
           src={fotoPortada}
           alt="Perros del equipo SERVICAN"
-          className="absolute inset-0 h-full w-full object-cover object-center"
+          className="absolute inset-0 h-full w-full object-cover object-[38%_center]"
         />
 
-        <div className="absolute inset-0 bg-black/25" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/55 to-black/5" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/20" />
+        <div className="absolute inset-0 bg-black/10" />
+        <div className="absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-black/45 to-transparent" />
+        <div className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-black/80 via-black/45 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-52 bg-gradient-to-t from-black via-black/50 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/70 to-transparent" />
 
-        <div className="relative mx-auto flex min-h-[92vh] max-w-[1500px] items-center px-4 py-20 sm:px-6 lg:px-8">
-          <div className="max-w-3xl rounded-[2rem] border border-yellow-500/20 bg-black/45 p-6 shadow-2xl backdrop-blur-sm sm:p-8 md:p-10">
-            <p className="mb-5 text-sm font-black uppercase tracking-[0.35em] text-yellow-500 md:tracking-[0.45em]">
-              Empresa de formación y trabajo canino
-            </p>
+        <div className="relative mx-auto flex min-h-[86vh] max-w-[1600px] items-center justify-end px-4 py-16 sm:px-6 lg:px-8">
+          <div className="w-full max-w-2xl rounded-[2rem] border border-yellow-500/25 bg-black/55 p-6 shadow-2xl backdrop-blur-md sm:p-8 md:p-10 lg:mr-8">
+            <div className="mb-6 inline-flex rounded-full border border-yellow-500/30 bg-yellow-500/10 px-4 py-2">
+              <p className="text-xs font-black uppercase tracking-[0.28em] text-yellow-400">
+                Formación y trabajo canino
+              </p>
+            </div>
 
-            <h1 className="text-5xl font-black leading-none md:text-8xl">
+            <h1 className="text-5xl font-black leading-none tracking-tight md:text-7xl lg:text-8xl">
               SERVICAN
             </h1>
 
-            <p className="mt-5 text-2xl font-bold text-yellow-500 md:text-3xl">
+            <p className="mt-5 text-2xl font-black text-yellow-500 md:text-3xl">
               Nuestro olfato nos define
             </p>
 
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-100">
+            <p className="mt-6 max-w-xl text-base leading-8 text-zinc-100 md:text-lg">
               Formación, entrenamiento y trabajo canino profesional en Uruguay.
               Desarrollamos el vínculo guía-perro con disciplina, respeto,
               estructura y una visión seria del mundo canino.
             </p>
 
-            <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
+                <p className="text-2xl font-black text-yellow-500">K9</p>
+                <p className="mt-1 text-xs text-zinc-300">
+                  Formación
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
+                <p className="text-2xl font-black text-yellow-500">UY</p>
+                <p className="mt-1 text-xs text-zinc-300">
+                  Uruguay
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
+                <p className="text-2xl font-black text-yellow-500">PRO</p>
+                <p className="mt-1 text-xs text-zinc-300">
+                  Trabajo serio
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-9 flex flex-col gap-4 sm:flex-row">
               <a
                 href="#quienes-somos"
-                className="rounded-full bg-yellow-500 px-9 py-4 text-center font-black text-black transition hover:bg-yellow-400"
+                className="rounded-full bg-yellow-500 px-8 py-4 text-center font-black text-black transition hover:bg-yellow-400"
               >
                 Conocer SERVICAN
               </a>
 
               <a
                 href="/cursos"
-                className="rounded-full border border-yellow-500 bg-black/40 px-9 py-4 text-center font-black text-yellow-500 transition hover:bg-yellow-500 hover:text-black"
+                className="rounded-full border border-yellow-500 bg-black/40 px-8 py-4 text-center font-black text-yellow-500 transition hover:bg-yellow-500 hover:text-black"
               >
                 Ver cursos
               </a>
             </div>
           </div>
+        </div>
+
+        <div className="absolute bottom-6 left-1/2 hidden -translate-x-1/2 text-center md:block">
+          <a
+            href="#quienes-somos"
+            className="inline-flex flex-col items-center gap-2 text-xs font-bold uppercase tracking-[0.25em] text-zinc-300 transition hover:text-yellow-500"
+          >
+            Deslizar
+            <span className="h-8 w-px bg-yellow-500" />
+          </a>
         </div>
       </section>
 
@@ -154,7 +191,7 @@ export default function Home() {
         id="quienes-somos"
         className="border-y border-zinc-800 bg-zinc-950 px-4 py-20 sm:px-6 lg:px-8"
       >
-        <div className="mx-auto grid max-w-[1400px] gap-10 md:grid-cols-2 md:items-center">
+        <div className="mx-auto grid max-w-[1450px] gap-10 md:grid-cols-2 md:items-center">
           <div>
             <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
               Quiénes somos
@@ -187,7 +224,7 @@ export default function Home() {
 
       {/* NUESTROS PERROS */}
       <section id="perros" className="px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-[1400px]">
+        <div className="mx-auto max-w-[1450px]">
           <div className="mx-auto max-w-3xl text-center">
             <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
               Nuestros perros
@@ -228,7 +265,7 @@ export default function Home() {
 
       {/* SERVICIOS */}
       <section id="servicios" className="bg-zinc-950 px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-[1400px]">
+        <div className="mx-auto max-w-[1450px]">
           <div className="mx-auto max-w-3xl text-center">
             <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
               Servicios
@@ -262,7 +299,7 @@ export default function Home() {
 
       {/* GALERÍA */}
       <section className="px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-[1400px]">
+        <div className="mx-auto max-w-[1450px]">
           <div className="rounded-[2rem] border border-yellow-500/30 bg-gradient-to-br from-zinc-950 to-black p-8 md:p-12">
             <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
               Galería
@@ -296,7 +333,7 @@ export default function Home() {
 
       {/* CURSOS RESUMEN */}
       <section className="bg-zinc-950 px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto grid max-w-[1400px] gap-10 md:grid-cols-2 md:items-center">
+        <div className="mx-auto grid max-w-[1450px] gap-10 md:grid-cols-2 md:items-center">
           <div>
             <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
               Formación
