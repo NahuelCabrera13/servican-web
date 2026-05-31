@@ -69,15 +69,6 @@ export default function PanelUsuario({
 }) {
   const role = perfil?.role || "alumno";
 
-  async function copiarCodigo(codigo) {
-  try {
-    await navigator.clipboard.writeText(codigo);
-    alert("Código copiado correctamente.");
-  } catch (error) {
-    alert("No se pudo copiar el código.");
-  }
-}
-
   const cursosActivos = cursosHabilitados.filter(
     (item) => item.estado === "activo" && item.curso
   );
@@ -85,6 +76,15 @@ export default function PanelUsuario({
   const cursosNoActivos = cursosHabilitados.filter(
     (item) => item.estado !== "activo" && item.curso
   );
+
+  async function copiarCodigo(codigo) {
+    try {
+      await navigator.clipboard.writeText(codigo);
+      alert("Código copiado correctamente.");
+    } catch (error) {
+      alert("No se pudo copiar el código.");
+    }
+  }
 
   return (
     <main className="min-h-screen bg-neutral-950 text-white">
@@ -110,14 +110,30 @@ export default function PanelUsuario({
             </div>
           </div>
 
-          <form action="/auth/logout" method="post">
-            <button
-              type="submit"
-              className="w-full rounded-2xl bg-red-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-400"
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Link
+              href="/"
+              className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-semibold text-white transition hover:bg-white/20"
             >
-              Cerrar sesión
-            </button>
-          </form>
+              Volver al inicio
+            </Link>
+
+            <Link
+              href="/cursos"
+              className="rounded-2xl border border-yellow-500/40 bg-yellow-500/10 px-5 py-3 text-center text-sm font-semibold text-yellow-200 transition hover:bg-yellow-500/20"
+            >
+              Ver cursos
+            </Link>
+
+            <form action="/auth/logout" method="post">
+              <button
+                type="submit"
+                className="w-full rounded-2xl bg-red-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-400"
+              >
+                Cerrar sesión
+              </button>
+            </form>
+          </div>
         </header>
 
         <section className="mb-8 rounded-3xl border border-white/10 bg-white/5 p-6">
@@ -175,18 +191,20 @@ export default function PanelUsuario({
             </Link>
 
             <Link
-              href="/cursos"
+              href="/admin/certificados"
               className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl transition hover:-translate-y-1 hover:bg-white/10"
             >
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-yellow-400">
-                Web pública
+                Certificados
               </p>
 
-              <h3 className="mt-3 text-2xl font-bold">Ver cursos</h3>
+              <h3 className="mt-3 text-2xl font-bold">
+                Certificados emitidos
+              </h3>
 
               <p className="mt-3 text-sm leading-6 text-neutral-300">
-                Revisar cómo se ven los cursos y la información pública de la
-                plataforma.
+                Ver certificados emitidos, copiar códigos y anular certificados
+                cuando sea necesario.
               </p>
             </Link>
           </section>
@@ -373,6 +391,7 @@ export default function PanelUsuario({
             </div>
           )}
         </section>
+
         <section className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl">
           <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
@@ -380,9 +399,7 @@ export default function PanelUsuario({
                 Certificados
               </p>
 
-              <h2 className="mt-2 text-3xl font-bold">
-                Mis certificados
-              </h2>
+              <h2 className="mt-2 text-3xl font-bold">Mis certificados</h2>
 
               <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-300">
                 Acá aparecen los certificados que obtuviste al completar cursos
