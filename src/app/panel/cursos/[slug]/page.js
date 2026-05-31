@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import BotonCompletarClase from "./BotonCompletarClase";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,17 @@ function obtenerEmbedYoutube(url) {
   } catch (error) {
     return "";
   }
+}
+
+function aplanarClases(modulos) {
+  return modulos.flatMap((modulo) =>
+    modulo.clases.map((clase) => ({
+      ...clase,
+      modulo_id: modulo.id,
+      modulo_titulo: modulo.titulo,
+      modulo_orden: modulo.orden,
+    }))
+  );
 }
 
 export async function generateMetadata({ params }) {
@@ -151,9 +163,75 @@ export default async function CursoPrivadoPage({ params }) {
     clases: (modulo.clases || []).filter((clase) => clase.activo),
   }));
 
-  const totalClases = modulosVisibles.reduce((total, modulo) => {
-    return total + modulo.clases.length;
-  }, 0);
+  const clasesOrdenadas = aplanarClases(modulosVisibles);
+
+  const { data: progreso } = await supabase
+    .from("clase_progreso")
+    .select("clase_id, completada")
+    .eq("user_id", user.id);
+
+  const clasesCompletadas = new Set(
+    (progreso || [])
+      .filter((item) => item.completada)
+      .map((item) => item.clase_id)
+  );
+
+  const totalClases = clasesOrdenadas.length;
+  const totalCompletadas = clasesOrdenadas.filter((clase) =>
+    clasesCompletadas.has(clase.id)
+  ).length;
+
+  const porcentaje =
+    totalClases > 0 ? Math.round((totalCompletadas / totalClases) * 100) : 0;
+
+  const cursoCompletado = totalClases > 0 && totalCompletadas === totalClases;
+
+  function obtenerEstadoClase(claseId) {
+    const indice = clasesOrdenadas.findIndex((clase) => clase.id === claseId);
+
+    const completada = clasesCompletadas.has(claseId);
+
+    if (completada) {
+      return {
+        completada: true,
+        bloqueada: false,
+        texto: "Completada",
+        claseBadge:
+          "border-green-500/30 bg-green-500/10 text-green-300",
+      };
+    }
+
+    if (indice === 0) {
+      return {
+        completada: false,
+        bloqueada: false,
+        texto: "Disponible",
+        claseBadge:
+          "border-yellow-500/30 bg-yellow-500/10 text-yellow-300",
+      };
+    }
+
+    const claseAnterior = clasesOrdenadas[indice - 1];
+    const anteriorCompletada = clasesCompletadas.has(claseAnterior?.id);
+
+    if (anteriorCompletada) {
+      return {
+        completada: false,
+        bloqueada: false,
+        texto: "Disponible",
+        claseBadge:
+          "border-yellow-500/30 bg-yellow-500/10 text-yellow-300",
+      };
+    }
+
+    return {
+      completada: false,
+      bloqueada: true,
+      texto: "Bloqueada",
+      claseBadge:
+        "border-neutral-500/30 bg-neutral-500/10 text-neutral-400",
+    };
+  }
 
   return (
     <main className="min-h-screen bg-neutral-950 text-white">
@@ -216,6 +294,12 @@ export default async function CursoPrivadoPage({ params }) {
                   </span>
                 )}
 
+                {cursoCompletado && (
+                  <span className="rounded-full border border-green-500/30 bg-green-500/10 px-4 py-2 text-xs font-bold uppercase tracking-wide text-green-300">
+                    Curso completado
+                  </span>
+                )}
+
                 {esAdmin && (
                   <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-xs font-bold uppercase tracking-wide text-yellow-300">
                     Vista admin
@@ -259,19 +343,19 @@ export default async function CursoPrivadoPage({ params }) {
 
                 <div className="rounded-2xl border border-white/10 bg-neutral-950 p-4">
                   <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
-                    Modalidad
+                    Completadas
                   </p>
-                  <p className="mt-1 font-bold text-yellow-400">
-                    {curso.modalidad || "A definir"}
+                  <p className="mt-1 font-bold text-green-400">
+                    {totalCompletadas}
                   </p>
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-neutral-950 p-4">
                   <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
-                    Duración
+                    Progreso
                   </p>
                   <p className="mt-1 font-bold text-yellow-400">
-                    {curso.duracion || "A definir"}
+                    {porcentaje}%
                   </p>
                 </div>
               </div>
@@ -314,29 +398,46 @@ export default async function CursoPrivadoPage({ params }) {
             <div className="mt-6 rounded-2xl border border-white/10 bg-neutral-950 p-5">
               <div className="mb-3 flex items-center justify-between text-sm">
                 <span className="text-neutral-400">Avance</span>
-                <span className="font-bold text-yellow-400">0%</span>
+                <span className="font-bold text-yellow-400">
+                  {porcentaje}%
+                </span>
               </div>
 
               <div className="h-3 overflow-hidden rounded-full bg-neutral-800">
-                <div className="h-full w-0 rounded-full bg-yellow-500" />
+                <div
+                  className="h-full rounded-full bg-yellow-500 transition-all"
+                  style={{ width: `${porcentaje}%` }}
+                />
               </div>
 
               <p className="mt-4 text-sm leading-6 text-neutral-400">
-                El progreso se conectará más adelante cuando agreguemos el
-                marcado de clases completadas por alumno.
+                Completaste {totalCompletadas} de {totalClases} clase
+                {totalClases === 1 ? "" : "s"}.
               </p>
             </div>
 
+            {cursoCompletado && (
+              <div className="mt-5 rounded-2xl border border-green-500/30 bg-green-500/10 p-5">
+                <p className="text-sm font-bold text-green-300">
+                  Curso finalizado
+                </p>
+
+                <p className="mt-2 text-sm leading-6 text-green-100">
+                  Ya completaste todas las clases. En el próximo bloque vamos a
+                  generar el certificado SERVICAN para este curso.
+                </p>
+              </div>
+            )}
+
             <div className="mt-5 rounded-2xl border border-white/10 bg-neutral-950 p-5">
               <p className="text-sm font-bold text-white">
-                Resumen del contenido
+                Reglas del curso
               </p>
 
               <ul className="mt-3 space-y-2 text-sm text-neutral-400">
-                <li>• {modulosVisibles.length} módulo(s)</li>
-                <li>• {totalClases} clase(s)</li>
-                <li>• Videos de YouTube cuando se carguen</li>
-                <li>• PDFs y materiales cuando se carguen</li>
+                <li>• Las clases se desbloquean en orden.</li>
+                <li>• Para avanzar, completá la clase anterior.</li>
+                <li>• Al finalizar todo el curso, se habilitará certificado.</li>
               </ul>
             </div>
           </aside>
@@ -350,9 +451,8 @@ export default async function CursoPrivadoPage({ params }) {
               <h3 className="mt-3 text-3xl font-bold">Módulos y clases</h3>
 
               <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-300">
-                Estos módulos y clases se cargan desde Supabase. Más adelante
-                vamos a crear una sección en el panel admin para editarlos sin
-                tocar código.
+                Las clases se desbloquean de forma progresiva. Para acceder a la
+                siguiente clase, primero tenés que completar la anterior.
               </p>
             </div>
 
@@ -406,12 +506,20 @@ export default async function CursoPrivadoPage({ params }) {
                     ) : (
                       <div className="divide-y divide-white/10">
                         {modulo.clases.map((clase) => {
+                          const estadoClase = obtenerEstadoClase(clase.id);
                           const videoEmbed = obtenerEmbedYoutube(
                             clase.video_url
                           );
 
                           return (
-                            <div key={clase.id} className="p-5">
+                            <div
+                              key={clase.id}
+                              className={`p-5 ${
+                                estadoClase.bloqueada
+                                  ? "opacity-60"
+                                  : ""
+                              }`}
+                            >
                               <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                                 <div>
                                   <p className="text-xs font-bold uppercase tracking-[0.25em] text-neutral-500">
@@ -429,12 +537,14 @@ export default async function CursoPrivadoPage({ params }) {
                                   )}
                                 </div>
 
-                                <span className="rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-green-300">
-                                  Disponible
+                                <span
+                                  className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${estadoClase.claseBadge}`}
+                                >
+                                  {estadoClase.texto}
                                 </span>
                               </div>
 
-                              {videoEmbed && (
+                              {!estadoClase.bloqueada && videoEmbed && (
                                 <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-black">
                                   <iframe
                                     src={videoEmbed}
@@ -446,7 +556,7 @@ export default async function CursoPrivadoPage({ params }) {
                                 </div>
                               )}
 
-                              {clase.contenido && (
+                              {!estadoClase.bloqueada && clase.contenido && (
                                 <div className="mt-5 rounded-2xl border border-white/10 bg-black p-5">
                                   <p className="whitespace-pre-line text-sm leading-7 text-neutral-300">
                                     {clase.contenido}
@@ -454,7 +564,7 @@ export default async function CursoPrivadoPage({ params }) {
                                 </div>
                               )}
 
-                              {clase.pdf_url && (
+                              {!estadoClase.bloqueada && clase.pdf_url && (
                                 <a
                                   href={clase.pdf_url}
                                   target="_blank"
@@ -464,6 +574,21 @@ export default async function CursoPrivadoPage({ params }) {
                                   Abrir material PDF
                                 </a>
                               )}
+
+                              {estadoClase.bloqueada && (
+                                <div className="mt-5 rounded-2xl border border-white/10 bg-black p-5 text-sm text-neutral-400">
+                                  Esta clase está bloqueada. Completá la clase
+                                  anterior para desbloquearla.
+                                </div>
+                              )}
+
+                              <div className="mt-5">
+                                <BotonCompletarClase
+                                  claseId={clase.id}
+                                  completadaInicial={estadoClase.completada}
+                                  bloqueada={estadoClase.bloqueada}
+                                />
+                              </div>
                             </div>
                           );
                         })}
