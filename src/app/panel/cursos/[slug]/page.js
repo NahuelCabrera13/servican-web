@@ -33,6 +33,34 @@ function textoEstado(estado) {
   return estado || "Sin estado";
 }
 
+function obtenerEmbedYoutube(url) {
+  if (!url) return "";
+
+  try {
+    const urlObj = new URL(url);
+
+    if (urlObj.hostname.includes("youtube.com")) {
+      const videoId = urlObj.searchParams.get("v");
+
+      if (videoId) {
+        return `https://www.youtube.com/embed/${videoId}`;
+      }
+    }
+
+    if (urlObj.hostname.includes("youtu.be")) {
+      const videoId = urlObj.pathname.replace("/", "");
+
+      if (videoId) {
+        return `https://www.youtube.com/embed/${videoId}`;
+      }
+    }
+
+    return url;
+  } catch (error) {
+    return "";
+  }
+}
+
 export async function generateMetadata({ params }) {
   const { slug } = await params;
 
@@ -78,7 +106,7 @@ export default async function CursoPrivadoPage({ params }) {
   const esAdmin = perfil.role === "admin";
   const esInstructor = perfil.role === "instructor";
 
-  const { data: acceso, error: errorAcceso } = await supabase
+  const { data: acceso } = await supabase
     .from("alumno_cursos")
     .select("*")
     .eq("user_id", user.id)
@@ -90,6 +118,42 @@ export default async function CursoPrivadoPage({ params }) {
   if (!esAdmin && !esInstructor && !tieneAccesoActivo) {
     redirect("/panel");
   }
+
+  const { data: modulos, error: errorModulos } = await supabase
+    .from("curso_modulos")
+    .select(`
+      id,
+      titulo,
+      descripcion,
+      orden,
+      activo,
+      clases:curso_clases (
+        id,
+        titulo,
+        descripcion,
+        video_url,
+        pdf_url,
+        contenido,
+        orden,
+        activo
+      )
+    `)
+    .eq("curso_id", curso.id)
+    .eq("activo", true)
+    .order("orden", { ascending: true })
+    .order("orden", {
+      referencedTable: "curso_clases",
+      ascending: true,
+    });
+
+  const modulosVisibles = (modulos || []).map((modulo) => ({
+    ...modulo,
+    clases: (modulo.clases || []).filter((clase) => clase.activo),
+  }));
+
+  const totalClases = modulosVisibles.reduce((total, modulo) => {
+    return total + modulo.clases.length;
+  }, 0);
 
   return (
     <main className="min-h-screen bg-neutral-950 text-white">
@@ -107,9 +171,7 @@ export default async function CursoPrivadoPage({ params }) {
                 SERVICAN
               </p>
 
-              <h1 className="text-3xl font-bold">
-                Aula privada
-              </h1>
+              <h1 className="text-3xl font-bold">Aula privada</h1>
 
               <p className="mt-1 text-sm text-neutral-300">
                 {perfil?.email || user?.email}
@@ -179,10 +241,19 @@ export default async function CursoPrivadoPage({ params }) {
               <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-2xl border border-white/10 bg-neutral-950 p-4">
                   <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
-                    Categoría
+                    Módulos
                   </p>
                   <p className="mt-1 font-bold text-yellow-400">
-                    {curso.categoria || "Formación"}
+                    {modulosVisibles.length}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-neutral-950 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
+                    Clases
+                  </p>
+                  <p className="mt-1 font-bold text-yellow-400">
+                    {totalClases}
                   </p>
                 </div>
 
@@ -201,15 +272,6 @@ export default async function CursoPrivadoPage({ params }) {
                   </p>
                   <p className="mt-1 font-bold text-yellow-400">
                     {curso.duracion || "A definir"}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-neutral-950 p-4">
-                  <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
-                    Estado
-                  </p>
-                  <p className="mt-1 font-bold text-yellow-400">
-                    {textoEstado(acceso?.estado || "activo")}
                   </p>
                 </div>
               </div>
@@ -247,9 +309,7 @@ export default async function CursoPrivadoPage({ params }) {
               Progreso
             </p>
 
-            <h3 className="mt-3 text-2xl font-bold">
-              Estado del curso
-            </h3>
+            <h3 className="mt-3 text-2xl font-bold">Estado del curso</h3>
 
             <div className="mt-6 rounded-2xl border border-white/10 bg-neutral-950 p-5">
               <div className="mb-3 flex items-center justify-between text-sm">
@@ -262,22 +322,21 @@ export default async function CursoPrivadoPage({ params }) {
               </div>
 
               <p className="mt-4 text-sm leading-6 text-neutral-400">
-                El progreso se conectará más adelante cuando creemos clases,
-                materiales y seguimiento por alumno.
+                El progreso se conectará más adelante cuando agreguemos el
+                marcado de clases completadas por alumno.
               </p>
             </div>
 
             <div className="mt-5 rounded-2xl border border-white/10 bg-neutral-950 p-5">
               <p className="text-sm font-bold text-white">
-                Próximas funciones
+                Resumen del contenido
               </p>
 
               <ul className="mt-3 space-y-2 text-sm text-neutral-400">
-                <li>• Módulos del curso</li>
-                <li>• Clases con video</li>
-                <li>• PDFs descargables</li>
-                <li>• Estado de clase completada</li>
-                <li>• Certificado final</li>
+                <li>• {modulosVisibles.length} módulo(s)</li>
+                <li>• {totalClases} clase(s)</li>
+                <li>• Videos de YouTube cuando se carguen</li>
+                <li>• PDFs y materiales cuando se carguen</li>
               </ul>
             </div>
           </aside>
@@ -288,70 +347,132 @@ export default async function CursoPrivadoPage({ params }) {
                 Contenido
               </p>
 
-              <h3 className="mt-3 text-3xl font-bold">
-                Módulos y clases
-              </h3>
+              <h3 className="mt-3 text-3xl font-bold">Módulos y clases</h3>
 
               <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-300">
-                Esta es la estructura base del aula. En el próximo bloque vamos
-                a crear las tablas para cargar módulos, clases, videos de
-                YouTube, archivos PDF y materiales desde el panel admin.
+                Estos módulos y clases se cargan desde Supabase. Más adelante
+                vamos a crear una sección en el panel admin para editarlos sin
+                tocar código.
               </p>
             </div>
 
-            <div className="space-y-4">
-              <article className="rounded-3xl border border-white/10 bg-neutral-950 p-5">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <p className="text-sm font-bold uppercase tracking-[0.25em] text-yellow-400">
-                      Módulo 1
-                    </p>
+            {errorModulos && (
+              <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+                No se pudieron cargar los módulos: {errorModulos.message}
+              </div>
+            )}
 
-                    <h4 className="mt-2 text-2xl font-bold">
-                      Introducción al curso
-                    </h4>
+            {!errorModulos && modulosVisibles.length === 0 && (
+              <div className="rounded-3xl border border-white/10 bg-neutral-950 p-8 text-center">
+                <h4 className="text-2xl font-bold">
+                  Todavía no hay módulos cargados
+                </h4>
 
-                    <p className="mt-2 text-sm leading-6 text-neutral-400">
-                      Espacio reservado para la primera clase, presentación,
-                      objetivos y materiales iniciales.
-                    </p>
-                  </div>
+                <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-neutral-400">
+                  Este curso ya tiene aula privada, pero todavía no tiene
+                  módulos ni clases activas. Cuando el administrador cargue
+                  contenido, aparecerá en esta sección.
+                </p>
+              </div>
+            )}
 
-                  <button
-                    disabled
-                    className="rounded-2xl bg-neutral-800 px-5 py-3 text-sm font-bold text-neutral-500"
+            {!errorModulos && modulosVisibles.length > 0 && (
+              <div className="space-y-5">
+                {modulosVisibles.map((modulo) => (
+                  <article
+                    key={modulo.id}
+                    className="overflow-hidden rounded-3xl border border-white/10 bg-neutral-950"
                   >
-                    Próximamente
-                  </button>
-                </div>
-              </article>
+                    <div className="border-b border-white/10 bg-white/[0.03] p-5">
+                      <p className="text-sm font-bold uppercase tracking-[0.25em] text-yellow-400">
+                        Módulo {modulo.orden}
+                      </p>
 
-              <article className="rounded-3xl border border-white/10 bg-neutral-950 p-5">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <p className="text-sm font-bold uppercase tracking-[0.25em] text-yellow-400">
-                      Módulo 2
-                    </p>
+                      <h4 className="mt-2 text-2xl font-bold">
+                        {modulo.titulo}
+                      </h4>
 
-                    <h4 className="mt-2 text-2xl font-bold">
-                      Materiales y clases
-                    </h4>
+                      {modulo.descripcion && (
+                        <p className="mt-2 text-sm leading-6 text-neutral-400">
+                          {modulo.descripcion}
+                        </p>
+                      )}
+                    </div>
 
-                    <p className="mt-2 text-sm leading-6 text-neutral-400">
-                      Más adelante se cargarán videos, PDFs, ejercicios y
-                      recursos privados para alumnos habilitados.
-                    </p>
-                  </div>
+                    {modulo.clases.length === 0 ? (
+                      <div className="p-5 text-sm text-neutral-400">
+                        Este módulo todavía no tiene clases activas.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-white/10">
+                        {modulo.clases.map((clase) => {
+                          const videoEmbed = obtenerEmbedYoutube(
+                            clase.video_url
+                          );
 
-                  <button
-                    disabled
-                    className="rounded-2xl bg-neutral-800 px-5 py-3 text-sm font-bold text-neutral-500"
-                  >
-                    Próximamente
-                  </button>
-                </div>
-              </article>
-            </div>
+                          return (
+                            <div key={clase.id} className="p-5">
+                              <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                                <div>
+                                  <p className="text-xs font-bold uppercase tracking-[0.25em] text-neutral-500">
+                                    Clase {clase.orden}
+                                  </p>
+
+                                  <h5 className="mt-2 text-xl font-bold">
+                                    {clase.titulo}
+                                  </h5>
+
+                                  {clase.descripcion && (
+                                    <p className="mt-2 text-sm leading-6 text-neutral-400">
+                                      {clase.descripcion}
+                                    </p>
+                                  )}
+                                </div>
+
+                                <span className="rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-green-300">
+                                  Disponible
+                                </span>
+                              </div>
+
+                              {videoEmbed && (
+                                <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-black">
+                                  <iframe
+                                    src={videoEmbed}
+                                    title={clase.titulo}
+                                    className="aspect-video w-full"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                  />
+                                </div>
+                              )}
+
+                              {clase.contenido && (
+                                <div className="mt-5 rounded-2xl border border-white/10 bg-black p-5">
+                                  <p className="whitespace-pre-line text-sm leading-7 text-neutral-300">
+                                    {clase.contenido}
+                                  </p>
+                                </div>
+                              )}
+
+                              {clase.pdf_url && (
+                                <a
+                                  href={clase.pdf_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="mt-5 inline-block rounded-2xl bg-yellow-500 px-5 py-3 text-sm font-bold text-black transition hover:bg-yellow-400"
+                                >
+                                  Abrir material PDF
+                                </a>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </div>
+            )}
           </section>
         </section>
       </section>
