@@ -79,6 +79,9 @@ export default function Home() {
             <a href="/cursos" className="hover:text-yellow-500">
               Cursos
             </a>
+            <a href="/verificar-certificado" className="hover:text-yellow-500">
+              Verificar certificado
+            </a>
             <a href="#contacto" className="hover:text-yellow-500">
               Contacto
             </a>
@@ -137,23 +140,17 @@ export default function Home() {
             <div className="mt-8 grid gap-3 sm:grid-cols-3">
               <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
                 <p className="text-2xl font-black text-yellow-500">K9</p>
-                <p className="mt-1 text-xs text-zinc-300">
-                  Formación
-                </p>
+                <p className="mt-1 text-xs text-zinc-300">Formación</p>
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
                 <p className="text-2xl font-black text-yellow-500">UY</p>
-                <p className="mt-1 text-xs text-zinc-300">
-                  Uruguay
-                </p>
+                <p className="mt-1 text-xs text-zinc-300">Uruguay</p>
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
                 <p className="text-2xl font-black text-yellow-500">PRO</p>
-                <p className="mt-1 text-xs text-zinc-300">
-                  Trabajo serio
-                </p>
+                <p className="mt-1 text-xs text-zinc-300">Trabajo serio</p>
               </div>
             </div>
 
@@ -170,6 +167,13 @@ export default function Home() {
                 className="rounded-full border border-yellow-500 bg-black/40 px-8 py-4 text-center font-black text-yellow-500 transition hover:bg-yellow-500 hover:text-black"
               >
                 Ver cursos
+              </a>
+
+              <a
+                href="/verificar-certificado"
+                className="rounded-full border border-white/20 bg-white/10 px-8 py-4 text-center font-black text-white transition hover:bg-white hover:text-black"
+              >
+                Verificar certificado
               </a>
             </div>
           </div>
@@ -366,8 +370,83 @@ export default function Home() {
         </div>
       </section>
 
+      {/* VERIFICACIÓN DE CERTIFICADOS */}
+      <section className="bg-black px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1450px]">
+          <div className="grid gap-10 rounded-[2rem] border border-yellow-500/30 bg-gradient-to-br from-zinc-950 via-black to-zinc-950 p-8 md:grid-cols-[1fr_0.8fr] md:items-center md:p-12">
+            <div>
+              <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
+                Certificados SERVICAN
+              </p>
+
+              <h2 className="text-4xl font-black md:text-5xl">
+                Verificación pública de certificados
+              </h2>
+
+              <p className="mt-5 max-w-3xl leading-8 text-zinc-300">
+                Los certificados emitidos por SERVICAN cuentan con un código
+                único de verificación. Esta herramienta permite comprobar si un
+                certificado es válido sin mostrar ni permitir descargar el
+                documento completo.
+              </p>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xl font-black text-yellow-500">Privado</p>
+                  <p className="mt-1 text-xs leading-5 text-zinc-400">
+                    El certificado completo solo lo ve el alumno desde su cuenta.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xl font-black text-yellow-500">
+                    Verificable
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-zinc-400">
+                    Cada certificado tiene un código único emitido por SERVICAN.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xl font-black text-yellow-500">Seguro</p>
+                  <p className="mt-1 text-xs leading-5 text-zinc-400">
+                    La página pública solo confirma la validez, no entrega el
+                    diploma.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-[2rem] border border-zinc-800 bg-black p-8 shadow-2xl">
+              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-yellow-500 text-3xl text-black">
+                ✓
+              </div>
+
+              <h3 className="text-2xl font-black text-yellow-500">
+                ¿Tenés un código de certificado?
+              </h3>
+
+              <p className="mt-4 leading-7 text-zinc-300">
+                Ingresalo en la página de verificación para confirmar si fue
+                emitido por SERVICAN y si se encuentra vigente.
+              </p>
+
+              <a
+                href="/verificar-certificado"
+                className="mt-8 inline-block rounded-full bg-yellow-500 px-8 py-4 font-black text-black transition hover:bg-yellow-400"
+              >
+                Verificar certificado
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CONTACTO */}
-      <section id="contacto" className="bg-yellow-500 px-4 py-20 text-black sm:px-6 lg:px-8">
+      <section
+        id="contacto"
+        className="bg-yellow-500 px-4 py-20 text-black sm:px-6 lg:px-8"
+      >
         <div className="mx-auto max-w-5xl text-center">
           <h2 className="text-4xl font-black md:text-6xl">
             Contactá con SERVICAN
@@ -403,7 +482,23 @@ export default function Home() {
         <p className="text-xl font-black tracking-[0.25em] text-yellow-500">
           SERVICAN
         </p>
+
         <p className="mt-2 text-zinc-500">Nuestro olfato nos define</p>
+
+        <div className="mt-5 flex flex-wrap justify-center gap-4 text-sm font-semibold text-zinc-400">
+          <a href="/cursos" className="hover:text-yellow-500">
+            Cursos
+          </a>
+
+          <a href="/verificar-certificado" className="hover:text-yellow-500">
+            Verificar certificado
+          </a>
+
+          <a href="/inscripcion" className="hover:text-yellow-500">
+            Consulta
+          </a>
+        </div>
+
         <p className="mt-4 text-sm text-zinc-600">
           © 2026 SERVICAN. Todos los derechos reservados.
         </p>

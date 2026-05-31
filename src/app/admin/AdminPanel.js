@@ -485,6 +485,14 @@ export default function AdminPanel({ usuario, perfil }) {
   >
     Usuarios y roles
   </Link>
+
+<Link
+  href="/admin/certificados"
+  className="rounded-2xl border border-green-500/30 bg-green-500/10 px-5 py-3 text-center text-sm font-bold text-green-100 transition hover:bg-green-500/20"
+>
+  Certificados
+</Link>
+
 </nav>
 
         {mensaje && (
