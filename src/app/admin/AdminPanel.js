@@ -1051,24 +1051,31 @@ export default function AdminPanel({ usuario, perfil }) {
                       </div>
                     </div>
 
-                    <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                      <button
-                        onClick={() => editarCurso(curso)}
-                        className="flex-1 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-bold transition hover:bg-white/20"
-                      >
-                        Editar
-                      </button>
+<div className="mt-5 grid gap-3 sm:grid-cols-3">
+  <button
+    onClick={() => editarCurso(curso)}
+    className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-bold transition hover:bg-white/20"
+  >
+    Editar
+  </button>
 
-                      <button
-                        onClick={() => eliminarCurso(curso.id)}
-                        disabled={accionandoId === curso.id}
-                        className="flex-1 rounded-2xl bg-red-500 px-4 py-3 text-sm font-bold text-white transition hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {accionandoId === curso.id
-                          ? "Eliminando..."
-                          : "Eliminar"}
-                      </button>
-                    </div>
+  <Link
+    href={`/admin/cursos/${curso.slug}/contenido`}
+    className="rounded-2xl bg-yellow-500 px-4 py-3 text-center text-sm font-bold text-neutral-950 transition hover:bg-yellow-400"
+  >
+    Gestionar contenido
+  </Link>
+
+  <button
+    onClick={() => eliminarCurso(curso.id)}
+    disabled={accionandoId === curso.id}
+    className="rounded-2xl bg-red-500 px-4 py-3 text-sm font-bold text-white transition hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-60"
+  >
+    {accionandoId === curso.id
+      ? "Eliminando..."
+      : "Eliminar"}
+  </button>
+</div>
                   </article>
                 ))}
               </section>
