@@ -2,20 +2,28 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import PanelUsuario from "./PanelUsuario";
 
+export const dynamic = "force-dynamic";
+
+export const metadata = {
+  title: "Panel privado | SERVICAN",
+  description: "Panel privado del usuario en la plataforma SERVICAN.",
+};
+
 export default async function PanelPage() {
   const supabase = await createClient();
 
   const {
     data: { user },
+    error: errorUsuario,
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (errorUsuario || !user) {
     redirect("/login?redirect=/panel");
   }
 
   const { data: perfil, error: errorPerfil } = await supabase
     .from("perfiles")
-    .select("*")
+    .select("id, user_id, email, nombre, role, created_at")
     .eq("user_id", user.id)
     .single();
 
@@ -30,6 +38,7 @@ export default async function PanelPage() {
       estado,
       fecha_inicio,
       fecha_fin,
+      created_at,
       curso:cursos (
         id,
         titulo,
@@ -49,7 +58,18 @@ export default async function PanelPage() {
 
   const { data: certificados, error: errorCertificados } = await supabase
     .from("certificados")
-    .select("*")
+    .select(`
+      id,
+      user_id,
+      curso_id,
+      codigo,
+      nombre_alumno,
+      email_alumno,
+      titulo_curso,
+      estado,
+      emitido_at,
+      created_at
+    `)
     .eq("user_id", user.id)
     .order("emitido_at", { ascending: false });
 

@@ -4,6 +4,49 @@ import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js
 
 const BUCKET_MATERIALES = "materiales-cursos";
 
+function crearRespuestaError(mensaje, status = 500) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: mensaje,
+    },
+    { status }
+  );
+}
+
+function validarId(id) {
+  const numero = Number(id);
+
+  if (!Number.isInteger(numero) || numero <= 0) {
+    return null;
+  }
+
+  return numero;
+}
+
+function rutaStorageValida(ruta) {
+  if (!ruta) return false;
+
+  const texto = String(ruta).trim();
+
+  if (!texto) return false;
+  if (texto.includes("..")) return false;
+  if (texto.startsWith("/")) return false;
+  if (texto.startsWith("\\")) return false;
+
+  return true;
+}
+
+function esUrlExternaValida(url) {
+  try {
+    const urlObj = new URL(url);
+
+    return urlObj.protocol === "https:" || urlObj.protocol === "http:";
+  } catch (error) {
+    return false;
+  }
+}
+
 function crearSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -12,38 +55,45 @@ function crearSupabaseAdmin() {
     throw new Error("Faltan variables de entorno de Supabase.");
   }
 
-  return createSupabaseAdminClient(supabaseUrl, serviceRoleKey);
+  return createSupabaseAdminClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
 }
 
 export async function GET(request) {
   try {
     const requestUrl = new URL(request.url);
-    const claseId = requestUrl.searchParams.get("clase_id");
+    const claseId = validarId(requestUrl.searchParams.get("clase_id"));
 
     if (!claseId) {
-      return NextResponse.json(
-        { error: "Falta el ID de la clase." },
-        { status: 400 }
-      );
+      return crearRespuestaError("ID de clase inválido.", 400);
     }
 
     const supabase = await createSupabaseServerClient();
 
     const {
       data: { user },
+      error: errorUsuario,
     } = await supabase.auth.getUser();
 
-    if (!user) {
+    if (errorUsuario || !user) {
       return NextResponse.redirect(
         new URL(`/login?redirect=/panel`, request.url)
       );
     }
 
-    const { data: perfil } = await supabase
+    const { data: perfil, error: errorPerfil } = await supabase
       .from("perfiles")
-      .select("role")
+      .select("id, user_id, role")
       .eq("user_id", user.id)
       .single();
+
+    if (errorPerfil || !perfil) {
+      return crearRespuestaError("No se encontró tu perfil.", 403);
+    }
 
     const supabaseAdmin = crearSupabaseAdmin();
 
@@ -52,39 +102,51 @@ export async function GET(request) {
       .select(`
         id,
         pdf_url,
+        activo,
         modulo:curso_modulos (
           id,
-          curso_id
+          curso_id,
+          activo,
+          curso:cursos (
+            id,
+            activo
+          )
         )
       `)
-      .eq("id", Number(claseId))
+      .eq("id", claseId)
       .single();
 
     if (errorClase || !clase) {
-      return NextResponse.json(
-        { error: "No se encontró la clase." },
-        { status: 404 }
-      );
+      return crearRespuestaError("No se encontró la clase.", 404);
     }
 
-    if (!clase.pdf_url) {
-      return NextResponse.json(
-        { error: "Esta clase no tiene material cargado." },
-        { status: 404 }
-      );
+    if (!clase.activo || !clase.modulo?.activo) {
+      return crearRespuestaError("Este material no está disponible.", 403);
     }
 
     const cursoId = clase.modulo?.curso_id;
+    const cursoActivo = clase.modulo?.curso?.activo;
 
     if (!cursoId) {
-      return NextResponse.json(
-        { error: "No se pudo encontrar el curso de la clase." },
-        { status: 400 }
+      return crearRespuestaError(
+        "No se pudo encontrar el curso de la clase.",
+        400
+      );
+    }
+
+    if (!cursoActivo) {
+      return crearRespuestaError("Este curso no está activo.", 403);
+    }
+
+    if (!clase.pdf_url) {
+      return crearRespuestaError(
+        "Esta clase no tiene material cargado.",
+        404
       );
     }
 
     const esAdminOInstructor =
-      perfil?.role === "admin" || perfil?.role === "instructor";
+      perfil.role === "admin" || perfil.role === "instructor";
 
     if (!esAdminOInstructor) {
       const { data: acceso } = await supabaseAdmin
@@ -96,34 +158,38 @@ export async function GET(request) {
         .maybeSingle();
 
       if (!acceso) {
-        return NextResponse.json(
-          { error: "No tenés acceso activo a este material." },
-          { status: 403 }
+        return crearRespuestaError(
+          "No tenés acceso activo a este material.",
+          403
         );
       }
     }
 
-    if (clase.pdf_url.startsWith("http://") || clase.pdf_url.startsWith("https://")) {
-      return NextResponse.redirect(clase.pdf_url);
+    const material = String(clase.pdf_url).trim();
+
+    if (material.startsWith("http://") || material.startsWith("https://")) {
+      if (!esUrlExternaValida(material)) {
+        return crearRespuestaError("El link del material no es válido.", 400);
+      }
+
+      return NextResponse.redirect(material);
+    }
+
+    if (!rutaStorageValida(material)) {
+      return crearRespuestaError("La ruta del material no es válida.", 400);
     }
 
     const { data: signedUrl, error: errorSignedUrl } =
       await supabaseAdmin.storage
         .from(BUCKET_MATERIALES)
-        .createSignedUrl(clase.pdf_url, 60 * 10);
+        .createSignedUrl(material, 60 * 10);
 
     if (errorSignedUrl || !signedUrl?.signedUrl) {
-      return NextResponse.json(
-        { error: "No se pudo abrir el material." },
-        { status: 500 }
-      );
+      return crearRespuestaError("No se pudo abrir el material.", 500);
     }
 
     return NextResponse.redirect(signedUrl.signedUrl);
   } catch (error) {
-    return NextResponse.json(
-      { error: "Error interno del servidor." },
-      { status: 500 }
-    );
+    return crearRespuestaError("Error interno del servidor.", 500);
   }
 }

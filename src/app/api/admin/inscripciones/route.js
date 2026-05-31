@@ -10,14 +10,47 @@ const ESTADOS_PERMITIDOS = [
   "rechazado",
 ];
 
+const CAMPOS_INSCRIPCION = `
+  id,
+  nombre,
+  telefono,
+  email,
+  curso,
+  modalidad,
+  mensaje,
+  estado,
+  created_at
+`;
+
+function crearRespuestaError(mensaje, status = 500) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: mensaje,
+    },
+    { status }
+  );
+}
+
+function validarId(id) {
+  const numero = Number(id);
+
+  if (!Number.isInteger(numero) || numero <= 0) {
+    return null;
+  }
+
+  return numero;
+}
+
 async function verificarAdmin() {
   const supabase = await createSupabaseServerClient();
 
   const {
     data: { user },
+    error: errorUsuario,
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (errorUsuario || !user) {
     return {
       ok: false,
       status: 401,
@@ -25,13 +58,13 @@ async function verificarAdmin() {
     };
   }
 
-  const { data: perfil, error } = await supabase
+  const { data: perfil, error: errorPerfil } = await supabase
     .from("perfiles")
     .select("role")
     .eq("user_id", user.id)
     .single();
 
-  if (error || !perfil || perfil.role !== "admin") {
+  if (errorPerfil || !perfil || perfil.role !== "admin") {
     return {
       ok: false,
       status: 403,
@@ -54,7 +87,12 @@ function crearSupabaseAdmin() {
     throw new Error("Faltan variables de entorno de Supabase.");
   }
 
-  return createSupabaseAdminClient(supabaseUrl, serviceRoleKey);
+  return createSupabaseAdminClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
 }
 
 export async function GET() {
@@ -62,23 +100,21 @@ export async function GET() {
     const admin = await verificarAdmin();
 
     if (!admin.ok) {
-      return NextResponse.json(
-        { error: admin.error },
-        { status: admin.status }
-      );
+      return crearRespuestaError(admin.error, admin.status);
     }
 
     const supabaseAdmin = crearSupabaseAdmin();
 
     const { data, error } = await supabaseAdmin
       .from("inscripciones")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .select(CAMPOS_INSCRIPCION)
+      .order("created_at", { ascending: false })
+      .limit(300);
 
     if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
+      return crearRespuestaError(
+        "No se pudieron cargar las inscripciones.",
+        500
       );
     }
 
@@ -87,10 +123,7 @@ export async function GET() {
       inscripciones: data || [],
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: "Error interno del servidor." },
-      { status: 500 }
-    );
+    return crearRespuestaError("Error interno del servidor.", 500);
   }
 }
 
@@ -99,35 +132,24 @@ export async function PATCH(request) {
     const admin = await verificarAdmin();
 
     if (!admin.ok) {
-      return NextResponse.json(
-        { error: admin.error },
-        { status: admin.status }
-      );
+      return crearRespuestaError(admin.error, admin.status);
     }
 
     const body = await request.json();
-    const id = body?.id;
-    const estado = body?.estado;
+
+    const id = validarId(body?.id);
+    const estado = String(body?.estado || "").trim();
 
     if (!id) {
-      return NextResponse.json(
-        { error: "Falta el ID de la inscripción." },
-        { status: 400 }
-      );
+      return crearRespuestaError("ID de inscripción inválido.", 400);
     }
 
     if (!estado) {
-      return NextResponse.json(
-        { error: "Falta el estado." },
-        { status: 400 }
-      );
+      return crearRespuestaError("Falta el estado.", 400);
     }
 
     if (!ESTADOS_PERMITIDOS.includes(estado)) {
-      return NextResponse.json(
-        { error: "Estado no permitido." },
-        { status: 400 }
-      );
+      return crearRespuestaError("Estado no permitido.", 400);
     }
 
     const supabaseAdmin = crearSupabaseAdmin();
@@ -136,13 +158,13 @@ export async function PATCH(request) {
       .from("inscripciones")
       .update({ estado })
       .eq("id", id)
-      .select("*")
+      .select(CAMPOS_INSCRIPCION)
       .single();
 
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
+    if (error || !data) {
+      return crearRespuestaError(
+        "No se pudo actualizar la inscripción.",
+        500
       );
     }
 
@@ -151,10 +173,7 @@ export async function PATCH(request) {
       inscripcion: data,
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: "Error interno del servidor." },
-      { status: 500 }
-    );
+    return crearRespuestaError("Error interno del servidor.", 500);
   }
 }
 
@@ -163,44 +182,35 @@ export async function DELETE(request) {
     const admin = await verificarAdmin();
 
     if (!admin.ok) {
-      return NextResponse.json(
-        { error: admin.error },
-        { status: admin.status }
-      );
+      return crearRespuestaError(admin.error, admin.status);
     }
 
     const body = await request.json();
-    const id = body?.id;
+
+    const id = validarId(body?.id);
 
     if (!id) {
-      return NextResponse.json(
-        { error: "Falta el ID de la inscripción." },
-        { status: 400 }
-      );
+      return crearRespuestaError("ID de inscripción inválido.", 400);
     }
 
     const supabaseAdmin = crearSupabaseAdmin();
 
-    const { error } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from("inscripciones")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .select("id")
+      .single();
 
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
+    if (error || !data) {
+      return crearRespuestaError("No se pudo eliminar la inscripción.", 500);
     }
 
     return NextResponse.json({
       ok: true,
-      id,
+      id: data.id,
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: "Error interno del servidor." },
-      { status: 500 }
-    );
+    return crearRespuestaError("Error interno del servidor.", 500);
   }
 }

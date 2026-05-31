@@ -5,6 +5,11 @@ import BotonImprimirCertificado from "./BotonImprimirCertificado";
 
 export const dynamic = "force-dynamic";
 
+export const metadata = {
+  title: "Certificado privado | SERVICAN",
+  description: "Certificado privado de finalización de curso SERVICAN.",
+};
+
 function formatearFecha(fecha) {
   if (!fecha) return "—";
 
@@ -15,31 +20,38 @@ function formatearFecha(fecha) {
   });
 }
 
-export async function generateMetadata({ params }) {
-  const { codigo } = await params;
+function codigoValido(codigo) {
+  if (!codigo) return false;
 
-  return {
-    title: `Certificado ${codigo} | SERVICAN`,
-    description: "Certificado de finalización de curso SERVICAN.",
-  };
+  const codigoLimpio = String(codigo).trim();
+
+  if (codigoLimpio.length < 6) return false;
+  if (codigoLimpio.length > 120) return false;
+
+  return /^[a-zA-Z0-9._-]+$/.test(codigoLimpio);
 }
 
 export default async function CertificadoPage({ params }) {
   const { codigo } = await params;
 
+  if (!codigoValido(codigo)) {
+    notFound();
+  }
+
   const supabase = await createClient();
 
   const {
     data: { user },
+    error: errorUsuario,
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (errorUsuario || !user) {
     redirect(`/login?redirect=/panel/certificados/${codigo}`);
   }
 
   const { data: perfil, error: errorPerfil } = await supabase
     .from("perfiles")
-    .select("*")
+    .select("id, user_id, email, nombre, role, created_at")
     .eq("user_id", user.id)
     .single();
 
@@ -49,8 +61,19 @@ export default async function CertificadoPage({ params }) {
 
   const { data: certificado, error: errorCertificado } = await supabase
     .from("certificados")
-    .select("*")
-    .eq("codigo", codigo)
+    .select(`
+      id,
+      user_id,
+      curso_id,
+      codigo,
+      nombre_alumno,
+      email_alumno,
+      titulo_curso,
+      estado,
+      emitido_at,
+      created_at
+    `)
+    .eq("codigo", String(codigo).trim())
     .single();
 
   if (errorCertificado || !certificado) {
@@ -65,21 +88,60 @@ export default async function CertificadoPage({ params }) {
     redirect("/acceso-denegado");
   }
 
+  const certificadoAnulado = certificado.estado === "anulado";
+
   return (
     <main className="min-h-screen bg-neutral-950 px-6 py-8 text-white print:bg-white print:px-0 print:py-0">
       <section className="mx-auto max-w-6xl">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
-          <Link
-            href="/panel"
-            className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-semibold transition hover:bg-white/20"
-          >
-            Volver al panel
-          </Link>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Link
+              href="/"
+              className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-semibold transition hover:bg-white/20"
+            >
+              Volver al inicio
+            </Link>
 
-          <BotonImprimirCertificado />
+            <Link
+              href="/panel"
+              className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-semibold transition hover:bg-white/20"
+            >
+              Volver al panel
+            </Link>
+
+            <Link
+              href="/verificar-certificado"
+              className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 px-5 py-3 text-center text-sm font-bold text-yellow-200 transition hover:bg-yellow-500/20"
+            >
+              Verificar código
+            </Link>
+          </div>
+
+          {!certificadoAnulado && <BotonImprimirCertificado />}
         </div>
 
+        {certificadoAnulado && (
+          <div className="mb-6 rounded-3xl border border-red-500/30 bg-red-500/10 p-5 text-red-100 print:hidden">
+            <p className="text-sm font-black uppercase tracking-[0.25em] text-red-300">
+              Certificado anulado
+            </p>
+
+            <p className="mt-2 text-sm leading-6">
+              Este certificado figura como anulado en el sistema. No debe usarse
+              como constancia válida de finalización.
+            </p>
+          </div>
+        )}
+
         <section className="relative overflow-hidden rounded-[2rem] border border-yellow-500/40 bg-white text-neutral-950 shadow-2xl print:rounded-none print:border-0 print:shadow-none">
+          {certificadoAnulado && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/70">
+              <p className="-rotate-12 border-8 border-red-600 px-10 py-5 text-5xl font-black uppercase tracking-[0.25em] text-red-600 opacity-80 md:text-7xl">
+                Anulado
+              </p>
+            </div>
+          )}
+
           <div className="absolute left-0 top-0 h-40 w-40 rounded-br-full bg-yellow-400/20" />
           <div className="absolute bottom-0 right-0 h-52 w-52 rounded-tl-full bg-yellow-400/20" />
 
@@ -105,9 +167,7 @@ export default async function CertificadoPage({ params }) {
             </header>
 
             <section className="py-12 text-center">
-              <p className="text-lg text-neutral-600">
-                Se certifica que
-              </p>
+              <p className="text-lg text-neutral-600">Se certifica que</p>
 
               <h2 className="mt-5 text-4xl font-black md:text-6xl">
                 {certificado.nombre_alumno || "Alumno SERVICAN"}
@@ -154,7 +214,11 @@ export default async function CertificadoPage({ params }) {
                   Estado
                 </p>
 
-                <p className="mt-2 text-lg font-bold uppercase">
+                <p
+                  className={`mt-2 text-lg font-bold uppercase ${
+                    certificadoAnulado ? "text-red-600" : "text-green-700"
+                  }`}
+                >
                   {certificado.estado}
                 </p>
               </div>
@@ -179,6 +243,11 @@ export default async function CertificadoPage({ params }) {
             <p className="mt-10 text-center text-xs leading-6 text-neutral-500">
               Certificado emitido digitalmente. Código de verificación:{" "}
               <strong>{certificado.codigo}</strong>
+            </p>
+
+            <p className="mt-3 text-center text-xs leading-6 text-neutral-400 print:hidden">
+              La versión pública de verificación solo confirma la validez del
+              código. No muestra ni permite descargar este certificado completo.
             </p>
           </div>
         </section>

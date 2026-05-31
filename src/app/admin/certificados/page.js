@@ -4,24 +4,30 @@ import CertificadosPanel from "./CertificadosPanel";
 
 export const dynamic = "force-dynamic";
 
+export const metadata = {
+  title: "Certificados | SERVICAN Admin",
+  description: "Gestión privada de certificados emitidos por SERVICAN.",
+};
+
 export default async function AdminCertificadosPage() {
   const supabase = await createClient();
 
   const {
     data: { user },
+    error: errorUsuario,
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (errorUsuario || !user) {
     redirect("/login?redirect=/admin/certificados");
   }
 
-  const { data: perfil, error } = await supabase
+  const { data: perfil, error: errorPerfil } = await supabase
     .from("perfiles")
-    .select("*")
+    .select("id, user_id, email, nombre, role, created_at")
     .eq("user_id", user.id)
     .single();
 
-  if (error || !perfil) {
+  if (errorPerfil || !perfil) {
     redirect("/acceso-denegado");
   }
 

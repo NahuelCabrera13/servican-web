@@ -2,15 +2,39 @@ import { NextResponse } from "next/server";
 import { createClient as createSupabaseServerClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
 
-function crearSupabaseAdmin() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const ESTADOS_CERTIFICADO = ["emitido", "anulado"];
 
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Faltan variables de entorno de Supabase.");
+const CAMPOS_CERTIFICADO = `
+  id,
+  user_id,
+  curso_id,
+  codigo,
+  nombre_alumno,
+  email_alumno,
+  titulo_curso,
+  estado,
+  emitido_at,
+  created_at
+`;
+
+function crearRespuestaError(mensaje, status = 500) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: mensaje,
+    },
+    { status }
+  );
+}
+
+function validarId(id) {
+  const numero = Number(id);
+
+  if (!Number.isInteger(numero) || numero <= 0) {
+    return null;
   }
 
-  return createSupabaseAdminClient(supabaseUrl, serviceRoleKey);
+  return numero;
 }
 
 async function verificarAdmin() {
@@ -18,9 +42,10 @@ async function verificarAdmin() {
 
   const {
     data: { user },
+    error: errorUsuario,
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (errorUsuario || !user) {
     return {
       ok: false,
       status: 401,
@@ -28,13 +53,13 @@ async function verificarAdmin() {
     };
   }
 
-  const { data: perfil, error } = await supabase
+  const { data: perfil, error: errorPerfil } = await supabase
     .from("perfiles")
     .select("role")
     .eq("user_id", user.id)
     .single();
 
-  if (error || !perfil || perfil.role !== "admin") {
+  if (errorPerfil || !perfil || perfil.role !== "admin") {
     return {
       ok: false,
       status: 403,
@@ -49,28 +74,42 @@ async function verificarAdmin() {
   };
 }
 
+function crearSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Faltan variables de entorno de Supabase.");
+  }
+
+  return createSupabaseAdminClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+}
+
 export async function GET() {
   try {
     const admin = await verificarAdmin();
 
     if (!admin.ok) {
-      return NextResponse.json(
-        { error: admin.error },
-        { status: admin.status }
-      );
+      return crearRespuestaError(admin.error, admin.status);
     }
 
     const supabaseAdmin = crearSupabaseAdmin();
 
     const { data: certificados, error } = await supabaseAdmin
       .from("certificados")
-      .select("*")
-      .order("emitido_at", { ascending: false });
+      .select(CAMPOS_CERTIFICADO)
+      .order("emitido_at", { ascending: false })
+      .limit(1000);
 
     if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
+      return crearRespuestaError(
+        "No se pudieron cargar los certificados.",
+        500
       );
     }
 
@@ -79,10 +118,7 @@ export async function GET() {
       certificados: certificados || [],
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: "Error interno del servidor." },
-      { status: 500 }
-    );
+    return crearRespuestaError("Error interno del servidor.", 500);
   }
 }
 
@@ -91,44 +127,45 @@ export async function PATCH(request) {
     const admin = await verificarAdmin();
 
     if (!admin.ok) {
-      return NextResponse.json(
-        { error: admin.error },
-        { status: admin.status }
-      );
+      return crearRespuestaError(admin.error, admin.status);
     }
 
     const body = await request.json();
 
-    const id = body?.id;
-    const estado = body?.estado;
+    const id = validarId(body?.id);
+    const estado = String(body?.estado || "").trim();
 
     if (!id) {
-      return NextResponse.json(
-        { error: "Falta el ID del certificado." },
-        { status: 400 }
-      );
+      return crearRespuestaError("ID de certificado inválido.", 400);
     }
 
-    if (!["emitido", "anulado"].includes(estado)) {
-      return NextResponse.json(
-        { error: "Estado no permitido." },
-        { status: 400 }
-      );
+    if (!ESTADOS_CERTIFICADO.includes(estado)) {
+      return crearRespuestaError("Estado no permitido.", 400);
     }
 
     const supabaseAdmin = crearSupabaseAdmin();
+
+    const { data: certificadoExiste } = await supabaseAdmin
+      .from("certificados")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (!certificadoExiste) {
+      return crearRespuestaError("No se encontró el certificado.", 404);
+    }
 
     const { data: certificado, error } = await supabaseAdmin
       .from("certificados")
       .update({ estado })
       .eq("id", id)
-      .select("*")
+      .select(CAMPOS_CERTIFICADO)
       .single();
 
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
+    if (error || !certificado) {
+      return crearRespuestaError(
+        "No se pudo actualizar el certificado.",
+        500
       );
     }
 
@@ -137,9 +174,6 @@ export async function PATCH(request) {
       certificado,
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: "Error interno del servidor." },
-      { status: 500 }
-    );
+    return crearRespuestaError("Error interno del servidor.", 500);
   }
 }
