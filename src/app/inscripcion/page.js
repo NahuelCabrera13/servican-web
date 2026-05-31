@@ -1,27 +1,37 @@
 "use client";
 
-import { useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-export default function Inscripcion() {
+function InscripcionContenido() {
   const whatsapp = "59898188257";
+  const searchParams = useSearchParams();
+
+  const cursoDesdeUrl = searchParams.get("curso");
+  const mensajeDesdeUrl = searchParams.get("mensaje");
 
   const [formulario, setFormulario] = useState({
     nombre: "",
     telefono: "",
     email: "",
-    curso: "Curso Básico Integral para Guías Caninos",
+    curso: "Consulta general",
     modalidad: "Consultar modalidad",
     mensaje: "",
   });
 
   const [enviando, setEnviando] = useState(false);
   const [aviso, setAviso] = useState("");
+
+  useEffect(() => {
+    if (cursoDesdeUrl || mensajeDesdeUrl) {
+      setFormulario((formularioActual) => ({
+        ...formularioActual,
+        curso: cursoDesdeUrl || formularioActual.curso,
+        mensaje: mensajeDesdeUrl || formularioActual.mensaje,
+      }));
+    }
+  }, [cursoDesdeUrl, mensajeDesdeUrl]);
 
   const actualizarCampo = (campo, valor) => {
     setFormulario({
@@ -30,24 +40,26 @@ export default function Inscripcion() {
     });
   };
 
-  const enviarFormulario = async (e) => {
-    e.preventDefault();
-    setEnviando(true);
-    setAviso("");
+const enviarFormulario = async (e) => {
+  e.preventDefault();
+  setEnviando(true);
+  setAviso("");
 
-    const datosParaGuardar = {
-      nombre: formulario.nombre,
-      telefono: formulario.telefono,
-      email: formulario.email || null,
-      curso: formulario.curso,
-      modalidad: formulario.modalidad,
-      mensaje: formulario.mensaje || null,
-      estado: "interesado",
-    };
+  const supabase = createClient();
 
-    const { error } = await supabase
-      .from("inscripciones")
-      .insert([datosParaGuardar]);
+  const datosParaGuardar = {
+    nombre: formulario.nombre,
+    telefono: formulario.telefono,
+    email: formulario.email || null,
+    curso: formulario.curso,
+    modalidad: formulario.modalidad,
+    mensaje: formulario.mensaje || null,
+    estado: "interesado",
+  };
+
+  const { error } = await supabase
+    .from("inscripciones")
+    .insert([datosParaGuardar]);
 
     if (error) {
       console.error("Error al guardar inscripción:", error);
@@ -59,12 +71,12 @@ export default function Inscripcion() {
     }
 
     const mensajeWhatsApp = `
-Hola SERVICAN, quiero inscribirme o consultar por un curso.
+Hola SERVICAN, quiero inscribirme o consultar.
 
 Nombre: ${formulario.nombre}
 Teléfono: ${formulario.telefono}
 Email: ${formulario.email || "No especificado"}
-Curso de interés: ${formulario.curso}
+Curso o consulta de interés: ${formulario.curso}
 Modalidad preferida: ${formulario.modalidad}
 Mensaje adicional: ${formulario.mensaje || "Sin mensaje adicional"}
 `;
@@ -73,7 +85,7 @@ Mensaje adicional: ${formulario.mensaje || "Sin mensaje adicional"}
       mensajeWhatsApp
     )}`;
 
-    setAviso("Inscripción guardada correctamente. Se abrirá WhatsApp.");
+    setAviso("Consulta guardada correctamente. Se abrirá WhatsApp.");
     setEnviando(false);
 
     window.open(url, "_blank");
@@ -82,8 +94,8 @@ Mensaje adicional: ${formulario.mensaje || "Sin mensaje adicional"}
   return (
     <main className="min-h-screen bg-black text-white">
       {/* MENÚ */}
-      <header className="sticky top-0 z-50 border-b border-yellow-500/20 bg-black/90 px-6 py-5 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
+      <header className="sticky top-0 z-50 border-b border-yellow-500/20 bg-black/90 px-4 py-5 backdrop-blur sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-[1450px] items-center justify-between">
           <a href="/" className="flex items-center gap-3">
             <img
               src="/logo-servican.jpeg"
@@ -100,21 +112,21 @@ Mensaje adicional: ${formulario.mensaje || "Sin mensaje adicional"}
           </a>
 
           <a
-            href="/"
+            href="/cursos"
             className="rounded-full border border-yellow-500 px-5 py-3 text-sm font-black text-yellow-500 hover:bg-yellow-500 hover:text-black"
           >
-            Volver al inicio
+            Volver a cursos
           </a>
         </div>
       </header>
 
       {/* PORTADA */}
-      <section className="relative overflow-hidden px-6 py-16 text-center">
+      <section className="relative overflow-hidden px-4 py-16 text-center sm:px-6 lg:px-8">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#3f3210_0%,#111_38%,#000_80%)]" />
 
         <div className="relative mx-auto max-w-4xl">
           <p className="mb-4 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
-            Inscripción
+            Consulta SERVICAN
           </p>
 
           <h1 className="text-5xl font-black leading-tight md:text-7xl">
@@ -122,18 +134,29 @@ Mensaje adicional: ${formulario.mensaje || "Sin mensaje adicional"}
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-zinc-300">
-            Completá tus datos. La inscripción quedará guardada en el sistema y
+            Completá tus datos. La consulta quedará guardada en el sistema y
             también se abrirá WhatsApp con el mensaje listo para enviar.
           </p>
+
+          {cursoDesdeUrl && (
+            <div className="mx-auto mt-8 max-w-2xl rounded-3xl border border-yellow-500/30 bg-yellow-500/10 p-5">
+              <p className="text-sm font-black uppercase tracking-[0.25em] text-yellow-500">
+                Curso seleccionado
+              </p>
+              <p className="mt-2 text-2xl font-black text-white">
+                {cursoDesdeUrl}
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
       {/* FORMULARIO */}
-      <section className="px-6 py-16">
-        <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-2">
+      <section className="px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto grid max-w-[1450px] gap-10 md:grid-cols-2">
           <div className="rounded-[2rem] border border-zinc-800 bg-zinc-950 p-8">
             <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
-              Datos del alumno
+              Datos del interesado
             </p>
 
             <h2 className="text-3xl font-black">
@@ -195,17 +218,28 @@ Mensaje adicional: ${formulario.mensaje || "Sin mensaje adicional"}
 
               <div>
                 <label className="mb-2 block text-sm font-bold text-zinc-300">
-                  Curso de interés
+                  Curso o consulta de interés
                 </label>
-                <select
-                  value={formulario.curso}
-                  onChange={(e) => actualizarCampo("curso", e.target.value)}
-                  className="w-full rounded-2xl border border-zinc-700 bg-black px-5 py-4 text-white outline-none focus:border-yellow-500"
-                >
-                  <option>Curso Básico Integral para Guías Caninos</option>
-                  <option>Módulo 2 K9 Antinarcóticos</option>
-                  <option>Quiero consultar por ambos cursos</option>
-                </select>
+
+                {cursoDesdeUrl ? (
+                  <input
+                    type="text"
+                    value={formulario.curso}
+                    onChange={(e) => actualizarCampo("curso", e.target.value)}
+                    className="w-full rounded-2xl border border-yellow-500/40 bg-yellow-500/10 px-5 py-4 font-bold text-yellow-100 outline-none focus:border-yellow-500"
+                  />
+                ) : (
+                  <select
+                    value={formulario.curso}
+                    onChange={(e) => actualizarCampo("curso", e.target.value)}
+                    className="w-full rounded-2xl border border-zinc-700 bg-black px-5 py-4 text-white outline-none focus:border-yellow-500"
+                  >
+                    <option>Consulta general</option>
+                    <option>Guía Canino desde Cero</option>
+                    <option>K9 Antinarcóticos</option>
+                    <option>Quiero consultar por varios cursos</option>
+                  </select>
+                )}
               </div>
 
               <div>
@@ -243,7 +277,7 @@ Mensaje adicional: ${formulario.mensaje || "Sin mensaje adicional"}
                 className="w-full rounded-full bg-yellow-500 px-8 py-4 font-black text-black hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {enviando
-                  ? "Guardando inscripción..."
+                  ? "Guardando consulta..."
                   : "Guardar y enviar por WhatsApp"}
               </button>
             </form>
@@ -317,5 +351,35 @@ Mensaje adicional: ${formulario.mensaje || "Sin mensaje adicional"}
         </div>
       </section>
     </main>
+  );
+}
+
+function CargandoInscripcion() {
+  return (
+    <main className="min-h-screen bg-black text-white">
+      <section className="flex min-h-screen items-center justify-center px-6">
+        <div className="rounded-[2rem] border border-yellow-500/30 bg-zinc-950 p-8 text-center">
+          <img
+            src="/logo-servican.jpeg"
+            alt="Logo SERVICAN"
+            className="mx-auto h-20 w-20 rounded-full object-contain"
+          />
+          <p className="mt-5 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
+            SERVICAN
+          </p>
+          <h1 className="mt-3 text-3xl font-black">
+            Cargando formulario...
+          </h1>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+export default function Inscripcion() {
+  return (
+    <Suspense fallback={<CargandoInscripcion />}>
+      <InscripcionContenido />
+    </Suspense>
   );
 }
