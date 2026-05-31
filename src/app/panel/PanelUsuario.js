@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 
 function nombreRol(role) {
@@ -47,13 +49,34 @@ function textoEstado(estado) {
   return estado || "Sin estado";
 }
 
+function formatearFecha(fecha) {
+  if (!fecha) return "—";
+
+  return new Date(fecha).toLocaleDateString("es-UY", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 export default function PanelUsuario({
   usuario,
   perfil,
   cursosHabilitados = [],
+  certificados = [],
   errorCursos = null,
+  errorCertificados = null,
 }) {
   const role = perfil?.role || "alumno";
+
+  async function copiarCodigo(codigo) {
+  try {
+    await navigator.clipboard.writeText(codigo);
+    alert("Código copiado correctamente.");
+  } catch (error) {
+    alert("No se pudo copiar el código.");
+  }
+}
 
   const cursosActivos = cursosHabilitados.filter(
     (item) => item.estado === "activo" && item.curso
@@ -347,6 +370,127 @@ export default function PanelUsuario({
                   </article>
                 ))}
               </div>
+            </div>
+          )}
+        </section>
+        <section className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl">
+          <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-yellow-400">
+                Certificados
+              </p>
+
+              <h2 className="mt-2 text-3xl font-bold">
+                Mis certificados
+              </h2>
+
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-300">
+                Acá aparecen los certificados que obtuviste al completar cursos
+                dentro de SERVICAN. El certificado completo es privado y solo
+                podés verlo desde tu cuenta.
+              </p>
+            </div>
+
+            <Link
+              href="/verificar-certificado"
+              className="rounded-2xl border border-yellow-500/40 bg-yellow-500/10 px-5 py-3 text-center text-sm font-bold text-yellow-200 transition hover:bg-yellow-500/20"
+            >
+              Verificar certificado
+            </Link>
+          </div>
+
+          {errorCertificados && (
+            <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+              No se pudieron cargar tus certificados: {errorCertificados}
+            </div>
+          )}
+
+          {!errorCertificados && certificados.length === 0 && (
+            <div className="rounded-3xl border border-white/10 bg-neutral-950 p-8 text-center">
+              <h3 className="text-2xl font-bold">
+                Todavía no tenés certificados
+              </h3>
+
+              <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-neutral-400">
+                Cuando completes todas las clases de un curso, tu certificado
+                aparecerá automáticamente en esta sección.
+              </p>
+            </div>
+          )}
+
+          {!errorCertificados && certificados.length > 0 && (
+            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {certificados.map((certificado) => (
+                <article
+                  key={certificado.id}
+                  className="rounded-3xl border border-yellow-500/20 bg-neutral-950 p-6 shadow-xl"
+                >
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    <span className="rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-green-300">
+                      {certificado.estado || "emitido"}
+                    </span>
+
+                    <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-yellow-300">
+                      SERVICAN
+                    </span>
+                  </div>
+
+                  <h3 className="text-2xl font-bold">
+                    {certificado.titulo_curso}
+                  </h3>
+
+                  <div className="mt-5 space-y-3">
+                    <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
+                      <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
+                        Código
+                      </p>
+
+                      <p className="mt-2 break-words text-sm font-bold text-yellow-300">
+                        {certificado.codigo}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
+                      <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
+                        Fecha de emisión
+                      </p>
+
+                      <p className="mt-2 text-sm font-bold text-neutral-200">
+                        {formatearFecha(certificado.emitido_at)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 grid gap-3">
+                    <Link
+                      href={`/panel/certificados/${certificado.codigo}`}
+                      className="rounded-2xl bg-yellow-500 px-5 py-3 text-center text-sm font-bold text-neutral-950 transition hover:bg-yellow-400"
+                    >
+                      Ver certificado privado
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => copiarCodigo(certificado.codigo)}
+                      className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/20"
+                    >
+                      Copiar código
+                    </button>
+
+                    <Link
+                      href="/verificar-certificado"
+                      className="rounded-2xl border border-green-500/30 bg-green-500/10 px-5 py-3 text-center text-sm font-bold text-green-200 transition hover:bg-green-500/20"
+                    >
+                      Verificar públicamente
+                    </Link>
+                  </div>
+
+                  <p className="mt-4 text-xs leading-5 text-neutral-500">
+                    La verificación pública solo confirma la validez del código.
+                    No muestra ni permite descargar el certificado completo.
+                  </p>
+                </article>
+              ))}
             </div>
           )}
         </section>

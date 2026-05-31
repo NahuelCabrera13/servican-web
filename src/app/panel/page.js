@@ -47,12 +47,20 @@ export default async function PanelPage() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
+  const { data: certificados, error: errorCertificados } = await supabase
+    .from("certificados")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("emitido_at", { ascending: false });
+
   return (
     <PanelUsuario
       usuario={user}
       perfil={perfil}
       cursosHabilitados={cursosHabilitados || []}
+      certificados={certificados || []}
       errorCursos={errorCursos?.message || null}
+      errorCertificados={errorCertificados?.message || null}
     />
   );
 }
