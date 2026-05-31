@@ -186,6 +186,13 @@ export default async function CursoPrivadoPage({ params }) {
 
   const cursoCompletado = totalClases > 0 && totalCompletadas === totalClases;
 
+  const { data: certificado } = await supabase
+  .from("certificados")
+  .select("*")
+  .eq("user_id", user.id)
+  .eq("curso_id", curso.id)
+  .maybeSingle();
+
   function obtenerEstadoClase(claseId) {
     const indice = clasesOrdenadas.findIndex((clase) => clase.id === claseId);
 
@@ -416,18 +423,31 @@ export default async function CursoPrivadoPage({ params }) {
               </p>
             </div>
 
-            {cursoCompletado && (
-              <div className="mt-5 rounded-2xl border border-green-500/30 bg-green-500/10 p-5">
-                <p className="text-sm font-bold text-green-300">
-                  Curso finalizado
-                </p>
+{cursoCompletado && (
+  <div className="mt-5 rounded-2xl border border-green-500/30 bg-green-500/10 p-5">
+    <p className="text-sm font-bold text-green-300">
+      Curso finalizado
+    </p>
 
-                <p className="mt-2 text-sm leading-6 text-green-100">
-                  Ya completaste todas las clases. En el próximo bloque vamos a
-                  generar el certificado SERVICAN para este curso.
-                </p>
-              </div>
-            )}
+    <p className="mt-2 text-sm leading-6 text-green-100">
+      Ya completaste todas las clases de este curso.
+    </p>
+
+    {certificado ? (
+      <Link
+        href={`/panel/certificados/${certificado.codigo}`}
+        className="mt-4 inline-block rounded-2xl bg-yellow-500 px-5 py-3 text-sm font-bold text-neutral-950 transition hover:bg-yellow-400"
+      >
+        Ver certificado
+      </Link>
+    ) : (
+      <p className="mt-4 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm text-yellow-100">
+        El certificado se generará automáticamente al completar la última clase.
+        Tocá actualizar si acabás de finalizar el curso.
+      </p>
+    )}
+  </div>
+)}
 
             <div className="mt-5 rounded-2xl border border-white/10 bg-neutral-950 p-5">
               <p className="text-sm font-bold text-white">
