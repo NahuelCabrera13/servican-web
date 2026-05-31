@@ -32,18 +32,15 @@ export default function Home() {
   const perros = [
     {
       nombre: "Equipo canino SERVICAN",
-      texto: "Perros que forman parte de la identidad visual y del trabajo profesional de SERVICAN.",
-      imagen: fotoPortada,
+      texto: "Espacio preparado para colocar fotos reales de los perros que forman parte del equipo.",
     },
     {
       nombre: "Entrenamiento y vínculo",
       texto: "Imágenes de prácticas, ejercicios, obediencia, socialización y trabajo en campo.",
-      imagen: fotoPortada,
     },
     {
       nombre: "Trabajo profesional",
       texto: "Registro visual de actividades, jornadas, formación y desarrollo del binomio guía-perro.",
-      imagen: fotoPortada,
     },
   ];
 
@@ -51,7 +48,7 @@ export default function Home() {
     <main className="min-h-screen bg-black text-white">
       {/* MENÚ */}
       <header className="sticky top-0 z-50 border-b border-yellow-500/20 bg-black/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-[1500px] items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <a href="#inicio" className="flex items-center gap-3">
             <img
               src="/logo-servican.jpeg"
@@ -101,25 +98,25 @@ export default function Home() {
       {/* HERO INSTITUCIONAL */}
       <section
         id="inicio"
-        className="relative min-h-[88vh] overflow-hidden px-6 py-24 md:py-32"
+        className="relative min-h-[92vh] overflow-hidden"
       >
         <img
           src={fotoPortada}
           alt="Perros del equipo SERVICAN"
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover object-center"
         />
 
-        <div className="absolute inset-0 bg-black/60" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/75 to-black/20" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/30" />
+        <div className="absolute inset-0 bg-black/25" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/55 to-black/5" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/20" />
 
-        <div className="relative mx-auto flex min-h-[65vh] max-w-7xl items-center">
-          <div className="max-w-3xl">
-            <p className="mb-5 text-sm font-black uppercase tracking-[0.45em] text-yellow-500">
+        <div className="relative mx-auto flex min-h-[92vh] max-w-[1500px] items-center px-4 py-20 sm:px-6 lg:px-8">
+          <div className="max-w-3xl rounded-[2rem] border border-yellow-500/20 bg-black/45 p-6 shadow-2xl backdrop-blur-sm sm:p-8 md:p-10">
+            <p className="mb-5 text-sm font-black uppercase tracking-[0.35em] text-yellow-500 md:tracking-[0.45em]">
               Empresa de formación y trabajo canino
             </p>
 
-            <h1 className="text-5xl font-black leading-tight md:text-8xl">
+            <h1 className="text-5xl font-black leading-none md:text-8xl">
               SERVICAN
             </h1>
 
@@ -127,7 +124,7 @@ export default function Home() {
               Nuestro olfato nos define
             </p>
 
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-200">
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-100">
               Formación, entrenamiento y trabajo canino profesional en Uruguay.
               Desarrollamos el vínculo guía-perro con disciplina, respeto,
               estructura y una visión seria del mundo canino.
@@ -143,7 +140,7 @@ export default function Home() {
 
               <a
                 href="/cursos"
-                className="rounded-full border border-yellow-500 px-9 py-4 text-center font-black text-yellow-500 transition hover:bg-yellow-500 hover:text-black"
+                className="rounded-full border border-yellow-500 bg-black/40 px-9 py-4 text-center font-black text-yellow-500 transition hover:bg-yellow-500 hover:text-black"
               >
                 Ver cursos
               </a>
@@ -155,9 +152,9 @@ export default function Home() {
       {/* QUIÉNES SOMOS */}
       <section
         id="quienes-somos"
-        className="border-y border-zinc-800 bg-zinc-950 px-6 py-20"
+        className="border-y border-zinc-800 bg-zinc-950 px-4 py-20 sm:px-6 lg:px-8"
       >
-        <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-2 md:items-center">
+        <div className="mx-auto grid max-w-[1400px] gap-10 md:grid-cols-2 md:items-center">
           <div>
             <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
               Quiénes somos
@@ -189,8 +186,8 @@ export default function Home() {
       </section>
 
       {/* NUESTROS PERROS */}
-      <section id="perros" className="px-6 py-20">
-        <div className="mx-auto max-w-7xl">
+      <section id="perros" className="px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1400px]">
           <div className="mx-auto max-w-3xl text-center">
             <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
               Nuestros perros
@@ -199,8 +196,9 @@ export default function Home() {
               El equipo canino de SERVICAN
             </h2>
             <p className="mt-4 text-zinc-300">
-              Esta sección muestra la identidad visual del equipo canino, los
-              perros, el entrenamiento y el trabajo real detrás de SERVICAN.
+              Esta sección será una de las más importantes de la web: acá se
+              mostrarán fotos reales de los perros, entrenamientos y actividades
+              del equipo.
             </p>
           </div>
 
@@ -210,12 +208,10 @@ export default function Home() {
                 key={item.nombre}
                 className="overflow-hidden rounded-[2rem] border border-zinc-800 bg-zinc-950 shadow-2xl"
               >
-                <div className="aspect-[4/3] overflow-hidden bg-zinc-900">
-                  <img
-                    src={item.imagen}
-                    alt={item.nombre}
-                    className="h-full w-full object-cover transition duration-500 hover:scale-105"
-                  />
+                <div className="flex aspect-[4/3] items-center justify-center bg-zinc-900 text-center text-zinc-500">
+                  Foto real
+                  <br />
+                  Próximamente
                 </div>
 
                 <div className="p-7">
@@ -231,8 +227,8 @@ export default function Home() {
       </section>
 
       {/* SERVICIOS */}
-      <section id="servicios" className="bg-zinc-950 px-6 py-20">
-        <div className="mx-auto max-w-7xl">
+      <section id="servicios" className="bg-zinc-950 px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1400px]">
           <div className="mx-auto max-w-3xl text-center">
             <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
               Servicios
@@ -265,8 +261,8 @@ export default function Home() {
       </section>
 
       {/* GALERÍA */}
-      <section className="px-6 py-20">
-        <div className="mx-auto max-w-7xl">
+      <section className="px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1400px]">
           <div className="rounded-[2rem] border border-yellow-500/30 bg-gradient-to-br from-zinc-950 to-black p-8 md:p-12">
             <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
               Galería
@@ -286,13 +282,11 @@ export default function Home() {
               {[1, 2, 3, 4].map((item) => (
                 <div
                   key={item}
-                  className="group aspect-square overflow-hidden rounded-3xl bg-zinc-900"
+                  className="flex aspect-square items-center justify-center rounded-3xl bg-zinc-900 text-center text-zinc-500"
                 >
-                  <img
-                    src={fotoPortada}
-                    alt={`Galería SERVICAN ${item}`}
-                    className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                  />
+                  Foto {item}
+                  <br />
+                  Próximamente
                 </div>
               ))}
             </div>
@@ -301,8 +295,8 @@ export default function Home() {
       </section>
 
       {/* CURSOS RESUMEN */}
-      <section className="bg-zinc-950 px-6 py-20">
-        <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-2 md:items-center">
+      <section className="bg-zinc-950 px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto grid max-w-[1400px] gap-10 md:grid-cols-2 md:items-center">
           <div>
             <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
               Formación
@@ -316,35 +310,27 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="overflow-hidden rounded-[2rem] border border-zinc-800 bg-black">
-            <img
-              src={fotoPortada}
-              alt="Cursos SERVICAN"
-              className="h-64 w-full object-cover"
-            />
+          <div className="rounded-[2rem] border border-zinc-800 bg-black p-8">
+            <h3 className="text-2xl font-black text-yellow-500">
+              Ver cursos SERVICAN
+            </h3>
+            <p className="mt-4 leading-7 text-zinc-300">
+              Accedé a la sección de cursos para ver los programas disponibles,
+              contenidos, modalidad e inscripción.
+            </p>
 
-            <div className="p-8">
-              <h3 className="text-2xl font-black text-yellow-500">
-                Ver cursos SERVICAN
-              </h3>
-              <p className="mt-4 leading-7 text-zinc-300">
-                Accedé a la sección de cursos para ver los programas
-                disponibles, contenidos, modalidad e inscripción.
-              </p>
-
-              <a
-                href="/cursos"
-                className="mt-8 inline-block rounded-full bg-yellow-500 px-8 py-4 font-black text-black hover:bg-yellow-400"
-              >
-                Ir a cursos
-              </a>
-            </div>
+            <a
+              href="/cursos"
+              className="mt-8 inline-block rounded-full bg-yellow-500 px-8 py-4 font-black text-black hover:bg-yellow-400"
+            >
+              Ir a cursos
+            </a>
           </div>
         </div>
       </section>
 
       {/* CONTACTO */}
-      <section id="contacto" className="bg-yellow-500 px-6 py-20 text-black">
+      <section id="contacto" className="bg-yellow-500 px-4 py-20 text-black sm:px-6 lg:px-8">
         <div className="mx-auto max-w-5xl text-center">
           <h2 className="text-4xl font-black md:text-6xl">
             Contactá con SERVICAN
