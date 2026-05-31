@@ -187,11 +187,11 @@ export default async function CursoPrivadoPage({ params }) {
   const cursoCompletado = totalClases > 0 && totalCompletadas === totalClases;
 
   const { data: certificado } = await supabase
-  .from("certificados")
-  .select("*")
-  .eq("user_id", user.id)
-  .eq("curso_id", curso.id)
-  .maybeSingle();
+    .from("certificados")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("curso_id", curso.id)
+    .maybeSingle();
 
   function obtenerEstadoClase(claseId) {
     const indice = clasesOrdenadas.findIndex((clase) => clase.id === claseId);
@@ -203,8 +203,7 @@ export default async function CursoPrivadoPage({ params }) {
         completada: true,
         bloqueada: false,
         texto: "Completada",
-        claseBadge:
-          "border-green-500/30 bg-green-500/10 text-green-300",
+        claseBadge: "border-green-500/30 bg-green-500/10 text-green-300",
       };
     }
 
@@ -213,8 +212,7 @@ export default async function CursoPrivadoPage({ params }) {
         completada: false,
         bloqueada: false,
         texto: "Disponible",
-        claseBadge:
-          "border-yellow-500/30 bg-yellow-500/10 text-yellow-300",
+        claseBadge: "border-yellow-500/30 bg-yellow-500/10 text-yellow-300",
       };
     }
 
@@ -226,8 +224,7 @@ export default async function CursoPrivadoPage({ params }) {
         completada: false,
         bloqueada: false,
         texto: "Disponible",
-        claseBadge:
-          "border-yellow-500/30 bg-yellow-500/10 text-yellow-300",
+        claseBadge: "border-yellow-500/30 bg-yellow-500/10 text-yellow-300",
       };
     }
 
@@ -235,8 +232,7 @@ export default async function CursoPrivadoPage({ params }) {
       completada: false,
       bloqueada: true,
       texto: "Bloqueada",
-      claseBadge:
-        "border-neutral-500/30 bg-neutral-500/10 text-neutral-400",
+      claseBadge: "border-neutral-500/30 bg-neutral-500/10 text-neutral-400",
     };
   }
 
@@ -265,6 +261,13 @@ export default async function CursoPrivadoPage({ params }) {
           </Link>
 
           <div className="flex flex-col gap-3 sm:flex-row">
+            <Link
+              href="/"
+              className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-semibold text-white transition hover:bg-white/20"
+            >
+              Volver al inicio
+            </Link>
+
             <Link
               href="/panel"
               className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-semibold text-white transition hover:bg-white/20"
@@ -326,7 +329,7 @@ export default async function CursoPrivadoPage({ params }) {
 
               <p className="mt-6 max-w-3xl text-lg leading-8 text-neutral-300">
                 {curso.descripcion ||
-                  "Contenido privado del curso SERVICAN. En esta sección se cargarán módulos, clases, videos, PDFs y materiales de apoyo."}
+                  "Contenido privado del curso SERVICAN. En esta sección se cargan módulos, clases, videos, materiales y recursos de apoyo."}
               </p>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -423,41 +426,41 @@ export default async function CursoPrivadoPage({ params }) {
               </p>
             </div>
 
-{cursoCompletado && (
-  <div className="mt-5 rounded-2xl border border-green-500/30 bg-green-500/10 p-5">
-    <p className="text-sm font-bold text-green-300">
-      Curso finalizado
-    </p>
+            {cursoCompletado && (
+              <div className="mt-5 rounded-2xl border border-green-500/30 bg-green-500/10 p-5">
+                <p className="text-sm font-bold text-green-300">
+                  Curso finalizado
+                </p>
 
-    <p className="mt-2 text-sm leading-6 text-green-100">
-      Ya completaste todas las clases de este curso.
-    </p>
+                <p className="mt-2 text-sm leading-6 text-green-100">
+                  Ya completaste todas las clases de este curso.
+                </p>
 
-    {certificado ? (
-      <Link
-        href={`/panel/certificados/${certificado.codigo}`}
-        className="mt-4 inline-block rounded-2xl bg-yellow-500 px-5 py-3 text-sm font-bold text-neutral-950 transition hover:bg-yellow-400"
-      >
-        Ver certificado
-      </Link>
-    ) : (
-      <p className="mt-4 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm text-yellow-100">
-        El certificado se generará automáticamente al completar la última clase.
-        Tocá actualizar si acabás de finalizar el curso.
-      </p>
-    )}
-  </div>
-)}
+                {certificado ? (
+                  <Link
+                    href={`/panel/certificados/${certificado.codigo}`}
+                    className="mt-4 inline-block rounded-2xl bg-yellow-500 px-5 py-3 text-sm font-bold text-neutral-950 transition hover:bg-yellow-400"
+                  >
+                    Ver certificado
+                  </Link>
+                ) : (
+                  <p className="mt-4 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm text-yellow-100">
+                    El certificado se generará automáticamente al completar la
+                    última clase. Tocá actualizar si acabás de finalizar el
+                    curso.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="mt-5 rounded-2xl border border-white/10 bg-neutral-950 p-5">
-              <p className="text-sm font-bold text-white">
-                Reglas del curso
-              </p>
+              <p className="text-sm font-bold text-white">Reglas del curso</p>
 
               <ul className="mt-3 space-y-2 text-sm text-neutral-400">
                 <li>• Las clases se desbloquean en orden.</li>
                 <li>• Para avanzar, completá la clase anterior.</li>
                 <li>• Al finalizar todo el curso, se habilitará certificado.</li>
+                <li>• Los materiales solo se abren con acceso activo.</li>
               </ul>
             </div>
           </aside>
@@ -535,9 +538,7 @@ export default async function CursoPrivadoPage({ params }) {
                             <div
                               key={clase.id}
                               className={`p-5 ${
-                                estadoClase.bloqueada
-                                  ? "opacity-60"
-                                  : ""
+                                estadoClase.bloqueada ? "opacity-60" : ""
                               }`}
                             >
                               <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -586,12 +587,12 @@ export default async function CursoPrivadoPage({ params }) {
 
                               {!estadoClase.bloqueada && clase.pdf_url && (
                                 <a
-                                  href={clase.pdf_url}
+                                  href={`/api/panel/materiales?clase_id=${clase.id}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="mt-5 inline-block rounded-2xl bg-yellow-500 px-5 py-3 text-sm font-bold text-black transition hover:bg-yellow-400"
                                 >
-                                  Abrir material PDF
+                                  Abrir material de la clase
                                 </a>
                               )}
 

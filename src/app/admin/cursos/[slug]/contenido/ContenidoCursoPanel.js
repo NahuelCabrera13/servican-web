@@ -12,6 +12,7 @@ export default function ContenidoCursoPanel({ slug }) {
   const [modulos, setModulos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
+  const [subiendoId, setSubiendoId] = useState(null);
   const [aviso, setAviso] = useState("");
   const [error, setError] = useState("");
 
@@ -169,6 +170,41 @@ export default function ContenidoCursoPanel({ slug }) {
     await cargarContenido();
   }
 
+  async function subirMaterial(clase, archivo) {
+    if (!archivo) return;
+
+    setSubiendoId(clase.id);
+    setAviso("");
+    setError("");
+
+    const formData = new FormData();
+    formData.append("archivo", archivo);
+    formData.append("clase_id", String(clase.id));
+    formData.append("slug", slug);
+
+    try {
+      const respuesta = await fetch("/api/admin/materiales/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await respuesta.json();
+
+      if (!respuesta.ok) {
+        setError(data.error || "No se pudo subir el material.");
+        setSubiendoId(null);
+        return;
+      }
+
+      setAviso("Material subido y asociado a la clase correctamente.");
+      await cargarContenido();
+    } catch (error) {
+      setError("Error de conexión al subir el material.");
+    } finally {
+      setSubiendoId(null);
+    }
+  }
+
   async function cambiarEstadoModulo(modulo) {
     setGuardando(true);
     setError("");
@@ -271,9 +307,7 @@ export default function ContenidoCursoPanel({ slug }) {
   }
 
   async function eliminarClase(clase) {
-    const confirmar = window.confirm(
-      `¿Eliminar la clase "${clase.titulo}"?`
-    );
+    const confirmar = window.confirm(`¿Eliminar la clase "${clase.titulo}"?`);
 
     if (!confirmar) return;
 
@@ -333,13 +367,9 @@ export default function ContenidoCursoPanel({ slug }) {
                 SERVICAN ADMIN
               </p>
 
-              <h1 className="text-3xl font-bold">
-                Contenido del curso
-              </h1>
+              <h1 className="text-3xl font-bold">Contenido del curso</h1>
 
-              <p className="mt-1 text-sm text-neutral-300">
-                {curso?.titulo}
-              </p>
+              <p className="mt-1 text-sm text-neutral-300">{curso?.titulo}</p>
             </div>
           </div>
 
@@ -405,9 +435,7 @@ export default function ContenidoCursoPanel({ slug }) {
                 Nuevo módulo
               </p>
 
-              <h2 className="mt-3 text-2xl font-bold">
-                Crear módulo
-              </h2>
+              <h2 className="mt-3 text-2xl font-bold">Crear módulo</h2>
 
               <div className="mt-6 space-y-4">
                 <input
@@ -472,9 +500,7 @@ export default function ContenidoCursoPanel({ slug }) {
                 Nueva clase
               </p>
 
-              <h2 className="mt-3 text-2xl font-bold">
-                Crear clase
-              </h2>
+              <h2 className="mt-3 text-2xl font-bold">Crear clase</h2>
 
               <div className="mt-6 space-y-4">
                 <select
@@ -525,14 +551,20 @@ export default function ContenidoCursoPanel({ slug }) {
                 />
 
                 <input
-                  type="url"
+                  type="text"
                   value={formClase.pdf_url}
                   onChange={(event) =>
                     actualizarClase("pdf_url", event.target.value)
                   }
-                  placeholder="Link del PDF o material"
+                  placeholder="Link externo o ruta del material"
                   className="w-full rounded-2xl border border-white/10 bg-neutral-950 px-4 py-3 outline-none focus:border-yellow-500"
                 />
+
+                <p className="rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-3 text-xs leading-5 text-yellow-100">
+                  Para subir materiales desde tu computadora, primero creá la
+                  clase. Después, en la lista de clases, usá el botón “Subir
+                  material”.
+                </p>
 
                 <textarea
                   value={formClase.contenido}
@@ -583,9 +615,7 @@ export default function ContenidoCursoPanel({ slug }) {
               Contenido actual
             </p>
 
-            <h2 className="mt-3 text-2xl font-bold">
-              Módulos y clases
-            </h2>
+            <h2 className="mt-3 text-2xl font-bold">Módulos y clases</h2>
 
             <div className="mt-6 space-y-5">
               {modulos.length === 0 && (
@@ -657,7 +687,7 @@ export default function ContenidoCursoPanel({ slug }) {
                     {modulo.clases?.map((clase) => (
                       <div key={clase.id} className="p-5">
                         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                          <div>
+                          <div className="flex-1">
                             <div className="mb-2 flex flex-wrap gap-2">
                               <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-neutral-300">
                                 Clase {clase.orden}
@@ -674,7 +704,9 @@ export default function ContenidoCursoPanel({ slug }) {
                               </span>
                             </div>
 
-                            <h4 className="text-lg font-bold">{clase.titulo}</h4>
+                            <h4 className="text-lg font-bold">
+                              {clase.titulo}
+                            </h4>
 
                             {clase.descripcion && (
                               <p className="mt-2 text-sm leading-6 text-neutral-400">
@@ -691,7 +723,7 @@ export default function ContenidoCursoPanel({ slug }) {
 
                               {clase.pdf_url && (
                                 <span className="rounded-full bg-yellow-500/10 px-3 py-1 text-yellow-300">
-                                  PDF
+                                  Material
                                 </span>
                               )}
 
@@ -701,9 +733,56 @@ export default function ContenidoCursoPanel({ slug }) {
                                 </span>
                               )}
                             </div>
+
+                            {clase.pdf_url && (
+                              <p className="mt-3 break-words rounded-2xl border border-white/10 bg-black/40 p-3 text-xs text-neutral-400">
+                                Material: {clase.pdf_url}
+                              </p>
+                            )}
+
+                            <div className="mt-4 rounded-2xl border border-white/10 bg-black/40 p-4">
+                              <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-neutral-400">
+                                Subir material para esta clase
+                              </label>
+
+                              <input
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx"
+                                disabled={subiendoId === clase.id}
+                                onChange={(event) => {
+                                  const archivo = event.target.files?.[0];
+                                  subirMaterial(clase, archivo);
+                                  event.target.value = "";
+                                }}
+                                className="w-full rounded-xl border border-white/10 bg-neutral-950 px-3 py-2 text-xs text-neutral-300"
+                              />
+
+                              <p className="mt-2 text-xs leading-5 text-neutral-500">
+                                Permitido: PDF, imagen, Word o Excel. Máximo 25
+                                MB. Si ya había un material, será reemplazado
+                                por el nuevo.
+                              </p>
+
+                              {subiendoId === clase.id && (
+                                <p className="mt-2 text-xs font-bold text-yellow-300">
+                                  Subiendo material...
+                                </p>
+                              )}
+                            </div>
                           </div>
 
                           <div className="flex flex-wrap gap-2">
+                            {clase.pdf_url && (
+                              <a
+                                href={`/api/panel/materiales?clase_id=${clase.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-xs font-bold text-yellow-200 transition hover:bg-yellow-500/20"
+                              >
+                                Abrir material
+                              </a>
+                            )}
+
                             <button
                               onClick={() => cambiarEstadoClase(clase)}
                               disabled={guardando}
