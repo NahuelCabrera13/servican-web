@@ -3,15 +3,15 @@ import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
-function crearSupabasePublico() {
+function crearSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Faltan variables públicas de Supabase.");
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Faltan variables de entorno de Supabase.");
   }
 
-  return createClient(supabaseUrl, supabaseAnonKey, {
+  return createClient(supabaseUrl, serviceRoleKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
@@ -31,7 +31,7 @@ function codigoValido(codigo) {
 }
 
 function limpiarCodigo(codigo) {
-  return String(codigo || "").trim().toUpperCase();
+  return String(codigo || "").trim();
 }
 
 function ocultarNombre(nombre) {
@@ -44,13 +44,22 @@ function ocultarNombre(nombre) {
   }
 
   if (partes.length === 1) {
-    return `${partes[0][0]?.toUpperCase() || ""}.`;
+    const inicial = partes[0][0]?.toUpperCase() || "";
+    return `${inicial}.`;
   }
 
   const primerNombre = partes[0];
   const primerApellido = partes[1];
 
   return `${primerNombre} ${primerApellido[0]?.toUpperCase() || ""}.`;
+}
+
+function normalizarEstado(estado) {
+  const valor = String(estado || "").toLowerCase().trim();
+
+  if (valor === "anulado") return "anulado";
+
+  return "emitido";
 }
 
 export async function POST(request) {
@@ -73,12 +82,13 @@ export async function POST(request) {
       );
     }
 
-    const supabase = crearSupabasePublico();
+    const supabaseAdmin = crearSupabaseAdmin();
 
-    const { data: certificado, error } = await supabase
-      .from("certificados_publicos")
+    const { data: certificados, error } = await supabaseAdmin
+      .from("certificados")
       .select(
         `
+        id,
         codigo,
         nombre_alumno,
         titulo_curso,
@@ -87,17 +97,22 @@ export async function POST(request) {
         created_at
       `
       )
-      .eq("codigo", codigo)
-      .maybeSingle();
+      .ilike("codigo", codigo)
+      .limit(1);
 
     if (error) {
-      console.error("Error verificando certificado público:", error);
+      console.error("Error verificando certificado:", error);
 
       return NextResponse.json(
-        { ok: false, error: "No se pudo verificar el certificado." },
+        {
+          ok: false,
+          error: `No se pudo verificar el certificado: ${error.message}`,
+        },
         { status: 500 }
       );
     }
+
+    const certificado = certificados?.[0] || null;
 
     if (!certificado) {
       return NextResponse.json({
@@ -107,14 +122,7 @@ export async function POST(request) {
       });
     }
 
-    if (certificado.estado !== "emitido") {
-      return NextResponse.json({
-        ok: true,
-        encontrado: false,
-        mensaje:
-          "El certificado no está disponible como válido. Puede estar anulado o no habilitado.",
-      });
-    }
+    const estado = normalizarEstado(certificado.estado);
 
     return NextResponse.json({
       ok: true,
@@ -123,7 +131,7 @@ export async function POST(request) {
         codigo: certificado.codigo,
         alumno: ocultarNombre(certificado.nombre_alumno),
         curso: certificado.titulo_curso || "Curso SERVICAN",
-        estado: certificado.estado,
+        estado,
         emitido_at: certificado.emitido_at || certificado.created_at || null,
         emisor: "SERVICAN Uruguay",
       },
@@ -132,7 +140,12 @@ export async function POST(request) {
     console.error("Error POST /api/certificados/verificar:", error);
 
     return NextResponse.json(
-      { ok: false, error: "Error interno del servidor." },
+      {
+        ok: false,
+        error:
+          error?.message ||
+          "Error interno del servidor al verificar el certificado.",
+      },
       { status: 500 }
     );
   }
