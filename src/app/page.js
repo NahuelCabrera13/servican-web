@@ -1,5 +1,7 @@
 import Image from "next/image";
 import HeaderAcceso from "./components/HeaderAcceso";
+import NoticiasInicio from "./components/NoticiasInicio";
+import NoticiasFlotantes from "./components/NoticiasFlotantes";
 
 export default function Home() {
   const whatsapp = "59898188257";
@@ -158,6 +160,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-black text-white">
+      <NoticiasFlotantes />
       <header className="sticky top-0 z-50 border-b border-yellow-500/20 bg-black/90 backdrop-blur">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
           <a href="#inicio" className="flex shrink-0 items-center gap-3">
@@ -181,25 +184,26 @@ export default function Home() {
           </a>
 
           <nav className="hidden gap-6 text-sm font-semibold text-zinc-300 lg:flex">
-            <a href="#quienes-somos" className="hover:text-yellow-500">
-              Quiénes somos
-            </a>
-            <a href="#perros" className="hover:text-yellow-500">
-              Nuestros perros
-            </a>
-            <a href="#servicios" className="hover:text-yellow-500">
-              Servicios
-            </a>
-            <a href="/cursos" className="hover:text-yellow-500">
-              Cursos
-            </a>
-            <a href="/verificar-certificado" className="hover:text-yellow-500">
-              Verificar certificado
-            </a>
-            <a href="#contacto" className="hover:text-yellow-500">
-              Contacto
-            </a>
-          </nav>
+  <a href="#inicio" className="hover:text-yellow-500">
+    Inicio
+  </a>
+
+  <a href="/cursos" className="hover:text-yellow-500">
+    Cursos
+  </a>
+
+  <a href="/noticias" className="hover:text-yellow-500">
+    Noticias
+  </a>
+
+  <a href="#servicios" className="hover:text-yellow-500">
+    Servicios
+  </a>
+
+  <a href="#contacto" className="hover:text-yellow-500">
+    Contacto
+  </a>
+</nav>
 
           <HeaderAcceso />
         </div>
@@ -690,6 +694,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <NoticiasInicio />
 
       <section
         id="contacto"

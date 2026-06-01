@@ -27,8 +27,11 @@ export default function BotonComprarProducto({ producto }) {
   );
 
   const cantidadParticipantes = Math.max(cantidadMaximaUsuarios - 1, 0);
+
   const requiereParticipantes =
     Boolean(producto?.requiere_participantes) || cantidadParticipantes > 0;
+
+  const esRecurrente = Boolean(producto?.es_recurrente);
 
   const [participantes, setParticipantes] = useState(
     Array.from({ length: cantidadParticipantes }, () => "")
@@ -52,7 +55,9 @@ export default function BotonComprarProducto({ producto }) {
 
     if (emails.length !== cantidadParticipantes) {
       throw new Error(
-        `Este plan requiere ${cantidadParticipantes} participantes además del comprador.`
+        `Este plan requiere ${cantidadParticipantes} participante${
+          cantidadParticipantes === 1 ? "" : "s"
+        } además del comprador.`
       );
     }
 
@@ -76,13 +81,24 @@ export default function BotonComprarProducto({ producto }) {
     setError("");
 
     try {
+      if (!producto?.id) {
+        throw new Error("No se encontró el ID del producto.");
+      }
+
+      if (esRecurrente) {
+        throw new Error(
+          "Este producto corresponde a una membresía mensual. Esa compra se activará desde el sistema de suscripciones."
+        );
+      }
+
       const supabase = createClient();
 
       const {
         data: { user },
+        error: errorUsuario,
       } = await supabase.auth.getUser();
 
-      if (!user) {
+      if (errorUsuario || !user) {
         const destino = encodeURIComponent(window.location.pathname);
         window.location.href = `/login?redirect=${destino}`;
         return;
@@ -95,10 +111,9 @@ export default function BotonComprarProducto({ producto }) {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "same-origin",
         body: JSON.stringify({
           productoId: producto.id,
-          userId: user.id,
-          email: user.email,
           participantes: emailsParticipantes,
         }),
       });
@@ -106,6 +121,12 @@ export default function BotonComprarProducto({ producto }) {
       const data = await leerRespuestaSegura(respuesta);
 
       if (!respuesta.ok) {
+        if (respuesta.status === 401) {
+          const destino = encodeURIComponent(window.location.pathname);
+          window.location.href = `/login?redirect=${destino}`;
+          return;
+        }
+
         if (Array.isArray(data?.emails_no_registrados)) {
           setError(
             `No se puede continuar. Estos correos no tienen cuenta registrada: ${data.emails_no_registrados.join(
@@ -171,16 +192,24 @@ export default function BotonComprarProducto({ producto }) {
                 actualizarParticipante(index, event.target.value)
               }
               placeholder={`Correo participante ${index + 1}`}
-              className="w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition focus:border-yellow-400"
+              disabled={cargando}
+              className="w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition focus:border-yellow-400 disabled:cursor-not-allowed disabled:opacity-60"
             />
           ))}
+        </div>
+      )}
+
+      {esRecurrente && (
+        <div className="mb-5 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm font-bold leading-6 text-yellow-100">
+          Este producto será parte de la futura membresía mensual SERVICAN. Las
+          suscripciones recurrentes se activarán en un bloque separado.
         </div>
       )}
 
       <button
         type="button"
         onClick={comprarProducto}
-        disabled={cargando}
+        disabled={cargando || esRecurrente}
         className="w-full rounded-full bg-yellow-500 px-7 py-4 text-center font-black text-black transition hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {cargando

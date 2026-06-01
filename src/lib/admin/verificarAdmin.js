@@ -1,36 +1,51 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 export async function verificarAdmin(request) {
-  const authHeader = request.headers.get("authorization") || "";
+  const authHeader = request?.headers?.get("authorization") || "";
   const token = authHeader.replace("Bearer ", "").trim();
 
-  if (!token) {
-    return {
-      ok: false,
-      status: 401,
-      error: "No autorizado. Falta token de sesión.",
-    };
+  let user = null;
+
+  if (token) {
+    const supabaseAdmin = createAdminClient();
+
+    const { data: userData, error: userError } =
+      await supabaseAdmin.auth.getUser(token);
+
+    if (userError || !userData?.user) {
+      return {
+        ok: false,
+        status: 401,
+        error: "Sesión inválida o expirada.",
+      };
+    }
+
+    user = userData.user;
+  } else {
+    const supabase = await createClient();
+
+    const {
+      data: { user: usuarioSesion },
+      error: errorUsuario,
+    } = await supabase.auth.getUser();
+
+    if (errorUsuario || !usuarioSesion) {
+      return {
+        ok: false,
+        status: 401,
+        error: "No autorizado. Iniciá sesión nuevamente.",
+      };
+    }
+
+    user = usuarioSesion;
   }
 
-  const supabase = createAdminClient();
+  const supabaseAdmin = createAdminClient();
 
-  const { data: userData, error: userError } = await supabase.auth.getUser(
-    token
-  );
-
-  if (userError || !userData?.user) {
-    return {
-      ok: false,
-      status: 401,
-      error: "Sesión inválida o expirada.",
-    };
-  }
-
-  const user = userData.user;
-
-  const { data: perfil, error: perfilError } = await supabase
+  const { data: perfil, error: perfilError } = await supabaseAdmin
     .from("perfiles")
-    .select("role")
+    .select("id, user_id, email, nombre, role, created_at")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -42,7 +57,15 @@ export async function verificarAdmin(request) {
     };
   }
 
-  if (perfil?.role !== "admin") {
+  if (!perfil) {
+    return {
+      ok: false,
+      status: 403,
+      error: "Acceso denegado. El usuario no tiene perfil.",
+    };
+  }
+
+  if (perfil.role !== "admin") {
     return {
       ok: false,
       status: 403,
@@ -54,6 +77,6 @@ export async function verificarAdmin(request) {
     ok: true,
     user,
     perfil,
-    supabase,
+    supabase: supabaseAdmin,
   };
 }

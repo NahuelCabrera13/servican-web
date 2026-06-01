@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { createClient as createSupabaseServerClient } from "@/lib/supabase/server";
-import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
+import { verificarAdmin } from "@/lib/admin/verificarAdmin";
+
+export const dynamic = "force-dynamic";
 
 const CAMPOS_CURSO = `
   id,
@@ -24,6 +25,7 @@ const CAMPOS_MODULO = `
   descripcion,
   orden,
   activo,
+  nivel_minimo_acceso,
   created_at
 `;
 
@@ -37,6 +39,7 @@ const CAMPOS_CLASE = `
   contenido,
   orden,
   activo,
+  nivel_minimo_acceso,
   created_at
 `;
 
@@ -47,6 +50,7 @@ const CAMPOS_MODULOS_CON_CLASES = `
   descripcion,
   orden,
   activo,
+  nivel_minimo_acceso,
   created_at,
   clases:curso_clases (
     id,
@@ -58,9 +62,12 @@ const CAMPOS_MODULOS_CON_CLASES = `
     contenido,
     orden,
     activo,
+    nivel_minimo_acceso,
     created_at
   )
 `;
+
+const NIVELES_ACCESO = ["basico", "extenso", "pro", "plantel"];
 
 function crearRespuestaError(mensaje, status = 500) {
   return NextResponse.json(
@@ -98,13 +105,76 @@ function limpiarSlug(slug) {
     .slice(0, 120);
 }
 
-function limpiarUrl(valor) {
+function limpiarNivelAcceso(valor) {
+  const nivel = String(valor || "basico").trim().toLowerCase();
+
+  if (NIVELES_ACCESO.includes(nivel)) {
+    return nivel;
+  }
+
+  return "basico";
+}
+
+function limpiarUrlMaterial(valor) {
   const texto = limpiarTexto(valor, 1200);
 
   if (!texto) return "";
 
-  if (texto.startsWith("/") || texto.startsWith("http://") || texto.startsWith("https://")) {
+  if (texto.includes("..")) return "";
+
+  if (
+    texto.startsWith("/") ||
+    texto.startsWith("http://") ||
+    texto.startsWith("https://") ||
+    !texto.includes("://")
+  ) {
     return texto;
+  }
+
+  return "";
+}
+
+function obtenerEmbedYoutube(url) {
+  if (!url) return "";
+
+  try {
+    const urlObj = new URL(url);
+
+    if (urlObj.hostname.includes("youtube.com")) {
+      const videoId = urlObj.searchParams.get("v");
+
+      if (videoId) {
+        return `https://www.youtube-nocookie.com/embed/${videoId}`;
+      }
+
+      if (urlObj.pathname.startsWith("/embed/")) {
+        return url.replace("youtube.com", "youtube-nocookie.com");
+      }
+    }
+
+    if (urlObj.hostname.includes("youtu.be")) {
+      const videoId = urlObj.pathname.replace("/", "");
+
+      if (videoId) {
+        return `https://www.youtube-nocookie.com/embed/${videoId}`;
+      }
+    }
+
+    return "";
+  } catch {
+    return "";
+  }
+}
+
+function limpiarUrlYoutube(valor) {
+  const texto = limpiarTexto(valor, 1200);
+
+  if (!texto) return "";
+
+  const embed = obtenerEmbedYoutube(texto);
+
+  if (!embed) {
+    return null;
   }
 
   return texto;
@@ -136,6 +206,7 @@ function prepararModulo(modulo) {
       descripcion: limpiarTexto(modulo?.descripcion, 1500),
       orden: validarId(modulo?.orden) || 1,
       activo: Boolean(modulo?.activo),
+      nivel_minimo_acceso: limpiarNivelAcceso(modulo?.nivel_minimo_acceso),
     },
   };
 }
@@ -157,6 +228,7 @@ function prepararModuloParaActualizar(modulo) {
       descripcion: limpiarTexto(modulo?.descripcion, 1500),
       orden: validarId(modulo?.orden) || 1,
       activo: Boolean(modulo?.activo),
+      nivel_minimo_acceso: limpiarNivelAcceso(modulo?.nivel_minimo_acceso),
     },
   };
 }
@@ -164,6 +236,7 @@ function prepararModuloParaActualizar(modulo) {
 function prepararClase(clase) {
   const moduloId = validarId(clase?.modulo_id);
   const titulo = limpiarTexto(clase?.titulo, 180);
+  const videoUrl = limpiarUrlYoutube(clase?.video_url);
 
   if (!moduloId) {
     return {
@@ -179,23 +252,33 @@ function prepararClase(clase) {
     };
   }
 
+  if (videoUrl === null) {
+    return {
+      ok: false,
+      error:
+        "El video debe ser un link válido de YouTube. Usá https://www.youtube.com/watch?v=... o https://youtu.be/...",
+    };
+  }
+
   return {
     ok: true,
     clase: {
       modulo_id: moduloId,
       titulo,
       descripcion: limpiarTexto(clase?.descripcion, 1500),
-      video_url: limpiarUrl(clase?.video_url),
-      pdf_url: limpiarUrl(clase?.pdf_url),
+      video_url: videoUrl,
+      pdf_url: limpiarUrlMaterial(clase?.pdf_url),
       contenido: limpiarTexto(clase?.contenido, 12000),
       orden: validarId(clase?.orden) || 1,
       activo: Boolean(clase?.activo),
+      nivel_minimo_acceso: limpiarNivelAcceso(clase?.nivel_minimo_acceso),
     },
   };
 }
 
 function prepararClaseParaActualizar(clase) {
   const titulo = limpiarTexto(clase?.titulo, 180);
+  const videoUrl = limpiarUrlYoutube(clase?.video_url);
 
   if (!titulo) {
     return {
@@ -204,76 +287,32 @@ function prepararClaseParaActualizar(clase) {
     };
   }
 
+  if (videoUrl === null) {
+    return {
+      ok: false,
+      error:
+        "El video debe ser un link válido de YouTube. Usá https://www.youtube.com/watch?v=... o https://youtu.be/...",
+    };
+  }
+
   return {
     ok: true,
     clase: {
       titulo,
       descripcion: limpiarTexto(clase?.descripcion, 1500),
-      video_url: limpiarUrl(clase?.video_url),
-      pdf_url: limpiarUrl(clase?.pdf_url),
+      video_url: videoUrl,
+      pdf_url: limpiarUrlMaterial(clase?.pdf_url),
       contenido: limpiarTexto(clase?.contenido, 12000),
       orden: validarId(clase?.orden) || 1,
       activo: Boolean(clase?.activo),
+      nivel_minimo_acceso: limpiarNivelAcceso(clase?.nivel_minimo_acceso),
     },
   };
-}
-
-async function verificarAdmin() {
-  const supabase = await createSupabaseServerClient();
-
-  const {
-    data: { user },
-    error: errorUsuario,
-  } = await supabase.auth.getUser();
-
-  if (errorUsuario || !user) {
-    return {
-      ok: false,
-      status: 401,
-      error: "No has iniciado sesión.",
-    };
-  }
-
-  const { data: perfil, error: errorPerfil } = await supabase
-    .from("perfiles")
-    .select("role")
-    .eq("user_id", user.id)
-    .single();
-
-  if (errorPerfil || !perfil || perfil.role !== "admin") {
-    return {
-      ok: false,
-      status: 403,
-      error: "No tenés permisos de administrador.",
-    };
-  }
-
-  return {
-    ok: true,
-    user,
-    perfil,
-  };
-}
-
-function crearSupabaseAdmin() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Faltan variables de entorno de Supabase.");
-  }
-
-  return createSupabaseAdminClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
 }
 
 export async function GET(request) {
   try {
-    const admin = await verificarAdmin();
+    const admin = await verificarAdmin(request);
 
     if (!admin.ok) {
       return crearRespuestaError(admin.error, admin.status);
@@ -286,19 +325,19 @@ export async function GET(request) {
       return crearRespuestaError("Falta el slug del curso.", 400);
     }
 
-    const supabaseAdmin = crearSupabaseAdmin();
+    const supabase = admin.supabase;
 
-    const { data: curso, error: errorCurso } = await supabaseAdmin
+    const { data: curso, error: errorCurso } = await supabase
       .from("cursos")
       .select(CAMPOS_CURSO)
       .eq("slug", slug)
-      .single();
+      .maybeSingle();
 
     if (errorCurso || !curso) {
       return crearRespuestaError("Curso no encontrado.", 404);
     }
 
-    const { data: modulos, error: errorModulos } = await supabaseAdmin
+    const { data: modulos, error: errorModulos } = await supabase
       .from("curso_modulos")
       .select(CAMPOS_MODULOS_CON_CLASES)
       .eq("curso_id", curso.id)
@@ -309,6 +348,8 @@ export async function GET(request) {
       });
 
     if (errorModulos) {
+      console.error("Error cargando contenido del curso:", errorModulos);
+
       return crearRespuestaError("No se pudo cargar el contenido.", 500);
     }
 
@@ -318,13 +359,15 @@ export async function GET(request) {
       modulos: modulos || [],
     });
   } catch (error) {
+    console.error("Error GET /api/admin/curso-contenido:", error);
+
     return crearRespuestaError("Error interno del servidor.", 500);
   }
 }
 
 export async function POST(request) {
   try {
-    const admin = await verificarAdmin();
+    const admin = await verificarAdmin(request);
 
     if (!admin.ok) {
       return crearRespuestaError(admin.error, admin.status);
@@ -333,7 +376,7 @@ export async function POST(request) {
     const body = await request.json();
     const tipo = String(body?.tipo || "").trim();
 
-    const supabaseAdmin = crearSupabaseAdmin();
+    const supabase = admin.supabase;
 
     if (tipo === "modulo") {
       const resultado = prepararModulo(body?.modulo);
@@ -342,23 +385,31 @@ export async function POST(request) {
         return crearRespuestaError(resultado.error, 400);
       }
 
-      const { data: cursoExiste } = await supabaseAdmin
+      const { data: cursoExiste, error: errorCursoExiste } = await supabase
         .from("cursos")
         .select("id")
         .eq("id", resultado.modulo.curso_id)
         .maybeSingle();
 
+      if (errorCursoExiste) {
+        console.error("Error verificando curso:", errorCursoExiste);
+
+        return crearRespuestaError("No se pudo verificar el curso.", 500);
+      }
+
       if (!cursoExiste) {
         return crearRespuestaError("No se encontró el curso.", 404);
       }
 
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await supabase
         .from("curso_modulos")
         .insert(resultado.modulo)
         .select(CAMPOS_MODULO)
         .single();
 
       if (error || !data) {
+        console.error("Error creando módulo:", error);
+
         return crearRespuestaError("No se pudo crear el módulo.", 500);
       }
 
@@ -375,23 +426,31 @@ export async function POST(request) {
         return crearRespuestaError(resultado.error, 400);
       }
 
-      const { data: moduloExiste } = await supabaseAdmin
+      const { data: moduloExiste, error: errorModuloExiste } = await supabase
         .from("curso_modulos")
         .select("id")
         .eq("id", resultado.clase.modulo_id)
         .maybeSingle();
 
+      if (errorModuloExiste) {
+        console.error("Error verificando módulo:", errorModuloExiste);
+
+        return crearRespuestaError("No se pudo verificar el módulo.", 500);
+      }
+
       if (!moduloExiste) {
         return crearRespuestaError("No se encontró el módulo.", 404);
       }
 
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await supabase
         .from("curso_clases")
         .insert(resultado.clase)
         .select(CAMPOS_CLASE)
         .single();
 
       if (error || !data) {
+        console.error("Error creando clase:", error);
+
         return crearRespuestaError("No se pudo crear la clase.", 500);
       }
 
@@ -403,13 +462,15 @@ export async function POST(request) {
 
     return crearRespuestaError("Tipo de contenido inválido.", 400);
   } catch (error) {
+    console.error("Error POST /api/admin/curso-contenido:", error);
+
     return crearRespuestaError("Error interno del servidor.", 500);
   }
 }
 
 export async function PATCH(request) {
   try {
-    const admin = await verificarAdmin();
+    const admin = await verificarAdmin(request);
 
     if (!admin.ok) {
       return crearRespuestaError(admin.error, admin.status);
@@ -423,7 +484,7 @@ export async function PATCH(request) {
       return crearRespuestaError("ID inválido.", 400);
     }
 
-    const supabaseAdmin = crearSupabaseAdmin();
+    const supabase = admin.supabase;
 
     if (tipo === "modulo") {
       const resultado = prepararModuloParaActualizar(body?.modulo);
@@ -432,7 +493,23 @@ export async function PATCH(request) {
         return crearRespuestaError(resultado.error, 400);
       }
 
-      const { data, error } = await supabaseAdmin
+      const { data: moduloExiste, error: errorModuloExiste } = await supabase
+        .from("curso_modulos")
+        .select("id")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (errorModuloExiste) {
+        console.error("Error verificando módulo:", errorModuloExiste);
+
+        return crearRespuestaError("No se pudo verificar el módulo.", 500);
+      }
+
+      if (!moduloExiste) {
+        return crearRespuestaError("No se encontró el módulo.", 404);
+      }
+
+      const { data, error } = await supabase
         .from("curso_modulos")
         .update(resultado.modulo)
         .eq("id", id)
@@ -440,6 +517,8 @@ export async function PATCH(request) {
         .single();
 
       if (error || !data) {
+        console.error("Error actualizando módulo:", error);
+
         return crearRespuestaError("No se pudo actualizar el módulo.", 500);
       }
 
@@ -456,7 +535,23 @@ export async function PATCH(request) {
         return crearRespuestaError(resultado.error, 400);
       }
 
-      const { data, error } = await supabaseAdmin
+      const { data: claseExiste, error: errorClaseExiste } = await supabase
+        .from("curso_clases")
+        .select("id")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (errorClaseExiste) {
+        console.error("Error verificando clase:", errorClaseExiste);
+
+        return crearRespuestaError("No se pudo verificar la clase.", 500);
+      }
+
+      if (!claseExiste) {
+        return crearRespuestaError("No se encontró la clase.", 404);
+      }
+
+      const { data, error } = await supabase
         .from("curso_clases")
         .update(resultado.clase)
         .eq("id", id)
@@ -464,6 +559,8 @@ export async function PATCH(request) {
         .single();
 
       if (error || !data) {
+        console.error("Error actualizando clase:", error);
+
         return crearRespuestaError("No se pudo actualizar la clase.", 500);
       }
 
@@ -475,13 +572,15 @@ export async function PATCH(request) {
 
     return crearRespuestaError("Tipo inválido.", 400);
   } catch (error) {
+    console.error("Error PATCH /api/admin/curso-contenido:", error);
+
     return crearRespuestaError("Error interno del servidor.", 500);
   }
 }
 
 export async function DELETE(request) {
   try {
-    const admin = await verificarAdmin();
+    const admin = await verificarAdmin(request);
 
     if (!admin.ok) {
       return crearRespuestaError(admin.error, admin.status);
@@ -495,10 +594,40 @@ export async function DELETE(request) {
       return crearRespuestaError("ID inválido.", 400);
     }
 
-    const supabaseAdmin = crearSupabaseAdmin();
+    const supabase = admin.supabase;
 
     if (tipo === "modulo") {
-      const { data, error } = await supabaseAdmin
+      const { data: moduloExiste, error: errorModuloExiste } = await supabase
+        .from("curso_modulos")
+        .select("id")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (errorModuloExiste) {
+        console.error("Error verificando módulo antes de eliminar:", errorModuloExiste);
+
+        return crearRespuestaError("No se pudo verificar el módulo.", 500);
+      }
+
+      if (!moduloExiste) {
+        return crearRespuestaError("No se encontró el módulo.", 404);
+      }
+
+      const { error: errorClases } = await supabase
+        .from("curso_clases")
+        .delete()
+        .eq("modulo_id", id);
+
+      if (errorClases) {
+        console.error("Error eliminando clases del módulo:", errorClases);
+
+        return crearRespuestaError(
+          "No se pudieron eliminar las clases del módulo.",
+          500
+        );
+      }
+
+      const { data, error } = await supabase
         .from("curso_modulos")
         .delete()
         .eq("id", id)
@@ -506,6 +635,8 @@ export async function DELETE(request) {
         .single();
 
       if (error || !data) {
+        console.error("Error eliminando módulo:", error);
+
         return crearRespuestaError("No se pudo eliminar el módulo.", 500);
       }
 
@@ -516,7 +647,37 @@ export async function DELETE(request) {
     }
 
     if (tipo === "clase") {
-      const { data, error } = await supabaseAdmin
+      const { data: claseExiste, error: errorClaseExiste } = await supabase
+        .from("curso_clases")
+        .select("id")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (errorClaseExiste) {
+        console.error("Error verificando clase antes de eliminar:", errorClaseExiste);
+
+        return crearRespuestaError("No se pudo verificar la clase.", 500);
+      }
+
+      if (!claseExiste) {
+        return crearRespuestaError("No se encontró la clase.", 404);
+      }
+
+      const { error: errorProgreso } = await supabase
+        .from("clase_progreso")
+        .delete()
+        .eq("clase_id", id);
+
+      if (errorProgreso) {
+        console.error("Error eliminando progreso de la clase:", errorProgreso);
+
+        return crearRespuestaError(
+          "No se pudo eliminar el progreso asociado a la clase.",
+          500
+        );
+      }
+
+      const { data, error } = await supabase
         .from("curso_clases")
         .delete()
         .eq("id", id)
@@ -524,6 +685,8 @@ export async function DELETE(request) {
         .single();
 
       if (error || !data) {
+        console.error("Error eliminando clase:", error);
+
         return crearRespuestaError("No se pudo eliminar la clase.", 500);
       }
 
@@ -535,6 +698,8 @@ export async function DELETE(request) {
 
     return crearRespuestaError("Tipo inválido.", 400);
   } catch (error) {
+    console.error("Error DELETE /api/admin/curso-contenido:", error);
+
     return crearRespuestaError("Error interno del servidor.", 500);
   }
 }

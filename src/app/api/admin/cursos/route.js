@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { createClient as createSupabaseServerClient } from "@/lib/supabase/server";
-import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
+import { verificarAdmin } from "@/lib/admin/verificarAdmin";
+
+export const dynamic = "force-dynamic";
 
 const CAMPOS_CURSO = `
   id,
@@ -87,76 +88,24 @@ function prepararCurso(curso) {
   };
 }
 
-async function verificarAdmin() {
-  const supabase = await createSupabaseServerClient();
-
-  const {
-    data: { user },
-    error: errorUsuario,
-  } = await supabase.auth.getUser();
-
-  if (errorUsuario || !user) {
-    return {
-      ok: false,
-      status: 401,
-      error: "No has iniciado sesión.",
-    };
-  }
-
-  const { data: perfil, error: errorPerfil } = await supabase
-    .from("perfiles")
-    .select("role")
-    .eq("user_id", user.id)
-    .single();
-
-  if (errorPerfil || !perfil || perfil.role !== "admin") {
-    return {
-      ok: false,
-      status: 403,
-      error: "No tenés permisos de administrador.",
-    };
-  }
-
-  return {
-    ok: true,
-    user,
-    perfil,
-  };
-}
-
-function crearSupabaseAdmin() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Faltan variables de entorno de Supabase.");
-  }
-
-  return createSupabaseAdminClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-}
-
-export async function GET() {
+export async function GET(request) {
   try {
-    const admin = await verificarAdmin();
+    const admin = await verificarAdmin(request);
 
     if (!admin.ok) {
       return crearRespuestaError(admin.error, admin.status);
     }
 
-    const supabaseAdmin = crearSupabaseAdmin();
+    const supabase = admin.supabase;
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabase
       .from("cursos")
       .select(CAMPOS_CURSO)
       .order("created_at", { ascending: false })
       .limit(300);
 
     if (error) {
+      console.error("Error cargando cursos admin:", error);
       return crearRespuestaError("No se pudieron cargar los cursos.", 500);
     }
 
@@ -165,17 +114,20 @@ export async function GET() {
       cursos: data || [],
     });
   } catch (error) {
+    console.error("Error GET /api/admin/cursos:", error);
     return crearRespuestaError("Error interno del servidor.", 500);
   }
 }
 
 export async function PUT(request) {
   try {
-    const admin = await verificarAdmin();
+    const admin = await verificarAdmin(request);
 
     if (!admin.ok) {
       return crearRespuestaError(admin.error, admin.status);
     }
+
+    const supabase = admin.supabase;
 
     const body = await request.json();
     const resultado = prepararCurso(body?.curso);
@@ -184,13 +136,16 @@ export async function PUT(request) {
       return crearRespuestaError(resultado.error, 400);
     }
 
-    const supabaseAdmin = crearSupabaseAdmin();
-
-    const { data: cursoExistente } = await supabaseAdmin
+    const { data: cursoExistente, error: errorSlug } = await supabase
       .from("cursos")
       .select("id")
       .eq("slug", resultado.curso.slug)
       .maybeSingle();
+
+    if (errorSlug) {
+      console.error("Error verificando slug de curso:", errorSlug);
+      return crearRespuestaError("No se pudo verificar el slug del curso.", 500);
+    }
 
     if (cursoExistente) {
       return crearRespuestaError(
@@ -199,13 +154,14 @@ export async function PUT(request) {
       );
     }
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabase
       .from("cursos")
       .insert(resultado.curso)
       .select(CAMPOS_CURSO)
       .single();
 
     if (error || !data) {
+      console.error("Error creando curso:", error);
       return crearRespuestaError("No se pudo crear el curso.", 500);
     }
 
@@ -214,17 +170,20 @@ export async function PUT(request) {
       curso: data,
     });
   } catch (error) {
+    console.error("Error PUT /api/admin/cursos:", error);
     return crearRespuestaError("Error interno del servidor.", 500);
   }
 }
 
 export async function PATCH(request) {
   try {
-    const admin = await verificarAdmin();
+    const admin = await verificarAdmin(request);
 
     if (!admin.ok) {
       return crearRespuestaError(admin.error, admin.status);
     }
+
+    const supabase = admin.supabase;
 
     const body = await request.json();
 
@@ -239,14 +198,32 @@ export async function PATCH(request) {
       return crearRespuestaError(resultado.error, 400);
     }
 
-    const supabaseAdmin = crearSupabaseAdmin();
+    const { data: cursoExiste, error: errorExiste } = await supabase
+      .from("cursos")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
 
-    const { data: cursoConMismoSlug } = await supabaseAdmin
+    if (errorExiste) {
+      console.error("Error verificando curso:", errorExiste);
+      return crearRespuestaError("No se pudo verificar el curso.", 500);
+    }
+
+    if (!cursoExiste) {
+      return crearRespuestaError("No se encontró el curso.", 404);
+    }
+
+    const { data: cursoConMismoSlug, error: errorSlug } = await supabase
       .from("cursos")
       .select("id")
       .eq("slug", resultado.curso.slug)
       .neq("id", id)
       .maybeSingle();
+
+    if (errorSlug) {
+      console.error("Error verificando slug repetido:", errorSlug);
+      return crearRespuestaError("No se pudo verificar el slug del curso.", 500);
+    }
 
     if (cursoConMismoSlug) {
       return crearRespuestaError(
@@ -255,7 +232,7 @@ export async function PATCH(request) {
       );
     }
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabase
       .from("cursos")
       .update(resultado.curso)
       .eq("id", id)
@@ -263,6 +240,7 @@ export async function PATCH(request) {
       .single();
 
     if (error || !data) {
+      console.error("Error actualizando curso:", error);
       return crearRespuestaError("No se pudo actualizar el curso.", 500);
     }
 
@@ -271,17 +249,20 @@ export async function PATCH(request) {
       curso: data,
     });
   } catch (error) {
+    console.error("Error PATCH /api/admin/cursos:", error);
     return crearRespuestaError("Error interno del servidor.", 500);
   }
 }
 
 export async function DELETE(request) {
   try {
-    const admin = await verificarAdmin();
+    const admin = await verificarAdmin(request);
 
     if (!admin.ok) {
       return crearRespuestaError(admin.error, admin.status);
     }
+
+    const supabase = admin.supabase;
 
     const body = await request.json();
 
@@ -291,9 +272,22 @@ export async function DELETE(request) {
       return crearRespuestaError("ID de curso inválido.", 400);
     }
 
-    const supabaseAdmin = crearSupabaseAdmin();
+    const { data: cursoExiste, error: errorExiste } = await supabase
+      .from("cursos")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
 
-    const { data, error } = await supabaseAdmin
+    if (errorExiste) {
+      console.error("Error verificando curso antes de eliminar:", errorExiste);
+      return crearRespuestaError("No se pudo verificar el curso.", 500);
+    }
+
+    if (!cursoExiste) {
+      return crearRespuestaError("No se encontró el curso.", 404);
+    }
+
+    const { data, error } = await supabase
       .from("cursos")
       .delete()
       .eq("id", id)
@@ -301,6 +295,7 @@ export async function DELETE(request) {
       .single();
 
     if (error || !data) {
+      console.error("Error eliminando curso:", error);
       return crearRespuestaError("No se pudo eliminar el curso.", 500);
     }
 
@@ -309,6 +304,7 @@ export async function DELETE(request) {
       id: data.id,
     });
   } catch (error) {
+    console.error("Error DELETE /api/admin/cursos:", error);
     return crearRespuestaError("Error interno del servidor.", 500);
   }
 }

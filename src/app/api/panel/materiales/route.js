@@ -2,7 +2,16 @@ import { NextResponse } from "next/server";
 import { createClient as createSupabaseServerClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
 
+export const dynamic = "force-dynamic";
+
 const BUCKET_MATERIALES = "materiales-cursos";
+
+const JERARQUIA_PLANES = {
+  basico: 1,
+  extenso: 2,
+  pro: 3,
+  plantel: 4,
+};
 
 function crearRespuestaError(mensaje, status = 500) {
   return NextResponse.json(
@@ -24,6 +33,25 @@ function validarId(id) {
   return numero;
 }
 
+function normalizarNivel(nivel) {
+  const valor = String(nivel || "basico").toLowerCase().trim();
+
+  if (JERARQUIA_PLANES[valor]) {
+    return valor;
+  }
+
+  return "basico";
+}
+
+function nivelesPermitidos(nivelAlumno) {
+  const nivel = normalizarNivel(nivelAlumno);
+  const valorNivel = JERARQUIA_PLANES[nivel];
+
+  return Object.entries(JERARQUIA_PLANES)
+    .filter(([, valor]) => valor <= valorNivel)
+    .map(([nombre]) => nombre);
+}
+
 function rutaStorageValida(ruta) {
   if (!ruta) return false;
 
@@ -42,9 +70,33 @@ function esUrlExternaValida(url) {
     const urlObj = new URL(url);
 
     return urlObj.protocol === "https:" || urlObj.protocol === "http:";
-  } catch (error) {
+  } catch {
     return false;
   }
+}
+
+function clasesActivasOrdenadas(modulos, niveles) {
+  return (modulos || [])
+    .flatMap((modulo) =>
+      (modulo.clases || [])
+        .filter(
+          (clase) =>
+            clase.activo &&
+            niveles.includes(normalizarNivel(clase.nivel_minimo_acceso))
+        )
+        .map((clase) => ({
+          ...clase,
+          modulo_id: modulo.id,
+          modulo_orden: modulo.orden,
+        }))
+    )
+    .sort((a, b) => {
+      if (a.modulo_orden !== b.modulo_orden) {
+        return a.modulo_orden - b.modulo_orden;
+      }
+
+      return a.orden - b.orden;
+    });
 }
 
 function crearSupabaseAdmin() {
@@ -89,7 +141,7 @@ export async function GET(request) {
       .from("perfiles")
       .select("id, user_id, role")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     if (errorPerfil || !perfil) {
       return crearRespuestaError("No se encontró tu perfil.", 403);
@@ -99,22 +151,28 @@ export async function GET(request) {
 
     const { data: clase, error: errorClase } = await supabaseAdmin
       .from("curso_clases")
-      .select(`
+      .select(
+        `
         id,
         pdf_url,
         activo,
+        nivel_minimo_acceso,
+        orden,
         modulo:curso_modulos (
           id,
           curso_id,
           activo,
+          orden,
+          nivel_minimo_acceso,
           curso:cursos (
             id,
             activo
           )
         )
-      `)
+      `
+      )
       .eq("id", claseId)
-      .single();
+      .maybeSingle();
 
     if (errorClase || !clase) {
       return crearRespuestaError("No se encontró la clase.", 404);
@@ -148,18 +206,96 @@ export async function GET(request) {
     const esAdminOInstructor =
       perfil.role === "admin" || perfil.role === "instructor";
 
+    let nivelAlumno = "plantel";
+
     if (!esAdminOInstructor) {
-      const { data: acceso } = await supabaseAdmin
+      const { data: acceso, error: errorAcceso } = await supabaseAdmin
         .from("alumno_cursos")
-        .select("id, estado")
+        .select("id, estado, nivel_acceso")
         .eq("user_id", user.id)
         .eq("curso_id", cursoId)
         .eq("estado", "activo")
         .maybeSingle();
 
-      if (!acceso) {
+      if (errorAcceso || !acceso) {
         return crearRespuestaError(
           "No tenés acceso activo a este material.",
+          403
+        );
+      }
+
+      nivelAlumno = normalizarNivel(acceso.nivel_acceso);
+    }
+
+    const niveles = nivelesPermitidos(nivelAlumno);
+
+    const nivelModulo = normalizarNivel(clase.modulo?.nivel_minimo_acceso);
+    const nivelClase = normalizarNivel(clase.nivel_minimo_acceso);
+
+    if (!niveles.includes(nivelModulo) || !niveles.includes(nivelClase)) {
+      return crearRespuestaError(
+        "Este material no está incluido en tu plan.",
+        403
+      );
+    }
+
+    const { data: modulos, error: errorModulos } = await supabaseAdmin
+      .from("curso_modulos")
+      .select(
+        `
+        id,
+        orden,
+        activo,
+        nivel_minimo_acceso,
+        clases:curso_clases (
+          id,
+          orden,
+          activo,
+          nivel_minimo_acceso
+        )
+      `
+      )
+      .eq("curso_id", cursoId)
+      .eq("activo", true)
+      .in("nivel_minimo_acceso", niveles)
+      .order("orden", { ascending: true })
+      .order("orden", {
+        referencedTable: "curso_clases",
+        ascending: true,
+      });
+
+    if (errorModulos) {
+      console.error("Error verificando módulos para material:", errorModulos);
+
+      return crearRespuestaError("No se pudo verificar el material.", 500);
+    }
+
+    const clasesOrdenadas = clasesActivasOrdenadas(modulos, niveles);
+    const indiceClaseActual = clasesOrdenadas.findIndex(
+      (item) => item.id === claseId
+    );
+
+    if (indiceClaseActual === -1) {
+      return crearRespuestaError(
+        "Este material no pertenece al contenido habilitado para tu plan.",
+        403
+      );
+    }
+
+    if (!esAdminOInstructor && indiceClaseActual > 0) {
+      const claseAnterior = clasesOrdenadas[indiceClaseActual - 1];
+
+      const { data: progresoAnterior } = await supabaseAdmin
+        .from("clase_progreso")
+        .select("id, completada")
+        .eq("user_id", user.id)
+        .eq("clase_id", claseAnterior.id)
+        .eq("completada", true)
+        .maybeSingle();
+
+      if (!progresoAnterior) {
+        return crearRespuestaError(
+          "Este material está bloqueado hasta completar la clase anterior.",
           403
         );
       }
@@ -185,11 +321,15 @@ export async function GET(request) {
         .createSignedUrl(material, 60 * 10);
 
     if (errorSignedUrl || !signedUrl?.signedUrl) {
+      console.error("Error creando signed URL:", errorSignedUrl);
+
       return crearRespuestaError("No se pudo abrir el material.", 500);
     }
 
     return NextResponse.redirect(signedUrl.signedUrl);
   } catch (error) {
+    console.error("Error GET /api/panel/materiales:", error);
+
     return crearRespuestaError("Error interno del servidor.", 500);
   }
 }

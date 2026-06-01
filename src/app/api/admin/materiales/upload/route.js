@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { createClient as createSupabaseServerClient } from "@/lib/supabase/server";
-import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
+import { verificarAdmin } from "@/lib/admin/verificarAdmin";
+
+export const dynamic = "force-dynamic";
 
 const BUCKET_MATERIALES = "materiales-cursos";
 
@@ -64,15 +65,17 @@ function validarId(id) {
 }
 
 function limpiarSlug(slug) {
-  return String(slug || "curso")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/ñ/g, "n")
-    .replace(/[^a-z0-9-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 120) || "curso";
+  return (
+    String(slug || "curso")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/ñ/g, "n")
+      .replace(/[^a-z0-9-]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 120) || "curso"
+  );
 }
 
 function limpiarNombreArchivo(nombre) {
@@ -107,66 +110,15 @@ function archivoPermitido(archivo) {
   return tipoPermitido && extensionPermitida;
 }
 
-async function verificarAdmin() {
-  const supabase = await createSupabaseServerClient();
-
-  const {
-    data: { user },
-    error: errorUsuario,
-  } = await supabase.auth.getUser();
-
-  if (errorUsuario || !user) {
-    return {
-      ok: false,
-      status: 401,
-      error: "No has iniciado sesión.",
-    };
-  }
-
-  const { data: perfil, error: errorPerfil } = await supabase
-    .from("perfiles")
-    .select("role")
-    .eq("user_id", user.id)
-    .single();
-
-  if (errorPerfil || !perfil || perfil.role !== "admin") {
-    return {
-      ok: false,
-      status: 403,
-      error: "No tenés permisos de administrador.",
-    };
-  }
-
-  return {
-    ok: true,
-    user,
-    perfil,
-  };
-}
-
-function crearSupabaseAdmin() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Faltan variables de entorno de Supabase.");
-  }
-
-  return createSupabaseAdminClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-}
-
 export async function POST(request) {
   try {
-    const admin = await verificarAdmin();
+    const admin = await verificarAdmin(request);
 
     if (!admin.ok) {
       return crearRespuestaError(admin.error, admin.status);
     }
+
+    const supabase = admin.supabase;
 
     const formData = await request.formData();
 
@@ -203,23 +155,23 @@ export async function POST(request) {
 
     if (!archivoPermitido(archivo)) {
       return crearRespuestaError(
-        "Tipo de archivo no permitido. Subí PDF, imagen, Word o Excel.",
+        "Tipo de archivo no permitido. Subí PDF, imagen, Word o Excel. Los videos pesados deben ir como enlace de YouTube no listado.",
         400
       );
     }
 
-    const supabaseAdmin = crearSupabaseAdmin();
-
-    const { data: clase, error: errorClase } = await supabaseAdmin
+    const { data: clase, error: errorClase } = await supabase
       .from("curso_clases")
-      .select(`
+      .select(
+        `
         id,
         pdf_url,
         modulo:curso_modulos (
           id,
           curso_id
         )
-      `)
+      `
+      )
       .eq("id", claseId)
       .single();
 
@@ -240,7 +192,7 @@ export async function POST(request) {
     const bytes = await archivo.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const { error: errorUpload } = await supabaseAdmin.storage
+    const { error: errorUpload } = await supabase.storage
       .from(BUCKET_MATERIALES)
       .upload(rutaArchivo, buffer, {
         contentType: archivo.type,
@@ -248,23 +200,25 @@ export async function POST(request) {
       });
 
     if (errorUpload) {
-      return crearRespuestaError("No se pudo subir el material.", 500);
+      console.error("Error subiendo material:", errorUpload);
+
+      return crearRespuestaError(
+        "No se pudo subir el material. Revisá que exista el bucket materiales-cursos.",
+        500
+      );
     }
 
-    const { data: claseActualizada, error: errorActualizar } =
-      await supabaseAdmin
-        .from("curso_clases")
-        .update({
-          pdf_url: rutaArchivo,
-        })
-        .eq("id", claseId)
-        .select(CAMPOS_CLASE)
-        .single();
+    const { data: claseActualizada, error: errorActualizar } = await supabase
+      .from("curso_clases")
+      .update({
+        pdf_url: rutaArchivo,
+      })
+      .eq("id", claseId)
+      .select(CAMPOS_CLASE)
+      .single();
 
     if (errorActualizar || !claseActualizada) {
-      await supabaseAdmin.storage
-        .from(BUCKET_MATERIALES)
-        .remove([rutaArchivo]);
+      await supabase.storage.from(BUCKET_MATERIALES).remove([rutaArchivo]);
 
       return crearRespuestaError(
         "El archivo subió, pero no se pudo asociar a la clase.",
@@ -278,6 +232,8 @@ export async function POST(request) {
       clase: claseActualizada,
     });
   } catch (error) {
+    console.error("Error POST /api/admin/materiales/upload:", error);
+
     return crearRespuestaError("Error interno del servidor.", 500);
   }
 }

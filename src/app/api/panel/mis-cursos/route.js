@@ -10,6 +10,16 @@ const JERARQUIA_PLANES = {
   plantel: 4,
 };
 
+function crearRespuestaError(mensaje, status = 500) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: mensaje,
+    },
+    { status }
+  );
+}
+
 function normalizarNivel(nivel) {
   const valor = String(nivel || "basico").toLowerCase().trim();
 
@@ -119,19 +129,21 @@ export async function GET(request) {
     );
 
     if (errorUsuario || !user) {
-      return NextResponse.json(
-        {
-          error: errorUsuario || "No autorizado.",
-        },
-        { status: 401 }
-      );
+      return crearRespuestaError(errorUsuario || "No autorizado.", 401);
     }
 
     const { data: accesos, error: errorAccesos } = await supabase
       .from("alumno_cursos")
       .select(
         `
-        *,
+        id,
+        user_id,
+        curso_id,
+        estado,
+        nivel_acceso,
+        fecha_inicio,
+        fecha_fin,
+        created_at,
         cursos (
           id,
           titulo,
@@ -146,20 +158,16 @@ export async function GET(request) {
       `
       )
       .eq("user_id", user.id)
-      .eq("activo", true);
+      .eq("estado", "activo");
 
     if (errorAccesos) {
       console.error("Error cargando cursos del alumno:", errorAccesos);
-
-      return NextResponse.json(
-        {
-          error: "No se pudieron cargar tus cursos.",
-        },
-        { status: 500 }
-      );
+      return crearRespuestaError("No se pudieron cargar tus cursos.", 500);
     }
 
-    const accesosValidos = (accesos || []).filter((acceso) => acceso.cursos);
+    const accesosValidos = (accesos || []).filter(
+      (acceso) => acceso.cursos && acceso.cursos.activo === true
+    );
 
     const cursoIds = accesosValidos.map((acceso) => acceso.curso_id);
 
@@ -180,6 +188,7 @@ export async function GET(request) {
         .from("curso_modulos")
         .select("*")
         .eq("curso_id", curso.id)
+        .eq("activo", true)
         .in("nivel_minimo_acceso", niveles)
         .order("orden", { ascending: true })
         .order("id", { ascending: true });
@@ -195,6 +204,7 @@ export async function GET(request) {
           curso,
           nivel_acceso: nivelAlumno,
           nombre_plan: nombrePlan(nivelAlumno),
+          niveles_permitidos: niveles,
           modulos: [],
           total_clases: 0,
           clases_completadas: 0,
@@ -215,6 +225,7 @@ export async function GET(request) {
           .from("curso_clases")
           .select("*")
           .in("modulo_id", moduloIds)
+          .eq("activo", true)
           .in("nivel_minimo_acceso", niveles)
           .order("orden", { ascending: true })
           .order("id", { ascending: true });
@@ -266,7 +277,9 @@ export async function GET(request) {
       ).length;
 
       const porcentaje =
-        totalClases > 0 ? Math.round((clasesCompletadas / totalClases) * 100) : 0;
+        totalClases > 0
+          ? Math.round((clasesCompletadas / totalClases) * 100)
+          : 0;
 
       cursosConContenido.push({
         acceso,
@@ -283,6 +296,7 @@ export async function GET(request) {
     }
 
     return NextResponse.json({
+      ok: true,
       usuario: {
         id: user.id,
         email: user.email,
@@ -292,11 +306,9 @@ export async function GET(request) {
   } catch (error) {
     console.error("Error en API /api/panel/mis-cursos:", error);
 
-    return NextResponse.json(
-      {
-        error: error?.message || "Error cargando panel del alumno.",
-      },
-      { status: 500 }
+    return crearRespuestaError(
+      error?.message || "Error cargando panel del alumno.",
+      500
     );
   }
 }

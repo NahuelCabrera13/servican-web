@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient as createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,21 @@ function esUrlProduccion(siteUrl) {
   return siteUrl.startsWith("https://");
 }
 
+async function obtenerUsuarioActual() {
+  const supabase = await createSupabaseServerClient();
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    return null;
+  }
+
+  return user;
+}
+
 async function buscarUsuariosPorEmails(supabase, emails) {
   if (!emails.length) {
     return [];
@@ -72,6 +88,7 @@ export async function GET() {
       NEXT_PUBLIC_SITE_URL: Boolean(process.env.NEXT_PUBLIC_SITE_URL),
     },
     siteUrl,
+    webhook: `${siteUrl}/api/pagos/webhook`,
     esProduccion: esUrlProduccion(siteUrl),
   });
 }
@@ -83,15 +100,27 @@ export async function POST(request) {
 
     if (!accessToken) {
       return NextResponse.json(
-        { error: "Falta MERCADOPAGO_ACCESS_TOKEN." },
+        { ok: false, error: "Falta MERCADOPAGO_ACCESS_TOKEN." },
         { status: 500 }
       );
     }
 
     if (!siteUrl) {
       return NextResponse.json(
-        { error: "Falta NEXT_PUBLIC_SITE_URL." },
+        { ok: false, error: "Falta NEXT_PUBLIC_SITE_URL." },
         { status: 500 }
+      );
+    }
+
+    const usuario = await obtenerUsuarioActual();
+
+    if (!usuario) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Tenés que iniciar sesión antes de comprar.",
+        },
+        { status: 401 }
       );
     }
 
@@ -99,33 +128,30 @@ export async function POST(request) {
 
     if (!body) {
       return NextResponse.json(
-        { error: "El cuerpo de la solicitud no es JSON válido." },
+        { ok: false, error: "El cuerpo de la solicitud no es JSON válido." },
         { status: 400 }
       );
     }
 
     const productoId = body?.productoId;
-    const compradorUserId = body?.userId;
-    const compradorEmail = normalizarEmail(body?.email);
+    const compradorUserId = usuario.id;
+    const compradorEmail = normalizarEmail(usuario.email);
     const participantesSolicitados = limpiarParticipantes(body?.participantes);
 
     if (!productoId) {
       return NextResponse.json(
-        { error: "Falta el ID del producto." },
-        { status: 400 }
-      );
-    }
-
-    if (!compradorUserId) {
-      return NextResponse.json(
-        { error: "Falta el ID del comprador." },
+        { ok: false, error: "Falta el ID del producto." },
         { status: 400 }
       );
     }
 
     if (!compradorEmail) {
       return NextResponse.json(
-        { error: "Falta el email del comprador." },
+        {
+          ok: false,
+          error:
+            "Tu usuario no tiene email válido. Cerrá sesión, volvé a iniciar sesión e intentá nuevamente.",
+        },
         { status: 400 }
       );
     }
@@ -147,13 +173,14 @@ export async function POST(request) {
       .eq("id", productoId)
       .eq("activo", true)
       .eq("visible_en_web", true)
-      .single();
+      .maybeSingle();
 
     if (errorProducto || !producto) {
       console.error("Producto no encontrado o inactivo:", errorProducto);
 
       return NextResponse.json(
         {
+          ok: false,
           error:
             "Producto no encontrado, inactivo o no visible en la web. Revisá en admin que esté activo y visible.",
         },
@@ -164,8 +191,22 @@ export async function POST(request) {
     if (producto.es_recurrente) {
       return NextResponse.json(
         {
+          ok: false,
           error:
-            "Este producto es una membresía recurrente. Se debe pagar desde el sistema de suscripciones.",
+            "Este producto es una membresía mensual. Se debe pagar desde el sistema de suscripciones.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const cursosAsociados = producto.producto_cursos || [];
+
+    if (!cursosAsociados.length) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Este producto no tiene cursos asociados. Revisá la configuración del producto en el panel admin.",
         },
         { status: 400 }
       );
@@ -176,6 +217,7 @@ export async function POST(request) {
     if (!precioNumero) {
       return NextResponse.json(
         {
+          ok: false,
           error:
             "Este producto no tiene un precio válido. Configuralo en el admin con un número mayor a 0.",
         },
@@ -191,10 +233,24 @@ export async function POST(request) {
     if (cantidadMaximaUsuarios > 1 || requiereParticipantes) {
       const cuposParticipantes = cantidadMaximaUsuarios - 1;
 
+      if (cuposParticipantes <= 0) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error:
+              "La configuración de participantes del producto no es válida.",
+          },
+          { status: 400 }
+        );
+      }
+
       if (participantesSolicitados.length !== cuposParticipantes) {
         return NextResponse.json(
           {
-            error: `Este producto requiere exactamente ${cuposParticipantes} participantes además del comprador.`,
+            ok: false,
+            error: `Este producto requiere exactamente ${cuposParticipantes} participante${
+              cuposParticipantes === 1 ? "" : "s"
+            } además del comprador.`,
           },
           { status: 400 }
         );
@@ -203,6 +259,7 @@ export async function POST(request) {
       if (participantesSolicitados.includes(compradorEmail)) {
         return NextResponse.json(
           {
+            ok: false,
             error:
               "No podés colocar tu propio email como participante. El comprador ya cuenta como un usuario.",
           },
@@ -229,6 +286,7 @@ export async function POST(request) {
       if (emailsNoRegistrados.length > 0) {
         return NextResponse.json(
           {
+            ok: false,
             error:
               "No se puede continuar. Todos los participantes deben tener una cuenta registrada en SERVICAN antes de comprar.",
             emails_no_registrados: emailsNoRegistrados,
@@ -252,15 +310,19 @@ export async function POST(request) {
     const externalReference = JSON.stringify({
       tipo: "producto",
       productoId: producto.id,
+      producto_id: producto.id,
       compradorUserId,
+      comprador_user_id: compradorUserId,
       participantes: participantesValidados,
     });
+
+    const notificationUrl = `${siteUrl}/api/pagos/webhook`;
 
     const preferenceBody = {
       items: [
         {
           id: String(producto.id),
-          title: producto.nombre,
+          title: producto.nombre || "Producto SERVICAN",
           description: producto.descripcion || "Producto SERVICAN",
           quantity: 1,
           unit_price: precioNumero,
@@ -274,7 +336,9 @@ export async function POST(request) {
       metadata: {
         tipo: "producto",
         producto_id: producto.id,
+        productoId: producto.id,
         comprador_user_id: compradorUserId,
+        compradorUserId,
         comprador_email: compradorEmail,
         tipo_producto: producto.tipo_producto,
         plan: producto.plan,
@@ -286,7 +350,7 @@ export async function POST(request) {
         failure: `${siteUrl}/pagos/error`,
         pending: `${siteUrl}/pagos/pendiente`,
       },
-      notification_url: `${siteUrl}/api/pagos/webhook`,
+      notification_url: notificationUrl,
     };
 
     if (esUrlProduccion(siteUrl)) {
@@ -315,6 +379,7 @@ export async function POST(request) {
         detalle: {
           producto,
           preference: resultado,
+          notification_url: notificationUrl,
         },
       },
     ]);
@@ -324,6 +389,7 @@ export async function POST(request) {
 
       return NextResponse.json(
         {
+          ok: false,
           error:
             "Mercado Pago creó la preferencia, pero no se pudo guardar el pago pendiente en Supabase.",
           detalle: errorInsertarPago.message,
@@ -333,6 +399,7 @@ export async function POST(request) {
     }
 
     return NextResponse.json({
+      ok: true,
       init_point: resultado.init_point,
       sandbox_init_point: resultado.sandbox_init_point,
       preference_id: preferenceId,
@@ -342,6 +409,7 @@ export async function POST(request) {
 
     return NextResponse.json(
       {
+        ok: false,
         error: error?.message || "Error interno creando preferencia de pago.",
         detalle: error?.cause || null,
       },

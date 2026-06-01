@@ -1,56 +1,186 @@
-import { createClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
 
-function crearClientePublico() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const ORDEN_PLANES = {
+  basico: 1,
+  extenso: 2,
+  pro: 3,
+  plantel: 4,
+};
 
-  if (!supabaseUrl) {
-    throw new Error("Falta NEXT_PUBLIC_SUPABASE_URL.");
-  }
-
-  if (!supabaseAnonKey) {
-    throw new Error("Falta NEXT_PUBLIC_SUPABASE_ANON_KEY.");
-  }
-
-  return createClient(supabaseUrl, supabaseAnonKey);
+function normalizar(valor) {
+  return String(valor || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
 }
 
-export async function obtenerProductosActivosPorCurso(cursoId) {
-  const supabase = crearClientePublico();
+function ordenarProductos(productos) {
+  return [...(productos || [])].sort((a, b) => {
+    const planA = normalizar(a.plan);
+    const planB = normalizar(b.plan);
 
-  const { data, error } = await supabase
-    .from("productos")
-    .select(
-      `
-      *,
-      producto_cursos (
-        id,
-        curso_id,
-        nivel_acceso,
-        beneficios_pro,
-        orden
-      )
-    `
-    )
-    .eq("curso_id", cursoId)
-    .eq("tipo_producto", "curso_plan")
-    .eq("activo", true)
-    .eq("visible_en_web", true)
-    .eq("es_recurrente", false)
-    .order("orden", { ascending: true })
-    .order("precio", { ascending: true });
+    const ordenA = Number(a.orden || ORDEN_PLANES[planA] || 99);
+    const ordenB = Number(b.orden || ORDEN_PLANES[planB] || 99);
 
-  if (error) {
-    console.error("Error obteniendo productos activos del curso:", error);
+    if (ordenA !== ordenB) {
+      return ordenA - ordenB;
+    }
 
-    return {
-      productos: [],
-      error,
-    };
+    return String(a.nombre || "").localeCompare(String(b.nombre || ""));
+  });
+}
+
+function quitarDuplicados(productos) {
+  const mapa = new Map();
+
+  for (const producto of productos || []) {
+    if (!producto?.id) continue;
+    mapa.set(String(producto.id), producto);
   }
 
-  return {
-    productos: data || [],
-    error: null,
-  };
+  return [...mapa.values()];
+}
+
+function normalizarCurso(cursoParametro) {
+  if (!cursoParametro) {
+    return null;
+  }
+
+  if (cursoParametro?.id) {
+    return cursoParametro;
+  }
+
+  if (cursoParametro?.curso?.id) {
+    return cursoParametro.curso;
+  }
+
+  return null;
+}
+
+function productoPerteneceAlCurso(producto, curso) {
+  if (!producto || !curso?.id) {
+    return false;
+  }
+
+  const cursoId = String(curso.id);
+
+  if (String(producto.curso_id || "") === cursoId) {
+    return true;
+  }
+
+  const relaciones = producto.producto_cursos || [];
+
+  return relaciones.some((relacion) => {
+    return String(relacion?.curso_id || "") === cursoId;
+  });
+}
+
+export async function obtenerProductosActivosPorCurso(cursoParametro) {
+  const curso = normalizarCurso(cursoParametro);
+
+  if (!curso?.id) {
+    console.error("No se recibió curso válido para buscar productos:", {
+      cursoParametro,
+    });
+
+    return [];
+  }
+
+  try {
+    const supabase = createAdminClient();
+
+    const { data, error } = await supabase
+      .from("productos")
+      .select(
+        `
+        *,
+        producto_cursos (
+          curso_id,
+          nivel_acceso,
+          beneficios_pro,
+          orden
+        )
+      `
+      )
+      .eq("activo", true)
+      .eq("visible_en_web", true)
+      .neq("tipo_producto", "paquete");
+
+    if (error) {
+      console.error("Error obteniendo productos activos:", {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
+
+      return [];
+    }
+
+    const productos = quitarDuplicados(data || []);
+    const productosDelCurso = productos.filter((producto) =>
+      productoPerteneceAlCurso(producto, curso)
+    );
+
+    console.log("DEBUG productos públicos:", {
+      curso: {
+        id: curso.id,
+        titulo: curso.titulo,
+        slug: curso.slug,
+      },
+      productosVisiblesTotales: productos.length,
+      productosDelCurso: productosDelCurso.length,
+    });
+
+    return ordenarProductos(productosDelCurso);
+  } catch (error) {
+    console.error("Error inesperado obteniendo productos activos:", {
+      message: error?.message,
+    });
+
+    return [];
+  }
+}
+
+export async function obtenerProductosActivos() {
+  try {
+    const supabase = createAdminClient();
+
+    const { data, error } = await supabase
+      .from("productos")
+      .select(
+        `
+        *,
+        producto_cursos (
+          curso_id,
+          nivel_acceso,
+          beneficios_pro,
+          orden
+        )
+      `
+      )
+      .eq("activo", true)
+      .eq("visible_en_web", true)
+      .neq("tipo_producto", "paquete");
+
+    if (error) {
+      console.error("Error obteniendo productos activos:", {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
+
+      return [];
+    }
+
+    return ordenarProductos(quitarDuplicados(data || []));
+  } catch (error) {
+    console.error("Error inesperado obteniendo productos activos:", {
+      message: error?.message,
+    });
+
+    return [];
+  }
 }

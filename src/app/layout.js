@@ -34,8 +34,8 @@ export default function RootLayout({ children }) {
   return (
     <html lang="es">
       <body>
-        {children}
         <AuthAccessMenu />
+        {children}
       </body>
     </html>
   );

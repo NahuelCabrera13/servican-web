@@ -140,6 +140,7 @@ export default function AdminPanel({ usuario, perfil }) {
       setInscripciones(data.inscripciones || []);
       return true;
     } catch (error) {
+      console.error("Error cargando consultas:", error);
       setError("Error de conexión al cargar consultas.");
       setInscripciones([]);
       return false;
@@ -163,6 +164,7 @@ export default function AdminPanel({ usuario, perfil }) {
       setCursos(data.cursos || []);
       return true;
     } catch (error) {
+      console.error("Error cargando cursos:", error);
       setError("Error de conexión al cargar cursos.");
       setCursos([]);
       return false;
@@ -186,6 +188,7 @@ export default function AdminPanel({ usuario, perfil }) {
       setProductos(data.productos || []);
       return true;
     } catch (error) {
+      console.error("Error cargando productos:", error);
       setError("Error de conexión al cargar productos.");
       setProductos([]);
       return false;
@@ -226,6 +229,7 @@ export default function AdminPanel({ usuario, perfil }) {
 
       setMensaje("Estado actualizado correctamente.");
     } catch (error) {
+      console.error("Error cambiando estado:", error);
       setError("Error de conexión al cambiar el estado.");
     } finally {
       setAccionandoId(null);
@@ -267,6 +271,7 @@ export default function AdminPanel({ usuario, perfil }) {
 
       setMensaje("Consulta eliminada correctamente.");
     } catch (error) {
+      console.error("Error eliminando consulta:", error);
       setError("Error de conexión al eliminar la consulta.");
     } finally {
       setAccionandoId(null);
@@ -363,6 +368,7 @@ export default function AdminPanel({ usuario, perfil }) {
       resetearFormularioCurso();
       await cargarCursos();
     } catch (error) {
+      console.error("Error guardando curso:", error);
       setError("Error de conexión al guardar el curso.");
     } finally {
       setCargando(false);
@@ -401,6 +407,7 @@ export default function AdminPanel({ usuario, perfil }) {
       setCursos((actuales) => actuales.filter((curso) => curso.id !== id));
       setMensaje("Curso eliminado correctamente.");
     } catch (error) {
+      console.error("Error eliminando curso:", error);
       setError("Error de conexión al eliminar el curso.");
     } finally {
       setAccionandoId(null);
@@ -437,6 +444,7 @@ export default function AdminPanel({ usuario, perfil }) {
       await cargarProductos();
       setTabActiva("productos");
     } catch (error) {
+      console.error("Error generando planes:", error);
       setError("Error de conexión al generar planes.");
     } finally {
       setAccionandoId(null);
@@ -622,6 +630,7 @@ export default function AdminPanel({ usuario, perfil }) {
       resetearFormularioProducto();
       await cargarProductos();
     } catch (error) {
+      console.error("Error guardando producto:", error);
       setError("Error de conexión al guardar producto.");
     } finally {
       setCargando(false);
@@ -660,6 +669,7 @@ export default function AdminPanel({ usuario, perfil }) {
 
       setMensaje("Producto eliminado correctamente.");
     } catch (error) {
+      console.error("Error eliminando producto:", error);
       setError("Error de conexión al eliminar producto.");
     } finally {
       setAccionandoId(null);
@@ -695,10 +705,27 @@ export default function AdminPanel({ usuario, perfil }) {
 
       setMensaje("Producto actualizado correctamente.");
     } catch (error) {
+      console.error("Error actualizando producto:", error);
       setError("Error de conexión al actualizar producto.");
     } finally {
       setAccionandoId(null);
     }
+  }
+
+  function formatearFecha(fecha) {
+    if (!fecha) return "—";
+
+    const date = new Date(fecha);
+
+    if (Number.isNaN(date.getTime())) return "—";
+
+    const dia = String(date.getDate()).padStart(2, "0");
+    const mes = String(date.getMonth() + 1).padStart(2, "0");
+    const anio = date.getFullYear();
+    const hora = String(date.getHours()).padStart(2, "0");
+    const minutos = String(date.getMinutes()).padStart(2, "0");
+
+    return `${dia}/${mes}/${anio} ${hora}:${minutos}`;
   }
 
   function formatearValor(valor) {
@@ -715,10 +742,7 @@ export default function AdminPanel({ usuario, perfil }) {
       valor.includes("T") &&
       !Number.isNaN(Date.parse(valor))
     ) {
-      return new Date(valor).toLocaleString("es-UY", {
-        dateStyle: "short",
-        timeStyle: "short",
-      });
+      return formatearFecha(valor);
     }
 
     return String(valor);
@@ -729,7 +753,7 @@ export default function AdminPanel({ usuario, perfil }) {
 
     if (!precio) return "Sin precio";
 
-    return `${producto.moneda || "UYU"} ${precio.toLocaleString("es-UY")}`;
+    return `${producto.moneda || "UYU"} ${Math.round(precio)}`;
   }
 
   function claseEstado(estado) {
@@ -820,133 +844,134 @@ export default function AdminPanel({ usuario, perfil }) {
     (producto) => Number(producto.precio || 0) <= 0
   );
 
+  const productosRecurrentes = productos.filter((producto) =>
+    Boolean(producto.es_recurrente)
+  );
+
   return (
-    <main className="min-h-screen bg-neutral-950 text-white">
-      <section className="mx-auto max-w-7xl px-6 py-8">
-        <header className="mb-8 flex flex-col gap-6 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-4">
-            <img
-              src="/logo-servican.jpeg"
-              alt="Logo SERVICAN"
-              className="h-16 w-16 rounded-full object-cover ring-4 ring-yellow-500/30"
-            />
+    <main className="min-h-screen bg-black text-white">
+      <section className="mx-auto max-w-[1500px] px-4 py-8 sm:px-6 lg:px-8">
+        <header className="mb-8 overflow-hidden rounded-[2rem] border border-white/10 bg-zinc-950 shadow-2xl">
+          <div className="border-b border-white/10 bg-gradient-to-br from-zinc-950 via-black to-zinc-950 p-6">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-4">
+                <img
+                  src="/logo-servican.jpeg"
+                  alt="Logo SERVICAN"
+                  className="h-16 w-16 rounded-full object-contain ring-4 ring-yellow-500/30"
+                />
 
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-yellow-400">
-                Panel administrador
-              </p>
+                <div>
+                  <p className="text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
+                    Panel administrador
+                  </p>
 
-              <h1 className="text-3xl font-bold">SERVICAN</h1>
+                  <h1 className="mt-1 text-3xl font-black">SERVICAN</h1>
 
-              <p className="mt-1 text-sm text-neutral-400">
-                {usuario?.email || "Administrador"} · Rol:{" "}
-                {perfil?.role || "admin"}
-              </p>
+                  <p className="mt-1 text-sm text-zinc-400">
+                    {usuario?.email || "Administrador"} · Rol:{" "}
+                    {perfil?.role || "admin"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={actualizarTodo}
+                  disabled={cargando}
+                  className="rounded-2xl bg-yellow-500 px-5 py-3 text-sm font-black text-black transition hover:bg-yellow-400 disabled:opacity-60"
+                >
+                  {cargando ? "Actualizando..." : "Actualizar datos"}
+                </button>
+
+                <Link
+                  href="/"
+                  className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-bold transition hover:bg-white/20"
+                >
+                  Inicio
+                </Link>
+
+                <Link
+                  href="/panel"
+                  className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-bold transition hover:bg-white/20"
+                >
+                  Panel alumno
+                </Link>
+
+                <Link
+                  href="/auth/logout"
+                  className="rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-3 text-center text-sm font-bold text-red-100 transition hover:bg-red-500/20"
+                >
+                  Cerrar sesión
+                </Link>
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/"
-              className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-bold transition hover:bg-white/20"
-            >
-              Volver al inicio
-            </Link>
+          <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
+            <AdminShortcut
+              href="/admin/pagos"
+              icono="💳"
+              titulo="Pagos"
+              descripcion="Ventas, estados y accesos generados."
+              color="yellow"
+            />
 
-            <Link
-              href="/cursos"
-              className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm font-bold text-yellow-100 transition hover:bg-yellow-500/20"
-            >
-              Ver cursos
-            </Link>
+            <AdminShortcut
+              href="/admin/usuarios"
+              icono="👤"
+              titulo="Usuarios"
+              descripcion="Roles, alumnos e instructores."
+              color="blue"
+            />
 
-            <Link
-              href="/panel"
-              className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-bold transition hover:bg-white/20"
-            >
-              Panel privado
-            </Link>
+            <AdminShortcut
+              href="/admin/certificados"
+              icono="🎓"
+              titulo="Certificados"
+              descripcion="Emitidos, anulados y verificación."
+              color="green"
+            />
 
-            <button
-              type="button"
-              onClick={actualizarTodo}
-              disabled={cargando}
-              className="rounded-2xl bg-yellow-500 px-4 py-3 text-sm font-bold text-neutral-950 transition hover:bg-yellow-400 disabled:opacity-60"
-            >
-              {cargando ? "Actualizando..." : "Actualizar"}
-            </button>
-
-            <Link
-              href="/auth/logout"
-              className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-100 transition hover:bg-red-500/20"
-            >
-              Cerrar sesión
-            </Link>
+            <AdminShortcut
+              href="/admin/noticias"
+              icono="📰"
+              titulo="Noticias"
+              descripcion="Comunicados y novedades públicas."
+              color="neutral"
+            />
           </div>
         </header>
 
-        <nav className="mb-8 flex flex-wrap gap-3">
-          <button
-            type="button"
+        <nav className="mb-8 grid gap-3 rounded-[2rem] border border-white/10 bg-zinc-950 p-3 md:grid-cols-4">
+          <TabButton
+            activo={tabActiva === "resumen"}
             onClick={() => setTabActiva("resumen")}
-            className={`rounded-2xl px-5 py-3 text-sm font-bold transition ${
-              tabActiva === "resumen"
-                ? "bg-yellow-500 text-neutral-950"
-                : "bg-white/10 text-white hover:bg-white/20"
-            }`}
-          >
-            Resumen
-          </button>
+            titulo="Resumen"
+            subtitulo="Estado general"
+          />
 
-          <button
-            type="button"
+          <TabButton
+            activo={tabActiva === "inscripciones"}
             onClick={() => setTabActiva("inscripciones")}
-            className={`rounded-2xl px-5 py-3 text-sm font-bold transition ${
-              tabActiva === "inscripciones"
-                ? "bg-yellow-500 text-neutral-950"
-                : "bg-white/10 text-white hover:bg-white/20"
-            }`}
-          >
-            Consultas
-          </button>
+            titulo="Consultas"
+            subtitulo={`${inscripciones.length} registros`}
+          />
 
-          <button
-            type="button"
+          <TabButton
+            activo={tabActiva === "cursos"}
             onClick={() => setTabActiva("cursos")}
-            className={`rounded-2xl px-5 py-3 text-sm font-bold transition ${
-              tabActiva === "cursos"
-                ? "bg-yellow-500 text-neutral-950"
-                : "bg-white/10 text-white hover:bg-white/20"
-            }`}
-          >
-            Cursos
-          </button>
+            titulo="Cursos"
+            subtitulo={`${cursos.length} cursos`}
+          />
 
-          <button
-            type="button"
+          <TabButton
+            activo={tabActiva === "productos"}
             onClick={() => setTabActiva("productos")}
-            className={`rounded-2xl px-5 py-3 text-sm font-bold transition ${
-              tabActiva === "productos"
-                ? "bg-yellow-500 text-neutral-950"
-                : "bg-white/10 text-white hover:bg-white/20"
-            }`}
-          >
-            Productos y planes
-          </button>
-
-          <Link
-            href="/admin/usuarios"
-            className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 px-5 py-3 text-center text-sm font-bold text-yellow-100 transition hover:bg-yellow-500/20"
-          >
-            Usuarios y roles
-          </Link>
-
-          <Link
-            href="/admin/certificados"
-            className="rounded-2xl border border-green-500/30 bg-green-500/10 px-5 py-3 text-center text-sm font-bold text-green-100 transition hover:bg-green-500/20"
-          >
-            Certificados
-          </Link>
+            titulo="Productos y planes"
+            subtitulo={`${productos.length} productos`}
+          />
         </nav>
 
         {mensaje && (
@@ -962,63 +987,129 @@ export default function AdminPanel({ usuario, perfil }) {
         )}
 
         {tabActiva === "resumen" && (
-          <section className="grid gap-6 lg:grid-cols-4">
-            <ResumenCard titulo="Consultas" valor={inscripciones.length} />
-            <ResumenCard titulo="Cursos" valor={cursos.length} />
-            <ResumenCard titulo="Productos activos" valor={productosActivos.length} />
-            <ResumenCard titulo="Sin precio" valor={productosSinPrecio.length} />
-
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 lg:col-span-2">
-              <h2 className="text-2xl font-bold">Acciones rápidas</h2>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => setTabActiva("cursos")}
-                  className="rounded-2xl bg-yellow-500 px-5 py-4 font-bold text-black transition hover:bg-yellow-400"
-                >
-                  Crear o editar cursos
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setTabActiva("productos")}
-                  className="rounded-2xl border border-yellow-500/40 bg-yellow-500/10 px-5 py-4 font-bold text-yellow-100 transition hover:bg-yellow-500/20"
-                >
-                  Configurar productos
-                </button>
-
-                <Link
-                  href="/admin/usuarios"
-                  className="rounded-2xl border border-white/10 bg-white/10 px-5 py-4 text-center font-bold transition hover:bg-white/20"
-                >
-                  Gestionar usuarios
-                </Link>
-
-                <Link
-                  href="/admin/certificados"
-                  className="rounded-2xl border border-green-500/30 bg-green-500/10 px-5 py-4 text-center font-bold text-green-100 transition hover:bg-green-500/20"
-                >
-                  Certificados
-                </Link>
-              </div>
+          <section className="space-y-8">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+              <ResumenCard titulo="Consultas" valor={inscripciones.length} />
+              <ResumenCard titulo="Cursos" valor={cursos.length} />
+              <ResumenCard
+                titulo="Productos activos"
+                valor={productosActivos.length}
+              />
+              <ResumenCard
+                titulo="Sin precio"
+                valor={productosSinPrecio.length}
+                alerta={productosSinPrecio.length > 0}
+              />
+              <ResumenCard
+                titulo="Membresías"
+                valor={productosRecurrentes.length}
+              />
             </div>
 
-            <div className="rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-6 lg:col-span-2">
-              <h2 className="text-2xl font-bold text-yellow-200">
-                Recordatorio de ventas
-              </h2>
+            <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+              <div className="rounded-[2rem] border border-white/10 bg-zinc-950 p-6">
+                <p className="text-sm font-black uppercase tracking-[0.25em] text-yellow-500">
+                  Acciones principales
+                </p>
 
-              <p className="mt-3 leading-7 text-yellow-100">
-                Para que un producto aparezca para comprar debe tener precio
-                mayor a 0, estar activo y estar visible en la web.
-              </p>
+                <h2 className="mt-3 text-3xl font-black">
+                  Gestión rápida del sistema
+                </h2>
 
-              <p className="mt-3 leading-7 text-yellow-100">
-                Los planes Plantel y paquetes de hasta 4 personas pedirán los
-                correos de los otros 3 participantes y solo permitirán continuar
-                si ya tienen cuenta registrada.
-              </p>
+                <p className="mt-3 max-w-3xl leading-7 text-zinc-400">
+                  Las funciones más importantes están agrupadas acá para evitar
+                  que el panel quede saturado. No se quitó ninguna función.
+                </p>
+
+                <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setTabActiva("cursos")}
+                    className="rounded-3xl border border-yellow-500/30 bg-yellow-500/10 p-5 text-left transition hover:bg-yellow-500/20"
+                  >
+                    <p className="text-3xl">📚</p>
+                    <h3 className="mt-3 text-xl font-black">
+                      Crear o editar cursos
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-yellow-100">
+                      Administrá información, portada y datos públicos.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTabActiva("productos")}
+                    className="rounded-3xl border border-yellow-500/30 bg-yellow-500/10 p-5 text-left transition hover:bg-yellow-500/20"
+                  >
+                    <p className="text-3xl">🛒</p>
+                    <h3 className="mt-3 text-xl font-black">
+                      Configurar productos
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-yellow-100">
+                      Planes, paquetes, precios y visibilidad.
+                    </p>
+                  </button>
+
+                  <Link
+                    href="/admin/pagos"
+                    className="rounded-3xl border border-green-500/30 bg-green-500/10 p-5 transition hover:bg-green-500/20"
+                  >
+                    <p className="text-3xl">💳</p>
+                    <h3 className="mt-3 text-xl font-black">Ver pagos</h3>
+                    <p className="mt-2 text-sm leading-6 text-green-100">
+                      Revisá ventas, estados y accesos automáticos.
+                    </p>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={() => setTabActiva("inscripciones")}
+                    className="rounded-3xl border border-blue-500/30 bg-blue-500/10 p-5 text-left transition hover:bg-blue-500/20"
+                  >
+                    <p className="text-3xl">📩</p>
+                    <h3 className="mt-3 text-xl font-black">
+                      Revisar consultas
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-blue-100">
+                      Seguimiento comercial de contactos.
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-[2rem] border border-yellow-500/20 bg-yellow-500/10 p-6">
+                <p className="text-sm font-black uppercase tracking-[0.25em] text-yellow-300">
+                  Recordatorio de ventas
+                </p>
+
+                <h2 className="mt-3 text-3xl font-black text-yellow-100">
+                  Para que un producto se pueda comprar
+                </h2>
+
+                <div className="mt-6 space-y-4 text-sm leading-7 text-yellow-100">
+                  <p>
+                    Debe tener precio mayor a 0, estar activo y estar visible en
+                    la web.
+                  </p>
+
+                  <p>
+                    Los planes Plantel y paquetes de hasta 4 personas pedirán
+                    correos de participantes registrados.
+                  </p>
+
+                  <p>
+                    La membresía mensual queda marcada como recurrente y se
+                    activará después con el sistema de suscripciones.
+                  </p>
+                </div>
+
+                <Link
+                  href="/admin/pagos"
+                  className="mt-6 inline-block rounded-2xl bg-yellow-500 px-6 py-3 text-sm font-black text-black transition hover:bg-yellow-400"
+                >
+                  Ir a pagos
+                </Link>
+              </div>
             </div>
           </section>
         )}
@@ -1027,27 +1118,39 @@ export default function AdminPanel({ usuario, perfil }) {
           <>
             <section className="mb-6 grid gap-4 md:grid-cols-3 lg:grid-cols-6">
               <ResumenCard titulo="Total" valor={inscripciones.length} />
-              <ResumenCard titulo="Pendientes" valor={resumenEstados.pendiente || 0} />
-              <ResumenCard titulo="Contactados" valor={resumenEstados.contactado || 0} />
-              <ResumenCard titulo="Interesados" valor={resumenEstados.interesado || 0} />
+              <ResumenCard
+                titulo="Pendientes"
+                valor={resumenEstados.pendiente || 0}
+              />
+              <ResumenCard
+                titulo="Contactados"
+                valor={resumenEstados.contactado || 0}
+              />
+              <ResumenCard
+                titulo="Interesados"
+                valor={resumenEstados.interesado || 0}
+              />
               <ResumenCard titulo="Pagó" valor={resumenEstados.pagó || 0} />
-              <ResumenCard titulo="Rechazados" valor={resumenEstados.rechazado || 0} />
+              <ResumenCard
+                titulo="Rechazados"
+                valor={resumenEstados.rechazado || 0}
+              />
             </section>
 
-            <section className="mb-6 rounded-3xl border border-white/10 bg-white/5 p-5">
+            <section className="mb-6 rounded-3xl border border-white/10 bg-zinc-950 p-5">
               <div className="grid gap-4 md:grid-cols-[1fr_220px]">
                 <input
                   type="search"
                   value={busqueda}
                   onChange={(event) => setBusqueda(event.target.value)}
                   placeholder="Buscar por nombre, email, teléfono, curso o mensaje."
-                  className="rounded-2xl border border-white/10 bg-neutral-900 px-4 py-3 text-white outline-none focus:border-yellow-400"
+                  className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-yellow-400"
                 />
 
                 <select
                   value={filtroEstado}
                   onChange={(event) => setFiltroEstado(event.target.value)}
-                  className="rounded-2xl border border-white/10 bg-neutral-900 px-4 py-3 text-white outline-none focus:border-yellow-400"
+                  className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-yellow-400"
                 >
                   <option value="todos">Todos los estados</option>
                   {ESTADOS.map((estado) => (
@@ -1061,7 +1164,7 @@ export default function AdminPanel({ usuario, perfil }) {
 
             <section className="space-y-4">
               {inscripcionesFiltradas.length === 0 && (
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center text-neutral-300">
+                <div className="rounded-3xl border border-white/10 bg-zinc-950 p-8 text-center text-zinc-300">
                   No hay consultas para mostrar.
                 </div>
               )}
@@ -1069,12 +1172,12 @@ export default function AdminPanel({ usuario, perfil }) {
               {inscripcionesFiltradas.map((inscripcion) => (
                 <article
                   key={inscripcion.id}
-                  className="rounded-3xl border border-white/10 bg-white/5 p-5"
+                  className="rounded-3xl border border-white/10 bg-zinc-950 p-5"
                 >
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-3">
-                        <h3 className="text-xl font-bold">
+                        <h3 className="text-xl font-black">
                           {inscripcion.nombre || "Sin nombre"}
                         </h3>
 
@@ -1087,30 +1190,30 @@ export default function AdminPanel({ usuario, perfil }) {
                         </span>
                       </div>
 
-                      <div className="mt-3 grid gap-2 text-sm text-neutral-300 md:grid-cols-2">
+                      <div className="mt-3 grid gap-2 text-sm text-zinc-300 md:grid-cols-2">
                         <p>
-                          <span className="text-neutral-500">Email:</span>{" "}
+                          <span className="text-zinc-500">Email:</span>{" "}
                           {formatearValor(inscripcion.email)}
                         </p>
 
                         <p>
-                          <span className="text-neutral-500">Teléfono:</span>{" "}
+                          <span className="text-zinc-500">Teléfono:</span>{" "}
                           {formatearValor(inscripcion.telefono)}
                         </p>
 
                         <p>
-                          <span className="text-neutral-500">Curso:</span>{" "}
+                          <span className="text-zinc-500">Curso:</span>{" "}
                           {formatearValor(inscripcion.curso)}
                         </p>
 
                         <p>
-                          <span className="text-neutral-500">Modalidad:</span>{" "}
+                          <span className="text-zinc-500">Modalidad:</span>{" "}
                           {formatearValor(inscripcion.modalidad)}
                         </p>
                       </div>
 
                       {inscripcion.mensaje && (
-                        <p className="mt-4 rounded-2xl bg-black/30 p-4 text-sm leading-6 text-neutral-300">
+                        <p className="mt-4 rounded-2xl bg-black p-4 text-sm leading-6 text-zinc-300">
                           {inscripcion.mensaje}
                         </p>
                       )}
@@ -1123,7 +1226,7 @@ export default function AdminPanel({ usuario, perfil }) {
                           cambiarEstado(inscripcion.id, event.target.value)
                         }
                         disabled={accionandoId === inscripcion.id}
-                        className="rounded-2xl border border-white/10 bg-neutral-900 px-4 py-3 text-white outline-none focus:border-yellow-400"
+                        className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-yellow-400"
                       >
                         {ESTADOS.map((estado) => (
                           <option key={estado} value={estado}>
@@ -1152,13 +1255,17 @@ export default function AdminPanel({ usuario, perfil }) {
           <section className="grid gap-8 xl:grid-cols-[420px_1fr]">
             <form
               onSubmit={guardarCurso}
-              className="rounded-3xl border border-white/10 bg-white/5 p-6"
+              className="rounded-[2rem] border border-white/10 bg-zinc-950 p-6"
             >
-              <h2 className="text-2xl font-bold">
+              <p className="text-sm font-black uppercase tracking-[0.25em] text-yellow-500">
+                Cursos
+              </p>
+
+              <h2 className="mt-3 text-3xl font-black">
                 {cursoEditandoId ? "Editar curso" : "Crear curso"}
               </h2>
 
-              <p className="mt-2 text-sm leading-6 text-neutral-400">
+              <p className="mt-2 text-sm leading-6 text-zinc-400">
                 El curso crea la información principal. Los planes de pago se
                 generan o editan en Productos y planes.
               </p>
@@ -1239,7 +1346,7 @@ export default function AdminPanel({ usuario, perfil }) {
                 <button
                   type="submit"
                   disabled={cargando}
-                  className="rounded-2xl bg-yellow-500 px-5 py-3 font-bold text-neutral-950 transition hover:bg-yellow-400 disabled:opacity-60"
+                  className="rounded-2xl bg-yellow-500 px-5 py-3 font-black text-black transition hover:bg-yellow-400 disabled:opacity-60"
                 >
                   {cargando
                     ? "Guardando..."
@@ -1261,19 +1368,19 @@ export default function AdminPanel({ usuario, perfil }) {
             </form>
 
             <div>
-              <div className="mb-5 rounded-3xl border border-white/10 bg-white/5 p-5">
+              <div className="mb-5 rounded-3xl border border-white/10 bg-zinc-950 p-5">
                 <input
                   type="search"
                   value={busquedaCursos}
                   onChange={(event) => setBusquedaCursos(event.target.value)}
                   placeholder="Buscar cursos."
-                  className="w-full rounded-2xl border border-white/10 bg-neutral-900 px-4 py-3 text-white outline-none focus:border-yellow-400"
+                  className="w-full rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-yellow-400"
                 />
               </div>
 
               <div className="space-y-4">
                 {cursosFiltrados.length === 0 && (
-                  <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center text-neutral-300">
+                  <div className="rounded-3xl border border-white/10 bg-zinc-950 p-8 text-center text-zinc-300">
                     No hay cursos para mostrar.
                   </div>
                 )}
@@ -1281,54 +1388,50 @@ export default function AdminPanel({ usuario, perfil }) {
                 {cursosFiltrados.map((curso) => (
                   <article
                     key={curso.id}
-                    className="rounded-3xl border border-white/10 bg-white/5 p-5"
+                    className="rounded-3xl border border-white/10 bg-zinc-950 p-5"
                   >
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div>
                         <div className="flex flex-wrap items-center gap-3">
-                          <h3 className="text-xl font-bold">{curso.titulo}</h3>
+                          <h3 className="text-xl font-black">
+                            {curso.titulo}
+                          </h3>
 
                           {curso.activo ? (
-                            <span className="rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-xs font-bold text-green-200">
-                              Activo
-                            </span>
+                            <Pill color="green">Activo</Pill>
                           ) : (
-                            <span className="rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-xs font-bold text-red-200">
-                              Inactivo
-                            </span>
+                            <Pill color="red">Inactivo</Pill>
                           )}
 
                           {curso.destacado && (
-                            <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-3 py-1 text-xs font-bold text-yellow-200">
-                              Destacado
-                            </span>
+                            <Pill color="yellow">Destacado</Pill>
                           )}
                         </div>
 
-                        <p className="mt-2 text-sm text-neutral-400">
+                        <p className="mt-2 text-sm text-zinc-400">
                           /cursos/{curso.slug}
                         </p>
 
-                        <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-300">
+                        <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
                           {curso.descripcion || "Sin descripción."}
                         </p>
 
-                        <div className="mt-4 flex flex-wrap gap-2 text-xs text-neutral-400">
-                          <span className="rounded-full bg-black/30 px-3 py-1">
+                        <div className="mt-4 flex flex-wrap gap-2 text-xs text-zinc-400">
+                          <span className="rounded-full bg-black px-3 py-1">
                             Precio visible: {formatearValor(curso.precio)}
                           </span>
 
-                          <span className="rounded-full bg-black/30 px-3 py-1">
+                          <span className="rounded-full bg-black px-3 py-1">
                             Duración: {formatearValor(curso.duracion)}
                           </span>
 
-                          <span className="rounded-full bg-black/30 px-3 py-1">
+                          <span className="rounded-full bg-black px-3 py-1">
                             Modalidad: {formatearValor(curso.modalidad)}
                           </span>
                         </div>
                       </div>
 
-                      <div className="flex min-w-[230px] flex-col gap-3">
+                      <div className="grid min-w-[230px] gap-3">
                         <Link
                           href={`/admin/cursos/${curso.slug}/contenido`}
                           className="rounded-2xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-center text-sm font-bold text-blue-100 transition hover:bg-blue-500/20"
@@ -1350,7 +1453,7 @@ export default function AdminPanel({ usuario, perfil }) {
                         <button
                           type="button"
                           onClick={() => editarCurso(curso)}
-                          className="rounded-2xl bg-yellow-500 px-4 py-3 text-sm font-bold text-neutral-950 transition hover:bg-yellow-400"
+                          className="rounded-2xl bg-yellow-500 px-4 py-3 text-sm font-black text-black transition hover:bg-yellow-400"
                         >
                           Editar curso
                         </button>
@@ -1376,15 +1479,19 @@ export default function AdminPanel({ usuario, perfil }) {
           <section className="grid gap-8 xl:grid-cols-[430px_1fr]">
             <form
               onSubmit={guardarProducto}
-              className="rounded-3xl border border-white/10 bg-white/5 p-6"
+              className="rounded-[2rem] border border-white/10 bg-zinc-950 p-6"
             >
-              <h2 className="text-2xl font-bold">
+              <p className="text-sm font-black uppercase tracking-[0.25em] text-yellow-500">
+                Productos y planes
+              </p>
+
+              <h2 className="mt-3 text-3xl font-black">
                 {productoEditandoId ? "Editar producto" : "Crear producto"}
               </h2>
 
-              <p className="mt-2 text-sm leading-6 text-neutral-400">
-                Acá se controlan los productos que se pueden vender: planes de
-                curso, paquetes, membresías y futuros productos.
+              <p className="mt-2 text-sm leading-6 text-zinc-400">
+                Acá se controlan productos vendibles: planes de curso, paquetes,
+                membresías y futuros productos.
               </p>
 
               <div className="mt-6 space-y-4">
@@ -1411,7 +1518,7 @@ export default function AdminPanel({ usuario, perfil }) {
                 />
 
                 <div>
-                  <label className="mb-2 block text-sm font-bold text-neutral-200">
+                  <label className="mb-2 block text-sm font-bold text-zinc-200">
                     Tipo de producto
                   </label>
 
@@ -1423,7 +1530,7 @@ export default function AdminPanel({ usuario, perfil }) {
                         event.target.value
                       )
                     }
-                    className="w-full rounded-2xl border border-white/10 bg-neutral-900 px-4 py-3 text-white outline-none focus:border-yellow-400"
+                    className="w-full rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-yellow-400"
                   >
                     {TIPOS_PRODUCTO.map((tipo) => (
                       <option key={tipo.value} value={tipo.value}>
@@ -1436,7 +1543,7 @@ export default function AdminPanel({ usuario, perfil }) {
                 {formProducto.tipo_producto === "curso_plan" && (
                   <>
                     <div>
-                      <label className="mb-2 block text-sm font-bold text-neutral-200">
+                      <label className="mb-2 block text-sm font-bold text-zinc-200">
                         Curso asociado
                       </label>
 
@@ -1448,7 +1555,7 @@ export default function AdminPanel({ usuario, perfil }) {
                             event.target.value
                           )
                         }
-                        className="w-full rounded-2xl border border-white/10 bg-neutral-900 px-4 py-3 text-white outline-none focus:border-yellow-400"
+                        className="w-full rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-yellow-400"
                       >
                         <option value="">Seleccionar curso</option>
                         {cursos.map((curso) => (
@@ -1460,7 +1567,7 @@ export default function AdminPanel({ usuario, perfil }) {
                     </div>
 
                     <div>
-                      <label className="mb-2 block text-sm font-bold text-neutral-200">
+                      <label className="mb-2 block text-sm font-bold text-zinc-200">
                         Plan
                       </label>
 
@@ -1469,7 +1576,7 @@ export default function AdminPanel({ usuario, perfil }) {
                         onChange={(event) =>
                           actualizarCampoProducto("plan", event.target.value)
                         }
-                        className="w-full rounded-2xl border border-white/10 bg-neutral-900 px-4 py-3 text-white outline-none focus:border-yellow-400"
+                        className="w-full rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-yellow-400"
                       >
                         {PLANES.map((plan) => (
                           <option key={plan.value} value={plan.value}>
@@ -1483,15 +1590,15 @@ export default function AdminPanel({ usuario, perfil }) {
 
                 {formProducto.tipo_producto === "paquete" && (
                   <div>
-                    <label className="mb-2 block text-sm font-bold text-neutral-200">
+                    <label className="mb-2 block text-sm font-bold text-zinc-200">
                       Cursos incluidos en el paquete
                     </label>
 
-                    <div className="space-y-2 rounded-2xl border border-white/10 bg-neutral-900 p-4">
+                    <div className="space-y-2 rounded-2xl border border-white/10 bg-black p-4">
                       {cursos.map((curso) => (
                         <label
                           key={curso.id}
-                          className="flex items-center gap-3 text-sm text-neutral-200"
+                          className="flex items-center gap-3 text-sm text-zinc-200"
                         >
                           <input
                             type="checkbox"
@@ -1505,7 +1612,7 @@ export default function AdminPanel({ usuario, perfil }) {
                       ))}
 
                       {cursos.length === 0 && (
-                        <p className="text-sm text-neutral-400">
+                        <p className="text-sm text-zinc-400">
                           Primero necesitás crear cursos.
                         </p>
                       )}
@@ -1523,7 +1630,7 @@ export default function AdminPanel({ usuario, perfil }) {
                   />
 
                   <div>
-                    <label className="mb-2 block text-sm font-bold text-neutral-200">
+                    <label className="mb-2 block text-sm font-bold text-zinc-200">
                       Moneda
                     </label>
 
@@ -1532,7 +1639,7 @@ export default function AdminPanel({ usuario, perfil }) {
                       onChange={(event) =>
                         actualizarCampoProducto("moneda", event.target.value)
                       }
-                      className="w-full rounded-2xl border border-white/10 bg-neutral-900 px-4 py-3 text-white outline-none focus:border-yellow-400"
+                      className="w-full rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-yellow-400"
                     >
                       <option value="UYU">UYU</option>
                       <option value="USD">USD</option>
@@ -1625,7 +1732,7 @@ export default function AdminPanel({ usuario, perfil }) {
                 <button
                   type="submit"
                   disabled={cargando}
-                  className="rounded-2xl bg-yellow-500 px-5 py-3 font-bold text-neutral-950 transition hover:bg-yellow-400 disabled:opacity-60"
+                  className="rounded-2xl bg-yellow-500 px-5 py-3 font-black text-black transition hover:bg-yellow-400 disabled:opacity-60"
                 >
                   {cargando
                     ? "Guardando..."
@@ -1647,7 +1754,7 @@ export default function AdminPanel({ usuario, perfil }) {
             </form>
 
             <div>
-              <div className="mb-5 rounded-3xl border border-white/10 bg-white/5 p-5">
+              <div className="mb-5 rounded-3xl border border-white/10 bg-zinc-950 p-5">
                 <div className="grid gap-4 md:grid-cols-[1fr_220px]">
                   <input
                     type="search"
@@ -1656,7 +1763,7 @@ export default function AdminPanel({ usuario, perfil }) {
                       setBusquedaProductos(event.target.value)
                     }
                     placeholder="Buscar productos, planes o paquetes."
-                    className="rounded-2xl border border-white/10 bg-neutral-900 px-4 py-3 text-white outline-none focus:border-yellow-400"
+                    className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-yellow-400"
                   />
 
                   <select
@@ -1664,7 +1771,7 @@ export default function AdminPanel({ usuario, perfil }) {
                     onChange={(event) =>
                       setFiltroTipoProducto(event.target.value)
                     }
-                    className="rounded-2xl border border-white/10 bg-neutral-900 px-4 py-3 text-white outline-none focus:border-yellow-400"
+                    className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-yellow-400"
                   >
                     <option value="todos">Todos</option>
                     {TIPOS_PRODUCTO.map((tipo) => (
@@ -1678,7 +1785,7 @@ export default function AdminPanel({ usuario, perfil }) {
 
               <div className="space-y-4">
                 {productosFiltrados.length === 0 && (
-                  <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center text-neutral-300">
+                  <div className="rounded-3xl border border-white/10 bg-zinc-950 p-8 text-center text-zinc-300">
                     No hay productos para mostrar.
                   </div>
                 )}
@@ -1686,12 +1793,12 @@ export default function AdminPanel({ usuario, perfil }) {
                 {productosFiltrados.map((producto) => (
                   <article
                     key={producto.id}
-                    className="rounded-3xl border border-white/10 bg-white/5 p-5"
+                    className="rounded-3xl border border-white/10 bg-zinc-950 p-5"
                   >
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-xl font-bold">
+                          <h3 className="text-xl font-black">
                             {producto.nombre}
                           </h3>
 
@@ -1718,32 +1825,36 @@ export default function AdminPanel({ usuario, perfil }) {
                           {producto.destacado && (
                             <Pill color="yellow">Destacado</Pill>
                           )}
+
+                          {producto.es_recurrente && (
+                            <Pill color="green">Recurrente</Pill>
+                          )}
                         </div>
 
-                        <p className="mt-2 text-sm text-neutral-400">
+                        <p className="mt-2 text-sm text-zinc-400">
                           /producto/{producto.slug}
                         </p>
 
-                        <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-300">
+                        <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
                           {producto.descripcion || "Sin descripción."}
                         </p>
 
-                        <div className="mt-4 flex flex-wrap gap-2 text-xs text-neutral-300">
-                          <span className="rounded-full bg-black/30 px-3 py-1">
+                        <div className="mt-4 flex flex-wrap gap-2 text-xs text-zinc-300">
+                          <span className="rounded-full bg-black px-3 py-1">
                             Precio: {formatearPrecio(producto)}
                           </span>
 
-                          <span className="rounded-full bg-black/30 px-3 py-1">
+                          <span className="rounded-full bg-black px-3 py-1">
                             Usuarios:{" "}
                             {producto.cantidad_maxima_usuarios || 1}
                           </span>
 
-                          <span className="rounded-full bg-black/30 px-3 py-1">
+                          <span className="rounded-full bg-black px-3 py-1">
                             Participantes:{" "}
                             {producto.requiere_participantes ? "Sí" : "No"}
                           </span>
 
-                          <span className="rounded-full bg-black/30 px-3 py-1">
+                          <span className="rounded-full bg-black px-3 py-1">
                             Correos registrados:{" "}
                             {producto.requiere_correos_registrados
                               ? "Sí"
@@ -1753,8 +1864,8 @@ export default function AdminPanel({ usuario, perfil }) {
 
                         {Array.isArray(producto.producto_cursos) &&
                           producto.producto_cursos.length > 0 && (
-                            <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4">
-                              <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
+                            <div className="mt-4 rounded-2xl border border-white/10 bg-black p-4">
+                              <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">
                                 Cursos asociados
                               </p>
 
@@ -1767,10 +1878,10 @@ export default function AdminPanel({ usuario, perfil }) {
                                   return (
                                     <span
                                       key={item.id || item.curso_id}
-                                      className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-neutral-200"
+                                      className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-zinc-200"
                                     >
-                                      {curso?.titulo || `Curso ${item.curso_id}`} ·{" "}
-                                      {item.nivel_acceso}
+                                      {curso?.titulo || `Curso ${item.curso_id}`}{" "}
+                                      · {item.nivel_acceso}
                                     </span>
                                   );
                                 })}
@@ -1779,7 +1890,7 @@ export default function AdminPanel({ usuario, perfil }) {
                           )}
                       </div>
 
-                      <div className="flex min-w-[230px] flex-col gap-3">
+                      <div className="grid min-w-[230px] gap-3">
                         <button
                           type="button"
                           onClick={() =>
@@ -1815,7 +1926,7 @@ export default function AdminPanel({ usuario, perfil }) {
                         <button
                           type="button"
                           onClick={() => editarProducto(producto)}
-                          className="rounded-2xl bg-yellow-500 px-4 py-3 text-sm font-bold text-neutral-950 transition hover:bg-yellow-400"
+                          className="rounded-2xl bg-yellow-500 px-4 py-3 text-sm font-black text-black transition hover:bg-yellow-400"
                         >
                           Editar producto
                         </button>
@@ -1841,19 +1952,79 @@ export default function AdminPanel({ usuario, perfil }) {
   );
 }
 
-function ResumenCard({ titulo, valor }) {
+function ResumenCard({ titulo, valor, alerta = false }) {
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-      <p className="text-sm text-neutral-400">{titulo}</p>
-      <p className="mt-2 text-4xl font-bold text-yellow-400">{valor}</p>
+    <div
+      className={`rounded-3xl border p-5 ${
+        alerta
+          ? "border-red-500/30 bg-red-500/10"
+          : "border-white/10 bg-zinc-950"
+      }`}
+    >
+      <p className="text-sm text-zinc-400">{titulo}</p>
+      <p
+        className={`mt-2 text-4xl font-black ${
+          alerta ? "text-red-400" : "text-yellow-500"
+        }`}
+      >
+        {valor}
+      </p>
     </div>
+  );
+}
+
+function AdminShortcut({ href, icono, titulo, descripcion, color = "neutral" }) {
+  const colores = {
+    yellow: "border-yellow-500/30 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-100",
+    blue: "border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-100",
+    green: "border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-green-100",
+    neutral: "border-white/10 bg-white/10 hover:bg-white/20 text-white",
+  };
+
+  return (
+    <Link
+      href={href}
+      className={`rounded-3xl border p-4 transition ${colores[color]}`}
+    >
+      <div className="flex items-start gap-3">
+        <span className="text-2xl">{icono}</span>
+
+        <div>
+          <p className="font-black">{titulo}</p>
+          <p className="mt-1 text-xs leading-5 opacity-80">{descripcion}</p>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function TabButton({ activo, onClick, titulo, subtitulo }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-2xl p-4 text-left transition ${
+        activo
+          ? "bg-yellow-500 text-black"
+          : "bg-black text-white hover:bg-white/10"
+      }`}
+    >
+      <p className="font-black">{titulo}</p>
+      <p
+        className={`mt-1 text-xs ${
+          activo ? "text-black/70" : "text-zinc-500"
+        }`}
+      >
+        {subtitulo}
+      </p>
+    </button>
   );
 }
 
 function CampoTexto({ label, value, onChange, required = false }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-bold text-neutral-200">
+      <label className="mb-2 block text-sm font-bold text-zinc-200">
         {label}
       </label>
 
@@ -1862,7 +2033,7 @@ function CampoTexto({ label, value, onChange, required = false }) {
         value={value}
         required={required}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-2xl border border-white/10 bg-neutral-900 px-4 py-3 text-white outline-none focus:border-yellow-400"
+        className="w-full rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-yellow-400"
       />
     </div>
   );
@@ -1871,7 +2042,7 @@ function CampoTexto({ label, value, onChange, required = false }) {
 function CampoNumero({ label, value, onChange }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-bold text-neutral-200">
+      <label className="mb-2 block text-sm font-bold text-zinc-200">
         {label}
       </label>
 
@@ -1879,7 +2050,7 @@ function CampoNumero({ label, value, onChange }) {
         type="number"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-2xl border border-white/10 bg-neutral-900 px-4 py-3 text-white outline-none focus:border-yellow-400"
+        className="w-full rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-yellow-400"
       />
     </div>
   );
@@ -1888,7 +2059,7 @@ function CampoNumero({ label, value, onChange }) {
 function CampoTextarea({ label, value, onChange }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-bold text-neutral-200">
+      <label className="mb-2 block text-sm font-bold text-zinc-200">
         {label}
       </label>
 
@@ -1896,7 +2067,7 @@ function CampoTextarea({ label, value, onChange }) {
         value={value}
         onChange={(event) => onChange(event.target.value)}
         rows={4}
-        className="w-full rounded-2xl border border-white/10 bg-neutral-900 px-4 py-3 text-white outline-none focus:border-yellow-400"
+        className="w-full rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-yellow-400"
       />
     </div>
   );
@@ -1904,7 +2075,7 @@ function CampoTextarea({ label, value, onChange }) {
 
 function CheckBox({ label, checked, onChange }) {
   return (
-    <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-neutral-900 px-4 py-3 text-sm text-neutral-200">
+    <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black px-4 py-3 text-sm text-zinc-200">
       <input
         type="checkbox"
         checked={checked}
@@ -1923,7 +2094,7 @@ function Pill({ children, color = "neutral" }) {
     red: "border-red-500/30 bg-red-500/10 text-red-200",
     yellow: "border-yellow-500/30 bg-yellow-500/10 text-yellow-200",
     blue: "border-blue-500/30 bg-blue-500/10 text-blue-200",
-    neutral: "border-white/10 bg-white/10 text-neutral-200",
+    neutral: "border-white/10 bg-white/10 text-zinc-200",
   };
 
   return (

@@ -35,6 +35,26 @@ function limpiarArray(valor) {
   return valor.filter((item) => item !== null && item !== undefined);
 }
 
+function crearRespuestaError(mensaje, status = 500) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: mensaje,
+    },
+    { status }
+  );
+}
+
+function validarId(id) {
+  const numero = Number(id);
+
+  if (!Number.isInteger(numero) || numero <= 0) {
+    return null;
+  }
+
+  return numero;
+}
+
 async function sincronizarCursosDelProducto({
   supabase,
   productoId,
@@ -42,16 +62,23 @@ async function sincronizarCursosDelProducto({
   nivelAcceso,
   beneficiosPro,
 }) {
-  const cursosLimpios = limpiarArray(cursoIds);
+  const idProducto = validarId(productoId);
+  const cursosLimpios = limpiarArray(cursoIds)
+    .map((cursoId) => validarId(cursoId))
+    .filter(Boolean);
+
+  if (!idProducto) {
+    throw new Error("ID de producto inválido.");
+  }
+
+  await supabase.from("producto_cursos").delete().eq("producto_id", idProducto);
 
   if (!cursosLimpios.length) {
     return;
   }
 
-  await supabase.from("producto_cursos").delete().eq("producto_id", productoId);
-
   const filas = cursosLimpios.map((cursoId, index) => ({
-    producto_id: productoId,
+    producto_id: idProducto,
     curso_id: cursoId,
     nivel_acceso: nivelAcceso || "basico",
     beneficios_pro: Boolean(beneficiosPro),
@@ -66,77 +93,105 @@ async function sincronizarCursosDelProducto({
   }
 }
 
+async function verificarSlugDisponible({
+  supabase,
+  slug,
+  productoIdIgnorar = null,
+}) {
+  let query = supabase.from("productos").select("id").eq("slug", slug);
+
+  if (productoIdIgnorar) {
+    query = query.neq("id", productoIdIgnorar);
+  }
+
+  const { data, error } = await query.maybeSingle();
+
+  if (error) {
+    console.error("Error verificando slug de producto:", error);
+    throw new Error("No se pudo verificar el slug del producto.");
+  }
+
+  return !data;
+}
+
 export async function GET(request) {
   const verificacion = await verificarAdmin(request);
 
   if (!verificacion.ok) {
-    return NextResponse.json(
-      { error: verificacion.error },
-      { status: verificacion.status }
-    );
+    return crearRespuestaError(verificacion.error, verificacion.status);
   }
 
   const { supabase } = verificacion;
 
-  const { searchParams } = new URL(request.url);
+  try {
+    const { searchParams } = new URL(request.url);
 
-  const tipo = searchParams.get("tipo");
-  const cursoId = searchParams.get("cursoId");
-  const soloActivos = searchParams.get("activos") === "true";
+    const tipo = searchParams.get("tipo");
+    const cursoId = searchParams.get("cursoId");
+    const soloActivos = searchParams.get("activos") === "true";
 
-  let query = supabase
-    .from("productos")
-    .select(
+    let query = supabase
+      .from("productos")
+      .select(
+        `
+        *,
+        producto_cursos (
+          id,
+          curso_id,
+          nivel_acceso,
+          beneficios_pro,
+          orden
+        )
       `
-      *,
-      producto_cursos (
-        id,
-        curso_id,
-        nivel_acceso,
-        beneficios_pro,
-        orden
       )
-    `
-    )
-    .order("orden", { ascending: true })
-    .order("created_at", { ascending: false });
+      .order("orden", { ascending: true })
+      .order("created_at", { ascending: false });
 
-  if (tipo) {
-    query = query.eq("tipo_producto", tipo);
-  }
+    if (tipo) {
+      query = query.eq("tipo_producto", tipo);
+    }
 
-  if (cursoId) {
-    query = query.eq("curso_id", cursoId);
-  }
+    if (cursoId) {
+      const cursoIdValido = validarId(cursoId);
 
-  if (soloActivos) {
-    query = query.eq("activo", true).eq("visible_en_web", true);
-  }
+      if (!cursoIdValido) {
+        return crearRespuestaError("ID de curso inválido.", 400);
+      }
 
-  const { data, error } = await query;
+      query = query.eq("curso_id", cursoIdValido);
+    }
 
-  if (error) {
-    console.error("Error obteniendo productos:", error);
+    if (soloActivos) {
+      query = query.eq("activo", true).eq("visible_en_web", true);
+    }
 
-    return NextResponse.json(
-      { error: "No se pudieron cargar los productos." },
-      { status: 500 }
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Error obteniendo productos:", error);
+
+      return crearRespuestaError("No se pudieron cargar los productos.", 500);
+    }
+
+    return NextResponse.json({
+      ok: true,
+      productos: data || [],
+    });
+  } catch (error) {
+    console.error("Error interno GET /api/admin/productos:", error);
+
+    return crearRespuestaError(
+      error?.message || "Error interno cargando productos.",
+      500
     );
   }
-
-  return NextResponse.json({
-    productos: data || [],
-  });
 }
 
 export async function POST(request) {
   const verificacion = await verificarAdmin(request);
 
   if (!verificacion.ok) {
-    return NextResponse.json(
-      { error: verificacion.error },
-      { status: verificacion.status }
-    );
+    return crearRespuestaError(verificacion.error, verificacion.status);
   }
 
   const { supabase } = verificacion;
@@ -147,32 +202,57 @@ export async function POST(request) {
     const nombre = String(body.nombre || "").trim();
 
     if (!nombre) {
-      return NextResponse.json(
-        { error: "El producto necesita un nombre." },
-        { status: 400 }
-      );
+      return crearRespuestaError("El producto necesita un nombre.", 400);
     }
 
     const slug = crearSlug(body.slug || nombre);
 
     if (!slug) {
-      return NextResponse.json(
-        { error: "No se pudo generar el slug del producto." },
-        { status: 400 }
+      return crearRespuestaError(
+        "No se pudo generar el slug del producto.",
+        400
       );
     }
 
-    const tipoProducto = body.tipo_producto || "curso_plan";
-    const plan = body.plan || null;
-    const cursoId = body.curso_id || null;
+    const slugDisponible = await verificarSlugDisponible({
+      supabase,
+      slug,
+    });
+
+    if (!slugDisponible) {
+      return crearRespuestaError(
+        "Ya existe un producto con ese slug. Cambiá el nombre o el slug.",
+        409
+      );
+    }
+
+    const tipoProducto = String(body.tipo_producto || "curso_plan").trim();
+    const plan = body.plan ? String(body.plan).trim() : null;
+    const cursoId = body.curso_id ? validarId(body.curso_id) : null;
+
+    if (body.curso_id && !cursoId) {
+      return crearRespuestaError("ID de curso inválido.", 400);
+    }
 
     const precio = limpiarNumero(body.precio, 0);
-    const moneda = body.moneda || "UYU";
+
+    if (precio < 0) {
+      return crearRespuestaError("El precio no puede ser negativo.", 400);
+    }
+
+    const moneda = String(body.moneda || "UYU").trim().toUpperCase();
 
     const cantidadMaximaUsuarios = limpiarNumero(
       body.cantidad_maxima_usuarios,
       1
     );
+
+    if (cantidadMaximaUsuarios < 1) {
+      return crearRespuestaError(
+        "La cantidad máxima de usuarios debe ser al menos 1.",
+        400
+      );
+    }
 
     const requiereParticipantes = limpiarBooleano(
       body.requiere_participantes
@@ -188,8 +268,15 @@ export async function POST(request) {
     const visibleEnWeb = limpiarBooleano(body.visible_en_web);
     const destacado = limpiarBooleano(body.destacado);
 
-    const beneficios = body.beneficios || {};
-    const contenidoIncluido = body.contenido_incluido || {};
+    const beneficios =
+      body.beneficios && typeof body.beneficios === "object"
+        ? body.beneficios
+        : {};
+
+    const contenidoIncluido =
+      body.contenido_incluido && typeof body.contenido_incluido === "object"
+        ? body.contenido_incluido
+        : {};
 
     const { data: producto, error } = await supabase
       .from("productos")
@@ -197,7 +284,7 @@ export async function POST(request) {
         {
           nombre,
           slug,
-          descripcion: body.descripcion || "",
+          descripcion: String(body.descripcion || "").trim(),
           tipo_producto: tipoProducto,
           plan,
           curso_id: cursoId,
@@ -213,7 +300,7 @@ export async function POST(request) {
           editable_desde_admin: true,
           origen: "admin",
           orden: limpiarNumero(body.orden, 0),
-          texto_boton: body.texto_boton || "Comprar",
+          texto_boton: String(body.texto_boton || "Comprar").trim(),
           beneficios,
           contenido_incluido: contenidoIncluido,
         },
@@ -221,13 +308,10 @@ export async function POST(request) {
       .select("*")
       .single();
 
-    if (error) {
+    if (error || !producto) {
       console.error("Error creando producto:", error);
 
-      return NextResponse.json(
-        { error: "No se pudo crear el producto." },
-        { status: 500 }
-      );
+      return crearRespuestaError("No se pudo crear el producto.", 500);
     }
 
     const cursoIds = limpiarArray(body.curso_ids);
@@ -238,7 +322,8 @@ export async function POST(request) {
         productoId: producto.id,
         cursoIds,
         nivelAcceso: body.nivel_acceso || plan || "basico",
-        beneficiosPro: body.beneficios_pro || plan === "pro" || plan === "plantel",
+        beneficiosPro:
+          body.beneficios_pro || plan === "pro" || plan === "plantel",
       });
     } else if (cursoId) {
       await sincronizarCursosDelProducto({
@@ -246,19 +331,21 @@ export async function POST(request) {
         productoId: producto.id,
         cursoIds: [cursoId],
         nivelAcceso: body.nivel_acceso || plan || "basico",
-        beneficiosPro: body.beneficios_pro || plan === "pro" || plan === "plantel",
+        beneficiosPro:
+          body.beneficios_pro || plan === "pro" || plan === "plantel",
       });
     }
 
     return NextResponse.json({
+      ok: true,
       producto,
     });
   } catch (error) {
     console.error("Error interno creando producto:", error);
 
-    return NextResponse.json(
-      { error: error?.message || "Error interno creando producto." },
-      { status: 500 }
+    return crearRespuestaError(
+      error?.message || "Error interno creando producto.",
+      500
     );
   }
 }
@@ -267,10 +354,7 @@ export async function PATCH(request) {
   const verificacion = await verificarAdmin(request);
 
   if (!verificacion.ok) {
-    return NextResponse.json(
-      { error: verificacion.error },
-      { status: verificacion.status }
-    );
+    return crearRespuestaError(verificacion.error, verificacion.status);
   }
 
   const { supabase } = verificacion;
@@ -278,13 +362,26 @@ export async function PATCH(request) {
   try {
     const body = await request.json();
 
-    const id = body.id;
+    const id = validarId(body.id);
 
     if (!id) {
-      return NextResponse.json(
-        { error: "Falta el ID del producto." },
-        { status: 400 }
-      );
+      return crearRespuestaError("Falta el ID del producto.", 400);
+    }
+
+    const { data: productoExiste, error: errorExiste } = await supabase
+      .from("productos")
+      .select("id, plan")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (errorExiste) {
+      console.error("Error verificando producto:", errorExiste);
+
+      return crearRespuestaError("No se pudo verificar el producto.", 500);
+    }
+
+    if (!productoExiste) {
+      return crearRespuestaError("No se encontró el producto.", 404);
     }
 
     const actualizacion = {
@@ -292,42 +389,88 @@ export async function PATCH(request) {
     };
 
     if (body.nombre !== undefined) {
-      actualizacion.nombre = String(body.nombre || "").trim();
+      const nombreLimpio = String(body.nombre || "").trim();
+
+      if (!nombreLimpio) {
+        return crearRespuestaError("El producto necesita un nombre.", 400);
+      }
+
+      actualizacion.nombre = nombreLimpio;
     }
 
     if (body.slug !== undefined) {
-      actualizacion.slug = crearSlug(body.slug);
+      const slugLimpio = crearSlug(body.slug);
+
+      if (!slugLimpio) {
+        return crearRespuestaError(
+          "No se pudo generar el slug del producto.",
+          400
+        );
+      }
+
+      const slugDisponible = await verificarSlugDisponible({
+        supabase,
+        slug: slugLimpio,
+        productoIdIgnorar: id,
+      });
+
+      if (!slugDisponible) {
+        return crearRespuestaError(
+          "Ya existe otro producto con ese slug. Cambiá el nombre o el slug.",
+          409
+        );
+      }
+
+      actualizacion.slug = slugLimpio;
     }
 
     if (body.descripcion !== undefined) {
-      actualizacion.descripcion = body.descripcion || "";
+      actualizacion.descripcion = String(body.descripcion || "").trim();
     }
 
     if (body.tipo_producto !== undefined) {
-      actualizacion.tipo_producto = body.tipo_producto;
+      actualizacion.tipo_producto = String(body.tipo_producto || "").trim();
     }
 
     if (body.plan !== undefined) {
-      actualizacion.plan = body.plan || null;
+      actualizacion.plan = body.plan ? String(body.plan).trim() : null;
     }
 
     if (body.curso_id !== undefined) {
-      actualizacion.curso_id = body.curso_id || null;
+      const cursoId = body.curso_id ? validarId(body.curso_id) : null;
+
+      if (body.curso_id && !cursoId) {
+        return crearRespuestaError("ID de curso inválido.", 400);
+      }
+
+      actualizacion.curso_id = cursoId;
     }
 
     if (body.precio !== undefined) {
-      actualizacion.precio = limpiarNumero(body.precio, 0);
+      const precio = limpiarNumero(body.precio, 0);
+
+      if (precio < 0) {
+        return crearRespuestaError("El precio no puede ser negativo.", 400);
+      }
+
+      actualizacion.precio = precio;
     }
 
     if (body.moneda !== undefined) {
-      actualizacion.moneda = body.moneda || "UYU";
+      actualizacion.moneda = String(body.moneda || "UYU").trim().toUpperCase();
     }
 
     if (body.cantidad_maxima_usuarios !== undefined) {
-      actualizacion.cantidad_maxima_usuarios = limpiarNumero(
-        body.cantidad_maxima_usuarios,
-        1
-      );
+      const cantidad = limpiarNumero(body.cantidad_maxima_usuarios, 1);
+
+      if (cantidad < 1) {
+        return crearRespuestaError(
+          "La cantidad máxima de usuarios debe ser al menos 1.",
+          400
+        );
+      }
+
+      actualizacion.cantidad_maxima_usuarios = cantidad;
     }
 
     if (body.requiere_participantes !== undefined) {
@@ -363,15 +506,24 @@ export async function PATCH(request) {
     }
 
     if (body.texto_boton !== undefined) {
-      actualizacion.texto_boton = body.texto_boton || "Comprar";
+      actualizacion.texto_boton = String(
+        body.texto_boton || "Comprar"
+      ).trim();
     }
 
     if (body.beneficios !== undefined) {
-      actualizacion.beneficios = body.beneficios || {};
+      actualizacion.beneficios =
+        body.beneficios && typeof body.beneficios === "object"
+          ? body.beneficios
+          : {};
     }
 
     if (body.contenido_incluido !== undefined) {
-      actualizacion.contenido_incluido = body.contenido_incluido || {};
+      actualizacion.contenido_incluido =
+        body.contenido_incluido &&
+        typeof body.contenido_incluido === "object"
+          ? body.contenido_incluido
+          : {};
     }
 
     const { data: producto, error } = await supabase
@@ -381,13 +533,10 @@ export async function PATCH(request) {
       .select("*")
       .single();
 
-    if (error) {
+    if (error || !producto) {
       console.error("Error actualizando producto:", error);
 
-      return NextResponse.json(
-        { error: "No se pudo actualizar el producto." },
-        { status: 500 }
-      );
+      return crearRespuestaError("No se pudo actualizar el producto.", 500);
     }
 
     if (body.curso_ids !== undefined) {
@@ -404,14 +553,15 @@ export async function PATCH(request) {
     }
 
     return NextResponse.json({
+      ok: true,
       producto,
     });
   } catch (error) {
     console.error("Error interno actualizando producto:", error);
 
-    return NextResponse.json(
-      { error: error?.message || "Error interno actualizando producto." },
-      { status: 500 }
+    return crearRespuestaError(
+      error?.message || "Error interno actualizando producto.",
+      500
     );
   }
 }
@@ -420,22 +570,49 @@ export async function DELETE(request) {
   const verificacion = await verificarAdmin(request);
 
   if (!verificacion.ok) {
-    return NextResponse.json(
-      { error: verificacion.error },
-      { status: verificacion.status }
-    );
+    return crearRespuestaError(verificacion.error, verificacion.status);
   }
 
   const { supabase } = verificacion;
 
   try {
     const body = await request.json();
-    const id = body.id;
+    const id = validarId(body.id);
 
     if (!id) {
-      return NextResponse.json(
-        { error: "Falta el ID del producto." },
-        { status: 400 }
+      return crearRespuestaError("Falta el ID del producto.", 400);
+    }
+
+    const { data: productoExiste, error: errorExiste } = await supabase
+      .from("productos")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (errorExiste) {
+      console.error("Error verificando producto antes de eliminar:", errorExiste);
+
+      return crearRespuestaError("No se pudo verificar el producto.", 500);
+    }
+
+    if (!productoExiste) {
+      return crearRespuestaError("No se encontró el producto.", 404);
+    }
+
+    const { error: errorProductoCursos } = await supabase
+      .from("producto_cursos")
+      .delete()
+      .eq("producto_id", id);
+
+    if (errorProductoCursos) {
+      console.error(
+        "Error eliminando asociaciones producto_cursos:",
+        errorProductoCursos
+      );
+
+      return crearRespuestaError(
+        "No se pudieron eliminar las asociaciones del producto.",
+        500
       );
     }
 
@@ -444,21 +621,16 @@ export async function DELETE(request) {
     if (error) {
       console.error("Error eliminando producto:", error);
 
-      return NextResponse.json(
-        { error: "No se pudo eliminar el producto." },
-        { status: 500 }
-      );
+      return crearRespuestaError("No se pudo eliminar el producto.", 500);
     }
 
     return NextResponse.json({
       ok: true,
+      id,
     });
   } catch (error) {
     console.error("Error interno eliminando producto:", error);
 
-    return NextResponse.json(
-      { error: "Error interno eliminando producto." },
-      { status: 500 }
-    );
+    return crearRespuestaError("Error interno eliminando producto.", 500);
   }
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { createClient as createSupabaseServerClient } from "@/lib/supabase/server";
-import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
+import { verificarAdmin } from "@/lib/admin/verificarAdmin";
+
+export const dynamic = "force-dynamic";
 
 const ESTADOS_CERTIFICADO = ["emitido", "anulado"];
 
@@ -37,76 +38,25 @@ function validarId(id) {
   return numero;
 }
 
-async function verificarAdmin() {
-  const supabase = await createSupabaseServerClient();
-
-  const {
-    data: { user },
-    error: errorUsuario,
-  } = await supabase.auth.getUser();
-
-  if (errorUsuario || !user) {
-    return {
-      ok: false,
-      status: 401,
-      error: "No has iniciado sesión.",
-    };
-  }
-
-  const { data: perfil, error: errorPerfil } = await supabase
-    .from("perfiles")
-    .select("role")
-    .eq("user_id", user.id)
-    .single();
-
-  if (errorPerfil || !perfil || perfil.role !== "admin") {
-    return {
-      ok: false,
-      status: 403,
-      error: "No tenés permisos de administrador.",
-    };
-  }
-
-  return {
-    ok: true,
-    user,
-    perfil,
-  };
-}
-
-function crearSupabaseAdmin() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Faltan variables de entorno de Supabase.");
-  }
-
-  return createSupabaseAdminClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-}
-
-export async function GET() {
+export async function GET(request) {
   try {
-    const admin = await verificarAdmin();
+    const admin = await verificarAdmin(request);
 
     if (!admin.ok) {
       return crearRespuestaError(admin.error, admin.status);
     }
 
-    const supabaseAdmin = crearSupabaseAdmin();
+    const supabase = admin.supabase;
 
-    const { data: certificados, error } = await supabaseAdmin
+    const { data: certificados, error } = await supabase
       .from("certificados")
       .select(CAMPOS_CERTIFICADO)
       .order("emitido_at", { ascending: false })
       .limit(1000);
 
     if (error) {
+      console.error("Error cargando certificados:", error);
+
       return crearRespuestaError(
         "No se pudieron cargar los certificados.",
         500
@@ -118,17 +68,21 @@ export async function GET() {
       certificados: certificados || [],
     });
   } catch (error) {
+    console.error("Error GET /api/admin/certificados:", error);
+
     return crearRespuestaError("Error interno del servidor.", 500);
   }
 }
 
 export async function PATCH(request) {
   try {
-    const admin = await verificarAdmin();
+    const admin = await verificarAdmin(request);
 
     if (!admin.ok) {
       return crearRespuestaError(admin.error, admin.status);
     }
+
+    const supabase = admin.supabase;
 
     const body = await request.json();
 
@@ -143,19 +97,26 @@ export async function PATCH(request) {
       return crearRespuestaError("Estado no permitido.", 400);
     }
 
-    const supabaseAdmin = crearSupabaseAdmin();
-
-    const { data: certificadoExiste } = await supabaseAdmin
+    const { data: certificadoExiste, error: errorExiste } = await supabase
       .from("certificados")
       .select("id")
       .eq("id", id)
       .maybeSingle();
 
+    if (errorExiste) {
+      console.error("Error verificando certificado:", errorExiste);
+
+      return crearRespuestaError(
+        "No se pudo verificar el certificado.",
+        500
+      );
+    }
+
     if (!certificadoExiste) {
       return crearRespuestaError("No se encontró el certificado.", 404);
     }
 
-    const { data: certificado, error } = await supabaseAdmin
+    const { data: certificado, error } = await supabase
       .from("certificados")
       .update({ estado })
       .eq("id", id)
@@ -163,6 +124,8 @@ export async function PATCH(request) {
       .single();
 
     if (error || !certificado) {
+      console.error("Error actualizando certificado:", error);
+
       return crearRespuestaError(
         "No se pudo actualizar el certificado.",
         500
@@ -174,6 +137,8 @@ export async function PATCH(request) {
       certificado,
     });
   } catch (error) {
+    console.error("Error PATCH /api/admin/certificados:", error);
+
     return crearRespuestaError("Error interno del servidor.", 500);
   }
 }

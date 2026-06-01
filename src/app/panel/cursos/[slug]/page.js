@@ -5,6 +5,73 @@ import BotonCompletarClase from "./BotonCompletarClase";
 
 export const dynamic = "force-dynamic";
 
+const JERARQUIA_PLANES = {
+  basico: 1,
+  extenso: 2,
+  pro: 3,
+  plantel: 4,
+};
+
+const PLANES = {
+  basico: {
+    nombre: "Básico",
+    descripcion: "Acceso al contenido base del curso.",
+    color: "border-zinc-500/30 bg-zinc-500/10 text-zinc-200",
+  },
+  extenso: {
+    nombre: "Extenso",
+    descripcion: "Acceso ampliado con más contenido formativo.",
+    color: "border-blue-500/30 bg-blue-500/10 text-blue-200",
+  },
+  pro: {
+    nombre: "Pro",
+    descripcion: "Acceso avanzado con beneficios profesionales.",
+    color: "border-yellow-500/30 bg-yellow-500/10 text-yellow-200",
+  },
+  plantel: {
+    nombre: "Plantel",
+    descripcion: "Acceso grupal con beneficios del plan Pro.",
+    color: "border-green-500/30 bg-green-500/10 text-green-200",
+  },
+};
+
+function normalizarNivel(nivel) {
+  const valor = String(nivel || "basico").toLowerCase().trim();
+
+  if (JERARQUIA_PLANES[valor]) {
+    return valor;
+  }
+
+  return "basico";
+}
+
+function nivelesPermitidos(nivelAlumno) {
+  const nivel = normalizarNivel(nivelAlumno);
+  const valorNivel = JERARQUIA_PLANES[nivel];
+
+  return Object.entries(JERARQUIA_PLANES)
+    .filter(([, valor]) => valor <= valorNivel)
+    .map(([nombre]) => nombre);
+}
+
+function nombrePlan(nivel) {
+  const normalizado = normalizarNivel(nivel);
+
+  return PLANES[normalizado]?.nombre || "Básico";
+}
+
+function descripcionPlan(nivel) {
+  const normalizado = normalizarNivel(nivel);
+
+  return PLANES[normalizado]?.descripcion || PLANES.basico.descripcion;
+}
+
+function clasePlan(nivel) {
+  const normalizado = normalizarNivel(nivel);
+
+  return PLANES[normalizado]?.color || PLANES.basico.color;
+}
+
 function claseEstado(estado) {
   if (estado === "activo") {
     return "border-green-500/30 bg-green-500/10 text-green-300";
@@ -44,7 +111,11 @@ function obtenerEmbedYoutube(url) {
       const videoId = urlObj.searchParams.get("v");
 
       if (videoId) {
-        return `https://www.youtube.com/embed/${videoId}`;
+        return `https://www.youtube-nocookie.com/embed/${videoId}`;
+      }
+
+      if (urlObj.pathname.startsWith("/embed/")) {
+        return url.replace("youtube.com", "youtube-nocookie.com");
       }
     }
 
@@ -52,12 +123,12 @@ function obtenerEmbedYoutube(url) {
       const videoId = urlObj.pathname.replace("/", "");
 
       if (videoId) {
-        return `https://www.youtube.com/embed/${videoId}`;
+        return `https://www.youtube-nocookie.com/embed/${videoId}`;
       }
     }
 
-    return url;
-  } catch (error) {
+    return "";
+  } catch {
     return "";
   }
 }
@@ -73,11 +144,70 @@ function aplanarClases(modulos) {
   );
 }
 
+function formatearFecha(fecha) {
+  if (!fecha) return "—";
+
+  const date = new Date(fecha);
+
+  if (Number.isNaN(date.getTime())) return "—";
+
+  const dia = String(date.getDate()).padStart(2, "0");
+  const mes = String(date.getMonth() + 1).padStart(2, "0");
+  const anio = date.getFullYear();
+
+  return `${dia}/${mes}/${anio}`;
+}
+
+function Badge({ children, className = "" }) {
+  return (
+    <span
+      className={`rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.2em] ${className}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function BarraProgreso({ porcentaje }) {
+  const valor = Math.max(0, Math.min(100, Number(porcentaje || 0)));
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between text-xs font-black uppercase tracking-wide text-zinc-400">
+        <span>Progreso</span>
+        <span>{valor}%</span>
+      </div>
+
+      <div className="h-3 overflow-hidden rounded-full bg-zinc-800">
+        <div
+          className="h-full rounded-full bg-yellow-500 transition-all"
+          style={{ width: `${valor}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function obtenerTipoClase(clase) {
+  if (clase?.video_url && clase?.pdf_url) return "Video + material";
+  if (clase?.video_url) return "Video";
+  if (clase?.pdf_url) return "Material";
+  if (clase?.contenido) return "Texto";
+  return "Clase";
+}
+
+function obtenerIconoClase(clase) {
+  if (clase?.video_url) return "🎥";
+  if (clase?.pdf_url) return "📄";
+  if (clase?.contenido) return "📘";
+  return "📘";
+}
+
 export async function generateMetadata({ params }) {
   const { slug } = await params;
 
   return {
-    title: `Curso privado | SERVICAN`,
+    title: "Aula privada | SERVICAN",
     description: `Acceso privado al curso ${slug} en SERVICAN.`,
   };
 }
@@ -89,17 +219,18 @@ export default async function CursoPrivadoPage({ params }) {
 
   const {
     data: { user },
+    error: errorUsuario,
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (errorUsuario || !user) {
     redirect(`/login?redirect=/panel/cursos/${slug}`);
   }
 
   const { data: perfil, error: errorPerfil } = await supabase
     .from("perfiles")
-    .select("*")
+    .select("id, user_id, email, nombre, role")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
   if (errorPerfil || !perfil) {
     redirect("/acceso-denegado");
@@ -109,16 +240,20 @@ export default async function CursoPrivadoPage({ params }) {
     .from("cursos")
     .select("*")
     .eq("slug", slug)
-    .single();
+    .maybeSingle();
 
   if (errorCurso || !curso) {
     notFound();
   }
 
+  if (!curso.activo && perfil.role !== "admin") {
+    redirect("/panel");
+  }
+
   const esAdmin = perfil.role === "admin";
   const esInstructor = perfil.role === "instructor";
 
-  const { data: acceso } = await supabase
+  const { data: acceso, error: errorAcceso } = await supabase
     .from("alumno_cursos")
     .select("*")
     .eq("user_id", user.id)
@@ -127,18 +262,25 @@ export default async function CursoPrivadoPage({ params }) {
 
   const tieneAccesoActivo = acceso?.estado === "activo";
 
-  if (!esAdmin && !esInstructor && !tieneAccesoActivo) {
+  if (!esAdmin && !esInstructor && (errorAcceso || !tieneAccesoActivo)) {
     redirect("/panel");
   }
 
+  const nivelAlumno =
+    esAdmin || esInstructor ? "plantel" : normalizarNivel(acceso?.nivel_acceso);
+
+  const niveles = nivelesPermitidos(nivelAlumno);
+
   const { data: modulos, error: errorModulos } = await supabase
     .from("curso_modulos")
-    .select(`
+    .select(
+      `
       id,
       titulo,
       descripcion,
       orden,
       activo,
+      nivel_minimo_acceso,
       clases:curso_clases (
         id,
         titulo,
@@ -147,11 +289,14 @@ export default async function CursoPrivadoPage({ params }) {
         pdf_url,
         contenido,
         orden,
-        activo
+        activo,
+        nivel_minimo_acceso
       )
-    `)
+    `
+    )
     .eq("curso_id", curso.id)
     .eq("activo", true)
+    .in("nivel_minimo_acceso", niveles)
     .order("orden", { ascending: true })
     .order("orden", {
       referencedTable: "curso_clases",
@@ -160,18 +305,30 @@ export default async function CursoPrivadoPage({ params }) {
 
   const modulosVisibles = (modulos || []).map((modulo) => ({
     ...modulo,
-    clases: (modulo.clases || []).filter((clase) => clase.activo),
+    clases: (modulo.clases || []).filter(
+      (clase) =>
+        clase.activo &&
+        niveles.includes(normalizarNivel(clase.nivel_minimo_acceso))
+    ),
   }));
 
   const clasesOrdenadas = aplanarClases(modulosVisibles);
+  const claseIdsVisibles = clasesOrdenadas.map((clase) => clase.id);
 
-  const { data: progreso } = await supabase
-    .from("clase_progreso")
-    .select("clase_id, completada")
-    .eq("user_id", user.id);
+  let progreso = [];
+
+  if (claseIdsVisibles.length) {
+    const { data: progresoData } = await supabase
+      .from("clase_progreso")
+      .select("clase_id, completada")
+      .eq("user_id", user.id)
+      .in("clase_id", claseIdsVisibles);
+
+    progreso = progresoData || [];
+  }
 
   const clasesCompletadas = new Set(
-    (progreso || [])
+    progreso
       .filter((item) => item.completada)
       .map((item) => item.clase_id)
   );
@@ -203,6 +360,7 @@ export default async function CursoPrivadoPage({ params }) {
         completada: true,
         bloqueada: false,
         texto: "Completada",
+        descripcion: "Esta clase ya fue marcada como completada.",
         claseBadge: "border-green-500/30 bg-green-500/10 text-green-300",
       };
     }
@@ -212,6 +370,7 @@ export default async function CursoPrivadoPage({ params }) {
         completada: false,
         bloqueada: false,
         texto: "Disponible",
+        descripcion: "Podés comenzar por esta clase.",
         claseBadge: "border-yellow-500/30 bg-yellow-500/10 text-yellow-300",
       };
     }
@@ -224,6 +383,7 @@ export default async function CursoPrivadoPage({ params }) {
         completada: false,
         bloqueada: false,
         texto: "Disponible",
+        descripcion: "Esta clase ya está desbloqueada.",
         claseBadge: "border-yellow-500/30 bg-yellow-500/10 text-yellow-300",
       };
     }
@@ -232,248 +392,321 @@ export default async function CursoPrivadoPage({ params }) {
       completada: false,
       bloqueada: true,
       texto: "Bloqueada",
-      claseBadge: "border-neutral-500/30 bg-neutral-500/10 text-neutral-400",
+      descripcion: "Completá la clase anterior para desbloquearla.",
+      claseBadge: "border-zinc-500/30 bg-zinc-500/10 text-zinc-400",
     };
   }
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-white">
-      <section className="mx-auto max-w-7xl px-6 py-8">
-        <header className="mb-8 flex flex-col gap-6 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl md:flex-row md:items-center md:justify-between">
+    <main className="min-h-screen bg-black text-white">
+      <header className="sticky top-0 z-50 border-b border-yellow-500/20 bg-black/95 backdrop-blur">
+        <div className="mx-auto flex max-w-[1500px] flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8 xl:flex-row xl:items-center xl:justify-between">
           <Link href="/panel" className="flex items-center gap-4">
             <img
               src="/logo-servican.jpeg"
               alt="Logo SERVICAN"
-              className="h-16 w-16 rounded-full object-cover ring-4 ring-yellow-500/30"
+              className="h-16 w-16 rounded-full object-contain"
             />
 
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-yellow-400">
+              <p className="text-xl font-black tracking-[0.25em] text-yellow-500">
                 SERVICAN
               </p>
 
-              <h1 className="text-3xl font-bold">Aula privada</h1>
-
-              <p className="mt-1 text-sm text-neutral-300">
-                {perfil?.email || user?.email}
-              </p>
+              <p className="text-sm text-zinc-400">Aula privada</p>
             </div>
           </Link>
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <Link
-              href="/"
-              className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-semibold text-white transition hover:bg-white/20"
+              href="/panel"
+              className="rounded-2xl border border-yellow-500/40 bg-yellow-500/10 px-5 py-3 text-center text-sm font-bold text-yellow-200 transition hover:bg-yellow-500/20"
             >
-              Volver al inicio
+              Volver al panel
             </Link>
 
             <Link
-              href="/panel"
-              className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-semibold text-white transition hover:bg-white/20"
+              href="/cursos"
+              className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-bold transition hover:bg-white/20"
             >
-              Volver al panel
+              Ver cursos
+            </Link>
+
+            <Link
+              href="/"
+              className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-bold transition hover:bg-white/20"
+            >
+              Inicio
             </Link>
 
             <form action="/auth/logout" method="post">
               <button
                 type="submit"
-                className="w-full rounded-2xl bg-red-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-400"
+                className="w-full rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-3 text-sm font-bold text-red-100 transition hover:bg-red-500/20"
               >
                 Cerrar sesión
               </button>
             </form>
           </div>
-        </header>
+        </div>
+      </header>
 
-        <section className="mb-8 overflow-hidden rounded-3xl border border-yellow-500/20 bg-white/5 shadow-2xl">
-          <div className="grid gap-0 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="p-8 md:p-10">
-              <div className="mb-5 flex flex-wrap gap-3">
-                <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-xs font-bold uppercase tracking-wide text-yellow-300">
-                  Curso privado
-                </span>
+      <section className="relative overflow-hidden border-b border-zinc-900 px-4 py-12 sm:px-6 lg:px-8">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#3f3210_0%,#111_34%,#000_78%)]" />
+        <div className="absolute inset-x-0 bottom-0 h-52 bg-gradient-to-t from-black to-transparent" />
 
-                {acceso?.estado && (
-                  <span
-                    className={`rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-wide ${claseEstado(
-                      acceso.estado
-                    )}`}
-                  >
-                    {textoEstado(acceso.estado)}
-                  </span>
-                )}
+        <div className="relative mx-auto max-w-[1500px]">
+          <div className="overflow-hidden rounded-[2rem] border border-yellow-500/20 bg-black/60 shadow-2xl backdrop-blur">
+            <div className="grid lg:grid-cols-[1.12fr_0.88fr]">
+              <div className="p-7 md:p-10">
+                <div className="mb-5 flex flex-wrap gap-3">
+                  <Badge className="border-yellow-500/30 bg-yellow-500/10 text-yellow-300">
+                    Curso privado
+                  </Badge>
 
-                {cursoCompletado && (
-                  <span className="rounded-full border border-green-500/30 bg-green-500/10 px-4 py-2 text-xs font-bold uppercase tracking-wide text-green-300">
-                    Curso completado
-                  </span>
-                )}
+                  <Badge className={clasePlan(nivelAlumno)}>
+                    Plan {nombrePlan(nivelAlumno)}
+                  </Badge>
 
-                {esAdmin && (
-                  <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-xs font-bold uppercase tracking-wide text-yellow-300">
-                    Vista admin
-                  </span>
-                )}
+                  {acceso?.estado && (
+                    <Badge className={claseEstado(acceso.estado)}>
+                      {textoEstado(acceso.estado)}
+                    </Badge>
+                  )}
 
-                {esInstructor && (
-                  <span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-xs font-bold uppercase tracking-wide text-blue-300">
-                    Vista instructor
-                  </span>
-                )}
-              </div>
+                  {cursoCompletado && (
+                    <Badge className="border-green-500/30 bg-green-500/10 text-green-300">
+                      Curso completado
+                    </Badge>
+                  )}
 
-              <h2 className="text-4xl font-black md:text-6xl">
-                {curso.titulo}
-              </h2>
+                  {esAdmin && (
+                    <Badge className="border-yellow-500/30 bg-yellow-500/10 text-yellow-300">
+                      Vista admin
+                    </Badge>
+                  )}
 
-              <p className="mt-6 max-w-3xl text-lg leading-8 text-neutral-300">
-                {curso.descripcion ||
-                  "Contenido privado del curso SERVICAN. En esta sección se cargan módulos, clases, videos, materiales y recursos de apoyo."}
-              </p>
-
-              <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-2xl border border-white/10 bg-neutral-950 p-4">
-                  <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
-                    Módulos
-                  </p>
-                  <p className="mt-1 font-bold text-yellow-400">
-                    {modulosVisibles.length}
-                  </p>
+                  {esInstructor && (
+                    <Badge className="border-blue-500/30 bg-blue-500/10 text-blue-300">
+                      Vista instructor
+                    </Badge>
+                  )}
                 </div>
 
-                <div className="rounded-2xl border border-white/10 bg-neutral-950 p-4">
-                  <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
-                    Clases
-                  </p>
-                  <p className="mt-1 font-bold text-yellow-400">
-                    {totalClases}
-                  </p>
-                </div>
+                <h1 className="text-4xl font-black md:text-6xl">
+                  {curso.titulo}
+                </h1>
 
-                <div className="rounded-2xl border border-white/10 bg-neutral-950 p-4">
-                  <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
-                    Completadas
-                  </p>
-                  <p className="mt-1 font-bold text-green-400">
-                    {totalCompletadas}
-                  </p>
-                </div>
+                <p className="mt-6 max-w-3xl text-lg leading-8 text-zinc-300">
+                  {curso.descripcion ||
+                    "Contenido privado del curso SERVICAN. En esta sección se cargan módulos, clases, videos, materiales y recursos de apoyo."}
+                </p>
 
-                <div className="rounded-2xl border border-white/10 bg-neutral-950 p-4">
-                  <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
-                    Progreso
-                  </p>
-                  <p className="mt-1 font-bold text-yellow-400">
-                    {porcentaje}%
-                  </p>
+                <p className="mt-4 text-sm text-zinc-500">
+                  Sesión iniciada como{" "}
+                  <span className="font-bold text-zinc-300">
+                    {perfil?.email || user?.email}
+                  </span>
+                </p>
+
+                <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  <ResumenMini titulo="Módulos" valor={modulosVisibles.length} />
+                  <ResumenMini titulo="Clases" valor={totalClases} />
+                  <ResumenMini
+                    titulo="Completadas"
+                    valor={totalCompletadas}
+                    color="green"
+                  />
+                  <ResumenMini titulo="Progreso" valor={`${porcentaje}%`} />
                 </div>
               </div>
-            </div>
 
-            <div className="min-h-[320px] bg-neutral-900">
-              {curso.imagen_url ? (
-                <img
-                  src={curso.imagen_url}
-                  alt={curso.titulo}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full min-h-[320px] items-center justify-center bg-gradient-to-br from-neutral-900 via-black to-neutral-950">
-                  <div className="text-center">
-                    <img
-                      src="/logo-servican.jpeg"
-                      alt="Logo SERVICAN"
-                      className="mx-auto h-28 w-28 rounded-full object-contain opacity-90"
-                    />
+              <div className="relative min-h-[340px] bg-zinc-900">
+                {curso.imagen_url ? (
+                  <img
+                    src={curso.imagen_url}
+                    alt={curso.titulo}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full min-h-[340px] items-center justify-center bg-gradient-to-br from-zinc-900 via-black to-zinc-950">
+                    <div className="text-center">
+                      <img
+                        src="/logo-servican.jpeg"
+                        alt="Logo SERVICAN"
+                        className="mx-auto h-28 w-28 rounded-full object-contain opacity-90"
+                      />
 
-                    <p className="mt-5 text-sm font-bold uppercase tracking-[0.3em] text-yellow-500">
-                      SERVICAN
-                    </p>
+                      <p className="mt-5 text-sm font-bold uppercase tracking-[0.3em] text-yellow-500">
+                        SERVICAN
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+
+                <div className="absolute bottom-6 left-6 right-6 rounded-3xl border border-white/10 bg-black/60 p-5 backdrop-blur">
+                  <p className="text-sm font-black uppercase tracking-[0.25em] text-yellow-400">
+                    Tu avance
+                  </p>
+
+                  <div className="mt-4">
+                    <BarraProgreso porcentaje={porcentaje} />
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           </div>
-        </section>
 
-        <section className="grid gap-6 lg:grid-cols-[0.75fr_1.25fr]">
-          <aside className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-yellow-400">
-              Progreso
-            </p>
+          {cursoCompletado && (
+            <div className="mt-6 rounded-[2rem] border border-green-500/30 bg-green-500/10 p-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h2 className="text-2xl font-black text-green-200">
+                    Curso finalizado
+                  </h2>
 
-            <h3 className="mt-3 text-2xl font-bold">Estado del curso</h3>
-
-            <div className="mt-6 rounded-2xl border border-white/10 bg-neutral-950 p-5">
-              <div className="mb-3 flex items-center justify-between text-sm">
-                <span className="text-neutral-400">Avance</span>
-                <span className="font-bold text-yellow-400">
-                  {porcentaje}%
-                </span>
-              </div>
-
-              <div className="h-3 overflow-hidden rounded-full bg-neutral-800">
-                <div
-                  className="h-full rounded-full bg-yellow-500 transition-all"
-                  style={{ width: `${porcentaje}%` }}
-                />
-              </div>
-
-              <p className="mt-4 text-sm leading-6 text-neutral-400">
-                Completaste {totalCompletadas} de {totalClases} clase
-                {totalClases === 1 ? "" : "s"}.
-              </p>
-            </div>
-
-            {cursoCompletado && (
-              <div className="mt-5 rounded-2xl border border-green-500/30 bg-green-500/10 p-5">
-                <p className="text-sm font-bold text-green-300">
-                  Curso finalizado
-                </p>
-
-                <p className="mt-2 text-sm leading-6 text-green-100">
-                  Ya completaste todas las clases de este curso.
-                </p>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-green-100">
+                    Completaste todas las clases visibles para tu plan. Si ya se
+                    emitió el certificado, podés verlo desde esta misma aula.
+                  </p>
+                </div>
 
                 {certificado ? (
                   <Link
                     href={`/panel/certificados/${certificado.codigo}`}
-                    className="mt-4 inline-block rounded-2xl bg-yellow-500 px-5 py-3 text-sm font-bold text-neutral-950 transition hover:bg-yellow-400"
+                    className="rounded-2xl bg-yellow-500 px-6 py-3 text-center text-sm font-black text-black transition hover:bg-yellow-400"
                   >
                     Ver certificado
                   </Link>
                 ) : (
-                  <p className="mt-4 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm text-yellow-100">
-                    El certificado se generará automáticamente al completar la
-                    última clase. Tocá actualizar si acabás de finalizar el
-                    curso.
-                  </p>
+                  <span className="rounded-full border border-yellow-500/30 bg-black/30 px-5 py-3 text-sm font-black text-yellow-100">
+                    Certificado pendiente
+                  </span>
                 )}
               </div>
-            )}
+            </div>
+          )}
+        </div>
+      </section>
 
-            <div className="mt-5 rounded-2xl border border-white/10 bg-neutral-950 p-5">
-              <p className="text-sm font-bold text-white">Reglas del curso</p>
+      <section className="px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto grid max-w-[1500px] gap-8 lg:grid-cols-[0.72fr_1.28fr]">
+          <aside className="space-y-5 lg:sticky lg:top-28 lg:self-start">
+            <div className="rounded-[2rem] border border-white/10 bg-zinc-950 p-6 shadow-2xl">
+              <p className="text-sm font-black uppercase tracking-[0.3em] text-yellow-500">
+                Progreso
+              </p>
 
-              <ul className="mt-3 space-y-2 text-sm text-neutral-400">
-                <li>• Las clases se desbloquean en orden.</li>
-                <li>• Para avanzar, completá la clase anterior.</li>
-                <li>• Al finalizar todo el curso, se habilitará certificado.</li>
-                <li>• Los materiales solo se abren con acceso activo.</li>
-              </ul>
+              <h2 className="mt-3 text-3xl font-black">Estado del curso</h2>
+
+              <div className="mt-6 rounded-2xl border border-white/10 bg-black p-5">
+                <BarraProgreso porcentaje={porcentaje} />
+
+                <p className="mt-4 text-sm leading-6 text-zinc-400">
+                  Completaste{" "}
+                  <span className="font-black text-green-300">
+                    {totalCompletadas}
+                  </span>{" "}
+                  de{" "}
+                  <span className="font-black text-yellow-300">
+                    {totalClases}
+                  </span>{" "}
+                  clase{totalClases === 1 ? "" : "s"}.
+                </p>
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-5">
+                <p className="text-sm font-black uppercase tracking-[0.25em] text-yellow-300">
+                  Plan {nombrePlan(nivelAlumno)}
+                </p>
+
+                <p className="mt-2 text-sm leading-6 text-yellow-100">
+                  {descripcionPlan(nivelAlumno)}
+                </p>
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-white/10 bg-black p-5">
+                <p className="text-sm font-black text-white">
+                  Reglas del aula
+                </p>
+
+                <ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-400">
+                  <li>• Las clases se desbloquean en orden.</li>
+                  <li>• Para avanzar, completá la clase anterior.</li>
+                  <li>• Solo ves el contenido incluido en tu plan.</li>
+                  <li>• Los materiales solo se abren con acceso activo.</li>
+                </ul>
+              </div>
+
+              {certificado && (
+                <div className="mt-5 rounded-2xl border border-green-500/30 bg-green-500/10 p-5">
+                  <p className="text-sm font-black text-green-200">
+                    Certificado disponible
+                  </p>
+
+                  <p className="mt-2 text-sm leading-6 text-green-100">
+                    Código:{" "}
+                    <span className="font-black">{certificado.codigo}</span>
+                  </p>
+
+                  <p className="mt-1 text-sm text-green-100">
+                    Emitido:{" "}
+                    {formatearFecha(
+                      certificado.emitido_at || certificado.created_at
+                    )}
+                  </p>
+
+                  <Link
+                    href={`/panel/certificados/${certificado.codigo}`}
+                    className="mt-4 inline-block rounded-2xl bg-yellow-500 px-5 py-3 text-sm font-black text-black transition hover:bg-yellow-400"
+                  >
+                    Ver certificado
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-[2rem] border border-white/10 bg-zinc-950 p-6">
+              <p className="text-sm font-black uppercase tracking-[0.3em] text-yellow-500">
+                Accesos rápidos
+              </p>
+
+              <div className="mt-5 grid gap-3">
+                <Link
+                  href="/panel"
+                  className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-bold transition hover:bg-white/20"
+                >
+                  Volver al panel
+                </Link>
+
+                <Link
+                  href="/cursos"
+                  className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 px-5 py-3 text-center text-sm font-bold text-yellow-200 transition hover:bg-yellow-500/20"
+                >
+                  Ver otros cursos
+                </Link>
+
+                <Link
+                  href="/verificar-certificado"
+                  className="rounded-2xl border border-green-500/30 bg-green-500/10 px-5 py-3 text-center text-sm font-bold text-green-200 transition hover:bg-green-500/20"
+                >
+                  Verificar certificado
+                </Link>
+              </div>
             </div>
           </aside>
 
-          <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl">
-            <div className="mb-6">
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-yellow-400">
+          <section className="rounded-[2rem] border border-white/10 bg-zinc-950 p-6 shadow-2xl">
+            <div className="mb-8">
+              <p className="text-sm font-black uppercase tracking-[0.3em] text-yellow-500">
                 Contenido
               </p>
 
-              <h3 className="mt-3 text-3xl font-bold">Módulos y clases</h3>
+              <h2 className="mt-3 text-4xl font-black">Módulos y clases</h2>
 
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-300">
+              <p className="mt-4 max-w-3xl text-sm leading-6 text-zinc-400">
                 Las clases se desbloquean de forma progresiva. Para acceder a la
                 siguiente clase, primero tenés que completar la anterior.
               </p>
@@ -486,45 +719,54 @@ export default async function CursoPrivadoPage({ params }) {
             )}
 
             {!errorModulos && modulosVisibles.length === 0 && (
-              <div className="rounded-3xl border border-white/10 bg-neutral-950 p-8 text-center">
-                <h4 className="text-2xl font-bold">
-                  Todavía no hay módulos cargados
-                </h4>
+              <div className="rounded-3xl border border-white/10 bg-black p-8 text-center">
+                <h3 className="text-2xl font-black">
+                  Todavía no hay módulos visibles
+                </h3>
 
-                <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-neutral-400">
+                <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
                   Este curso ya tiene aula privada, pero todavía no tiene
-                  módulos ni clases activas. Cuando el administrador cargue
-                  contenido, aparecerá en esta sección.
+                  contenido activo para tu plan.
                 </p>
               </div>
             )}
 
             {!errorModulos && modulosVisibles.length > 0 && (
-              <div className="space-y-5">
+              <div className="space-y-6">
                 {modulosVisibles.map((modulo) => (
                   <article
                     key={modulo.id}
-                    className="overflow-hidden rounded-3xl border border-white/10 bg-neutral-950"
+                    className="overflow-hidden rounded-[2rem] border border-white/10 bg-black"
                   >
-                    <div className="border-b border-white/10 bg-white/[0.03] p-5">
-                      <p className="text-sm font-bold uppercase tracking-[0.25em] text-yellow-400">
-                        Módulo {modulo.orden}
-                      </p>
+                    <div className="border-b border-white/10 bg-white/[0.03] p-6">
+                      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                        <div>
+                          <p className="text-sm font-black uppercase tracking-[0.25em] text-yellow-500">
+                            Módulo {modulo.orden}
+                          </p>
 
-                      <h4 className="mt-2 text-2xl font-bold">
-                        {modulo.titulo}
-                      </h4>
+                          <h3 className="mt-2 text-2xl font-black">
+                            {modulo.titulo}
+                          </h3>
 
-                      {modulo.descripcion && (
-                        <p className="mt-2 text-sm leading-6 text-neutral-400">
-                          {modulo.descripcion}
-                        </p>
-                      )}
+                          {modulo.descripcion && (
+                            <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-400">
+                              {modulo.descripcion}
+                            </p>
+                          )}
+                        </div>
+
+                        <span className="rounded-full border border-white/10 bg-zinc-950 px-4 py-2 text-xs font-black uppercase tracking-wide text-zinc-300">
+                          {modulo.clases.length} clase
+                          {modulo.clases.length === 1 ? "" : "s"}
+                        </span>
+                      </div>
                     </div>
 
                     {modulo.clases.length === 0 ? (
-                      <div className="p-5 text-sm text-neutral-400">
-                        Este módulo todavía no tiene clases activas.
+                      <div className="p-6 text-sm text-zinc-400">
+                        Este módulo todavía no tiene clases activas para tu
+                        plan.
                       </div>
                     ) : (
                       <div className="divide-y divide-white/10">
@@ -537,49 +779,75 @@ export default async function CursoPrivadoPage({ params }) {
                           return (
                             <div
                               key={clase.id}
-                              className={`p-5 ${
-                                estadoClase.bloqueada ? "opacity-60" : ""
+                              className={`p-6 ${
+                                estadoClase.bloqueada ? "opacity-70" : ""
                               }`}
                             >
-                              <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                                <div>
-                                  <p className="text-xs font-bold uppercase tracking-[0.25em] text-neutral-500">
-                                    Clase {clase.orden}
-                                  </p>
+                              <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                                <div className="flex gap-4">
+                                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-yellow-500 text-2xl text-black">
+                                    {obtenerIconoClase(clase)}
+                                  </div>
 
-                                  <h5 className="mt-2 text-xl font-bold">
-                                    {clase.titulo}
-                                  </h5>
+                                  <div>
+                                    <div className="flex flex-wrap gap-2">
+                                      <span className="rounded-full border border-white/10 bg-zinc-950 px-3 py-1 text-xs font-bold uppercase tracking-wide text-zinc-300">
+                                        Clase {clase.orden}
+                                      </span>
 
-                                  {clase.descripcion && (
-                                    <p className="mt-2 text-sm leading-6 text-neutral-400">
-                                      {clase.descripcion}
+                                      <span className="rounded-full border border-white/10 bg-zinc-950 px-3 py-1 text-xs font-bold uppercase tracking-wide text-zinc-300">
+                                        {obtenerTipoClase(clase)}
+                                      </span>
+
+                                      <span
+                                        className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${estadoClase.claseBadge}`}
+                                      >
+                                        {estadoClase.texto}
+                                      </span>
+                                    </div>
+
+                                    <h4 className="mt-3 text-2xl font-black">
+                                      {clase.titulo}
+                                    </h4>
+
+                                    {clase.descripcion && (
+                                      <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">
+                                        {clase.descripcion}
+                                      </p>
+                                    )}
+
+                                    <p className="mt-2 text-xs text-zinc-500">
+                                      {estadoClase.descripcion}
                                     </p>
-                                  )}
+                                  </div>
                                 </div>
-
-                                <span
-                                  className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${estadoClase.claseBadge}`}
-                                >
-                                  {estadoClase.texto}
-                                </span>
                               </div>
 
                               {!estadoClase.bloqueada && videoEmbed && (
-                                <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-black">
+                                <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl">
                                   <iframe
                                     src={videoEmbed}
                                     title={clase.titulo}
                                     className="aspect-video w-full"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                                     allowFullScreen
                                   />
                                 </div>
                               )}
 
+                              {!estadoClase.bloqueada &&
+                                clase.video_url &&
+                                !videoEmbed && (
+                                  <div className="mt-5 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-5 text-sm leading-6 text-yellow-100">
+                                    El video cargado no tiene formato compatible
+                                    para embeber. Revisá que sea un enlace de
+                                    YouTube válido.
+                                  </div>
+                                )}
+
                               {!estadoClase.bloqueada && clase.contenido && (
-                                <div className="mt-5 rounded-2xl border border-white/10 bg-black p-5">
-                                  <p className="whitespace-pre-line text-sm leading-7 text-neutral-300">
+                                <div className="mt-5 rounded-2xl border border-white/10 bg-zinc-950 p-5">
+                                  <p className="whitespace-pre-line text-sm leading-7 text-zinc-300">
                                     {clase.contenido}
                                   </p>
                                 </div>
@@ -590,14 +858,14 @@ export default async function CursoPrivadoPage({ params }) {
                                   href={`/api/panel/materiales?clase_id=${clase.id}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="mt-5 inline-block rounded-2xl bg-yellow-500 px-5 py-3 text-sm font-bold text-black transition hover:bg-yellow-400"
+                                  className="mt-5 inline-block rounded-2xl bg-yellow-500 px-5 py-3 text-sm font-black text-black transition hover:bg-yellow-400"
                                 >
                                   Abrir material de la clase
                                 </a>
                               )}
 
                               {estadoClase.bloqueada && (
-                                <div className="mt-5 rounded-2xl border border-white/10 bg-black p-5 text-sm text-neutral-400">
+                                <div className="mt-5 rounded-2xl border border-white/10 bg-zinc-950 p-5 text-sm leading-6 text-zinc-400">
                                   Esta clase está bloqueada. Completá la clase
                                   anterior para desbloquearla.
                                 </div>
@@ -620,8 +888,28 @@ export default async function CursoPrivadoPage({ params }) {
               </div>
             )}
           </section>
-        </section>
+        </div>
       </section>
     </main>
+  );
+}
+
+function ResumenMini({ titulo, valor, color = "yellow" }) {
+  const colores = {
+    yellow: "text-yellow-500",
+    green: "text-green-400",
+    white: "text-white",
+  };
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-black p-4">
+      <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">
+        {titulo}
+      </p>
+
+      <p className={`mt-1 text-2xl font-black ${colores[color]}`}>
+        {valor}
+      </p>
+    </div>
   );
 }

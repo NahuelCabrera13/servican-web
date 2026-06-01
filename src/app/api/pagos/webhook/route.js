@@ -8,6 +8,19 @@ function normalizarEmail(email) {
   return String(email || "").trim().toLowerCase();
 }
 
+function normalizarParticipantes(participantes) {
+  if (!Array.isArray(participantes)) {
+    return [];
+  }
+
+  return participantes
+    .map((participante) => ({
+      user_id: participante?.user_id || participante?.userId || null,
+      email: normalizarEmail(participante?.email),
+    }))
+    .filter((participante) => participante.user_id && participante.email);
+}
+
 function obtenerPaymentId(requestUrl, body) {
   const url = new URL(requestUrl);
 
@@ -17,21 +30,23 @@ function obtenerPaymentId(requestUrl, body) {
     url.searchParams.get("payment_id");
 
   if (idDesdeQuery) {
-    return idDesdeQuery;
+    return String(idDesdeQuery);
   }
 
   if (body?.data?.id) {
-    return body.data.id;
+    return String(body.data.id);
   }
 
   if (body?.id) {
-    return body.id;
+    return String(body.id);
   }
 
   return null;
 }
 
 function parsearExternalReference(valor) {
+  if (!valor) return null;
+
   try {
     return JSON.parse(valor);
   } catch {
@@ -48,18 +63,19 @@ function leerMetadata(payment) {
       metadata.producto_id ||
       metadata.productoId ||
       externalReference?.productoId ||
+      externalReference?.producto_id ||
       null,
 
     compradorUserId:
       metadata.comprador_user_id ||
       metadata.compradorUserId ||
       externalReference?.compradorUserId ||
+      externalReference?.comprador_user_id ||
       null,
 
-    participantes:
-      metadata.participantes ||
-      externalReference?.participantes ||
-      [],
+    participantes: normalizarParticipantes(
+      metadata.participantes || externalReference?.participantes || []
+    ),
   };
 }
 
@@ -77,7 +93,7 @@ async function obtenerProductoConCursos(supabase, productoId) {
     `
     )
     .eq("id", productoId)
-    .single();
+    .maybeSingle();
 
   if (error || !data) {
     console.error("No se encontró el producto del pago:", error);
@@ -176,26 +192,25 @@ async function habilitarCursos({
       email: participante.email,
       comprador: false,
     })),
-  ];
+  ].filter((usuario) => usuario.user_id);
 
   for (const usuario of usuariosAutorizados) {
-    if (!usuario.user_id) {
-      console.error("Usuario autorizado sin user_id:", usuario);
-      continue;
-    }
-
     for (const cursoProducto of cursosDelProducto) {
+      const nivelAcceso =
+        cursoProducto.nivel_acceso || producto.plan || "basico";
+
       const { error } = await supabase.from("alumno_cursos").upsert(
         {
           user_id: usuario.user_id,
           curso_id: cursoProducto.curso_id,
-          activo: true,
+          estado: "activo",
           origen: "mercadopago",
           pago_id: pago.id,
           producto_id: producto.id,
           comprador_user_id: compradorUserId,
-          nivel_acceso: cursoProducto.nivel_acceso || producto.plan || "basico",
+          nivel_acceso: nivelAcceso,
           acceso_grupal: Boolean(!usuario.comprador),
+          fecha_inicio: new Date().toISOString(),
         },
         {
           onConflict: "user_id,curso_id",
@@ -215,8 +230,6 @@ async function habilitarCursos({
   }
 
   for (const participante of participantes) {
-    if (!participante.user_id) continue;
-
     const { error } = await supabase.from("compra_participantes").upsert(
       {
         pago_id: pago.id,
@@ -255,7 +268,7 @@ export async function POST(request) {
 
     if (!accessToken) {
       return NextResponse.json(
-        { error: "Falta MERCADOPAGO_ACCESS_TOKEN." },
+        { ok: false, error: "Falta MERCADOPAGO_ACCESS_TOKEN." },
         { status: 500 }
       );
     }
@@ -282,7 +295,8 @@ export async function POST(request) {
 
     const estado = payment.status || "desconocido";
 
-    const { productoId, compradorUserId, participantes } = leerMetadata(payment);
+    const { productoId, compradorUserId, participantes } =
+      leerMetadata(payment);
 
     if (!productoId || !compradorUserId) {
       console.error("Webhook sin productoId o compradorUserId:", {
@@ -309,11 +323,20 @@ export async function POST(request) {
       });
     }
 
-    const { data: pagoExistente } = await supabase
+    const { data: pagoExistente, error: errorPagoExistente } = await supabase
       .from("pagos")
       .select("*")
       .eq("mercadopago_payment_id", String(paymentId))
       .maybeSingle();
+
+    if (errorPagoExistente) {
+      console.error("Error buscando pago existente:", errorPagoExistente);
+
+      return NextResponse.json(
+        { ok: false, error: "No se pudo verificar el pago existente." },
+        { status: 500 }
+      );
+    }
 
     const pago = await guardarOActualizarPago({
       supabase,
@@ -326,10 +349,12 @@ export async function POST(request) {
 
     if (!pago) {
       return NextResponse.json(
-        { error: "No se pudo guardar el pago." },
+        { ok: false, error: "No se pudo guardar el pago." },
         { status: 500 }
       );
     }
+
+    let cursoHabilitado = false;
 
     if (estado === "approved") {
       await habilitarCursos({
@@ -339,6 +364,8 @@ export async function POST(request) {
         compradorUserId,
         participantes,
       });
+
+      cursoHabilitado = true;
     }
 
     return NextResponse.json({
@@ -346,13 +373,14 @@ export async function POST(request) {
       payment_id: paymentId,
       estado,
       producto_id: productoId,
-      curso_habilitado: estado === "approved",
+      curso_habilitado: cursoHabilitado,
     });
   } catch (error) {
     console.error("Error en webhook Mercado Pago:", error);
 
     return NextResponse.json(
       {
+        ok: false,
         error: error?.message || "Error procesando webhook Mercado Pago.",
       },
       { status: 500 }

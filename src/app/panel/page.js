@@ -22,7 +22,7 @@ const PLANES = {
   },
   pro: {
     nombre: "Pro",
-    resumen: "Incluye básico, extenso y soporte personalizado.",
+    resumen: "Incluye básico, extenso y beneficios profesionales.",
   },
   plantel: {
     nombre: "Plantel",
@@ -33,15 +33,15 @@ const PLANES = {
 function formatearFecha(fecha) {
   if (!fecha) return "—";
 
-  try {
-    return new Date(fecha).toLocaleDateString("es-UY", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  } catch {
-    return "—";
-  }
+  const date = new Date(fecha);
+
+  if (Number.isNaN(date.getTime())) return "—";
+
+  const dia = String(date.getDate()).padStart(2, "0");
+  const mes = String(date.getMonth() + 1).padStart(2, "0");
+  const anio = date.getFullYear();
+
+  return `${dia}/${mes}/${anio}`;
 }
 
 function normalizarNivel(nivel) {
@@ -52,32 +52,21 @@ function normalizarNivel(nivel) {
   return "basico";
 }
 
-function obtenerNombreTipo(tipo) {
-  const tipos = {
-    clase: "Clase",
-    video: "Video",
-    pdf: "PDF",
-    material: "Material",
-    evaluacion: "Evaluación",
-    soporte: "Soporte",
-    bonus: "Bonus",
-  };
+function obtenerIconoClase(clase) {
+  if (clase?.video_url) return "🎥";
+  if (clase?.pdf_url) return "📄";
+  if (clase?.contenido) return "📘";
 
-  return tipos[tipo] || "Clase";
+  return "📘";
 }
 
-function obtenerIconoTipo(tipo) {
-  const tipos = {
-    clase: "📘",
-    video: "🎥",
-    pdf: "📄",
-    material: "📦",
-    evaluacion: "📝",
-    soporte: "🤝",
-    bonus: "⭐",
-  };
+function obtenerTipoClase(clase) {
+  if (clase?.video_url && clase?.pdf_url) return "Video + material";
+  if (clase?.video_url) return "Video";
+  if (clase?.pdf_url) return "Material";
+  if (clase?.contenido) return "Texto";
 
-  return tipos[tipo] || "📘";
+  return "Clase";
 }
 
 function PlanBadge({ nivel }) {
@@ -96,17 +85,19 @@ function PlanBadge({ nivel }) {
 }
 
 function BarraProgreso({ porcentaje }) {
+  const valor = Math.max(0, Math.min(100, Number(porcentaje || 0)));
+
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between text-xs font-bold uppercase tracking-wide text-zinc-400">
+      <div className="mb-2 flex items-center justify-between text-xs font-black uppercase tracking-wide text-zinc-400">
         <span>Progreso</span>
-        <span>{porcentaje}%</span>
+        <span>{valor}%</span>
       </div>
 
       <div className="h-3 overflow-hidden rounded-full bg-zinc-800">
         <div
           className="h-full rounded-full bg-yellow-500 transition-all"
-          style={{ width: `${porcentaje}%` }}
+          style={{ width: `${valor}%` }}
         />
       </div>
     </div>
@@ -116,7 +107,7 @@ function BarraProgreso({ porcentaje }) {
 function CargandoPanel() {
   return (
     <main className="min-h-screen bg-black px-6 py-20 text-white">
-      <section className="mx-auto max-w-4xl rounded-[2rem] border border-yellow-500/30 bg-zinc-950 p-8 text-center">
+      <section className="mx-auto max-w-4xl rounded-[2rem] border border-yellow-500/30 bg-zinc-950 p-8 text-center shadow-2xl">
         <img
           src="/logo-servican.jpeg"
           alt="Logo SERVICAN"
@@ -127,13 +118,74 @@ function CargandoPanel() {
           SERVICAN
         </p>
 
-        <h1 className="mt-3 text-4xl font-black">Cargando tu panel.</h1>
+        <h1 className="mt-3 text-4xl font-black">Cargando tu panel</h1>
 
         <p className="mt-4 text-zinc-400">
-          Estamos verificando tus cursos y el plan que compraste.
+          Estamos verificando tus cursos, progreso y certificados.
         </p>
       </section>
     </main>
+  );
+}
+
+function ResumenCard({ titulo, valor, texto, destacado = false }) {
+  return (
+    <div
+      className={`rounded-3xl border p-5 ${
+        destacado
+          ? "border-yellow-500/30 bg-yellow-500/10"
+          : "border-white/10 bg-zinc-950"
+      }`}
+    >
+      <p className="text-sm text-zinc-400">{titulo}</p>
+
+      <p
+        className={`mt-2 text-4xl font-black ${
+          destacado ? "text-yellow-500" : "text-white"
+        }`}
+      >
+        {valor}
+      </p>
+
+      {texto && <p className="mt-2 text-xs leading-5 text-zinc-500">{texto}</p>}
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="rounded-[2rem] border border-white/10 bg-zinc-950 p-10 text-center shadow-2xl">
+      <img
+        src="/logo-servican.jpeg"
+        alt="Logo SERVICAN"
+        className="mx-auto h-20 w-20 rounded-full object-contain opacity-80"
+      />
+
+      <h2 className="mt-6 text-3xl font-black">
+        Todavía no tenés cursos habilitados
+      </h2>
+
+      <p className="mx-auto mt-4 max-w-2xl leading-7 text-zinc-400">
+        Cuando compres un curso o SERVICAN habilite tu acceso, aparecerá
+        automáticamente en este panel.
+      </p>
+
+      <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+        <Link
+          href="/cursos"
+          className="rounded-full bg-yellow-500 px-8 py-4 font-black text-black transition hover:bg-yellow-400"
+        >
+          Ver cursos disponibles
+        </Link>
+
+        <Link
+          href="/inscripcion"
+          className="rounded-full border border-white/10 bg-white/10 px-8 py-4 font-black text-white transition hover:bg-white hover:text-black"
+        >
+          Hacer una consulta
+        </Link>
+      </div>
+    </div>
   );
 }
 
@@ -157,15 +209,27 @@ export default function PanelAlumnoPage() {
       0
     );
 
+    const certificados = cursos.filter((item) => item.certificado).length;
+
     const porcentaje =
       totalClases > 0 ? Math.round((completadas / totalClases) * 100) : 0;
+
+    const cursosFinalizados = cursos.filter(
+      (item) => Number(item.porcentaje || 0) >= 100
+    ).length;
 
     return {
       totalClases,
       completadas,
+      certificados,
       porcentaje,
+      cursosFinalizados,
     };
   }, [cursos]);
+
+  const cursoAbierto = useMemo(() => {
+    return cursos.find((item) => item.curso.id === cursoAbiertoId) || null;
+  }, [cursos, cursoAbiertoId]);
 
   useEffect(() => {
     cargarPanel();
@@ -183,7 +247,7 @@ export default function PanelAlumnoPage() {
       } = await supabase.auth.getSession();
 
       if (!session?.user || !session?.access_token) {
-        window.location.href = "/login";
+        window.location.href = "/login?redirect=/panel";
         return;
       }
 
@@ -204,10 +268,12 @@ export default function PanelAlumnoPage() {
         return;
       }
 
-      setCursos(data.cursos || []);
+      const cursosRecibidos = data.cursos || [];
 
-      if (data.cursos?.length) {
-        setCursoAbiertoId(data.cursos[0].curso.id);
+      setCursos(cursosRecibidos);
+
+      if (cursosRecibidos.length) {
+        setCursoAbiertoId((actual) => actual || cursosRecibidos[0].curso.id);
       }
     } catch (error) {
       console.error("Error cargando panel:", error);
@@ -223,8 +289,8 @@ export default function PanelAlumnoPage() {
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <header className="border-b border-yellow-500/20 bg-black/95">
-        <div className="mx-auto flex max-w-[1500px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8 xl:flex-row xl:items-center xl:justify-between">
+      <header className="sticky top-0 z-50 border-b border-yellow-500/20 bg-black/95 backdrop-blur">
+        <div className="mx-auto flex max-w-[1500px] flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8 xl:flex-row xl:items-center xl:justify-between">
           <Link href="/" className="flex items-center gap-4">
             <img
               src="/logo-servican.jpeg"
@@ -245,7 +311,7 @@ export default function PanelAlumnoPage() {
               href="/"
               className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-bold transition hover:bg-white/20"
             >
-              Volver al inicio
+              Inicio
             </Link>
 
             <Link
@@ -258,7 +324,8 @@ export default function PanelAlumnoPage() {
             <button
               type="button"
               onClick={cargarPanel}
-              className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-bold transition hover:bg-white/20"
+              disabled={cargando}
+              className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-bold transition hover:bg-white/20 disabled:opacity-60"
             >
               Actualizar
             </button>
@@ -266,7 +333,7 @@ export default function PanelAlumnoPage() {
             <form action="/auth/logout" method="post">
               <button
                 type="submit"
-                className="w-full rounded-2xl bg-red-500 px-5 py-3 text-sm font-bold text-white transition hover:bg-red-400"
+                className="w-full rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-3 text-sm font-bold text-red-100 transition hover:bg-red-500/20"
               >
                 Cerrar sesión
               </button>
@@ -275,55 +342,112 @@ export default function PanelAlumnoPage() {
         </div>
       </header>
 
-      <section className="border-b border-zinc-900 bg-gradient-to-br from-zinc-950 via-black to-zinc-950 px-4 py-12 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-[1500px]">
-          <p className="text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
-            Mi formación
-          </p>
+      <section className="relative overflow-hidden border-b border-zinc-900 px-4 py-14 sm:px-6 lg:px-8">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#3f3210_0%,#111_34%,#000_78%)]" />
+        <div className="absolute inset-x-0 bottom-0 h-52 bg-gradient-to-t from-black to-transparent" />
 
-          <h1 className="mt-4 text-4xl font-black md:text-6xl">
-            Tus cursos habilitados
-          </h1>
-
-          <p className="mt-5 max-w-3xl leading-8 text-zinc-300">
-            Acá solo vas a ver el contenido correspondiente al plan que
-            compraste. Si compraste Básico, no se muestran materiales Extenso o
-            Pro. Si compraste Pro o Plantel, se habilitan más recursos.
-          </p>
-
-          {usuario?.email && (
-            <p className="mt-4 text-sm text-zinc-500">
-              Sesión iniciada como {usuario.email}
-            </p>
-          )}
-
-          <div className="mt-8 grid gap-4 md:grid-cols-4">
-            <div className="rounded-3xl border border-white/10 bg-zinc-950 p-5">
-              <p className="text-sm text-zinc-400">Cursos activos</p>
-              <p className="mt-2 text-4xl font-black text-yellow-500">
-                {totalCursos}
+        <div className="relative mx-auto max-w-[1500px]">
+          <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr] xl:items-end">
+            <div>
+              <p className="text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
+                Mi formación
               </p>
+
+              <h1 className="mt-4 text-4xl font-black md:text-6xl">
+                Tus cursos habilitados
+              </h1>
+
+              <p className="mt-5 max-w-3xl leading-8 text-zinc-300">
+                Este panel muestra tus cursos activos, progreso, clases
+                disponibles y certificados. El contenido se filtra según el plan
+                comprado y tu avance dentro de cada curso.
+              </p>
+
+              {usuario?.email && (
+                <p className="mt-4 rounded-full border border-white/10 bg-black/40 px-4 py-2 text-sm text-zinc-400 sm:inline-block">
+                  Sesión iniciada como{" "}
+                  <span className="font-bold text-zinc-200">
+                    {usuario.email}
+                  </span>
+                </p>
+              )}
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-zinc-950 p-5">
-              <p className="text-sm text-zinc-400">Clases visibles</p>
-              <p className="mt-2 text-4xl font-black">
-                {resumen.totalClases}
+            <div className="rounded-[2rem] border border-yellow-500/20 bg-black/60 p-6 shadow-2xl backdrop-blur">
+              <p className="text-sm font-black uppercase tracking-[0.25em] text-yellow-400">
+                Progreso general
               </p>
-            </div>
 
-            <div className="rounded-3xl border border-white/10 bg-zinc-950 p-5">
-              <p className="text-sm text-zinc-400">Completadas</p>
-              <p className="mt-2 text-4xl font-black">
-                {resumen.completadas}
-              </p>
-            </div>
-
-            <div className="rounded-3xl border border-white/10 bg-zinc-950 p-5">
-              <p className="text-sm text-zinc-400">Progreso general</p>
-              <p className="mt-2 text-4xl font-black text-yellow-500">
+              <p className="mt-3 text-5xl font-black text-yellow-500">
                 {resumen.porcentaje}%
               </p>
+
+              <p className="mt-3 text-sm leading-6 text-zinc-300">
+                Calculado sobre todas las clases visibles en tus cursos
+                habilitados.
+              </p>
+
+              <div className="mt-5">
+                <BarraProgreso porcentaje={resumen.porcentaje} />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+            <ResumenCard
+              titulo="Cursos activos"
+              valor={totalCursos}
+              texto="Cursos habilitados en tu cuenta."
+              destacado
+            />
+
+            <ResumenCard
+              titulo="Clases visibles"
+              valor={resumen.totalClases}
+              texto="Contenido disponible según tu plan."
+            />
+
+            <ResumenCard
+              titulo="Completadas"
+              valor={resumen.completadas}
+              texto="Clases marcadas como finalizadas."
+            />
+
+            <ResumenCard
+              titulo="Finalizados"
+              valor={resumen.cursosFinalizados}
+              texto="Cursos con progreso completo."
+            />
+
+            <ResumenCard
+              titulo="Certificados"
+              valor={resumen.certificados}
+              texto="Certificados disponibles."
+              destacado
+            />
+          </div>
+
+          <div className="mt-8 rounded-[2rem] border border-yellow-500/20 bg-yellow-500/10 p-6">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-sm font-black uppercase tracking-[0.25em] text-yellow-300">
+                  Próximamente
+                </p>
+
+                <h2 className="mt-2 text-2xl font-black">
+                  Membresía mensual SERVICAN
+                </h2>
+
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-yellow-100">
+                  Más adelante este panel también tendrá acceso a contenido
+                  exclusivo, galería privada, videos, fotos y beneficios de
+                  membresía mensual.
+                </p>
+              </div>
+
+              <span className="rounded-full border border-yellow-500/30 bg-black/30 px-5 py-3 text-sm font-black text-yellow-200">
+                En desarrollo
+              </span>
             </div>
           </div>
         </div>
@@ -332,35 +456,36 @@ export default function PanelAlumnoPage() {
       <section className="px-4 py-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-[1500px]">
           {error && (
-            <div className="mb-8 rounded-3xl border border-red-500/30 bg-red-500/10 p-6 text-red-200">
-              <h2 className="text-2xl font-black">Error</h2>
+            <div className="mb-8 rounded-[2rem] border border-red-500/30 bg-red-500/10 p-6 text-red-200">
+              <h2 className="text-2xl font-black">Error cargando el panel</h2>
               <p className="mt-2">{error}</p>
-            </div>
-          )}
 
-          {!error && cursos.length === 0 && (
-            <div className="rounded-[2rem] border border-white/10 bg-zinc-950 p-10 text-center">
-              <h2 className="text-3xl font-black">
-                Todavía no tenés cursos habilitados
-              </h2>
-
-              <p className="mx-auto mt-4 max-w-2xl leading-7 text-zinc-400">
-                Cuando compres un curso o SERVICAN habilite tu acceso, aparecerá
-                automáticamente en este panel.
-              </p>
-
-              <Link
-                href="/cursos"
-                className="mt-8 inline-block rounded-full bg-yellow-500 px-8 py-4 font-black text-black transition hover:bg-yellow-400"
+              <button
+                type="button"
+                onClick={cargarPanel}
+                className="mt-5 rounded-2xl bg-red-500 px-6 py-3 text-sm font-black text-white transition hover:bg-red-400"
               >
-                Ver cursos disponibles
-              </Link>
+                Reintentar
+              </button>
             </div>
           )}
+
+          {!error && cursos.length === 0 && <EmptyState />}
 
           {cursos.length > 0 && (
-            <div className="grid gap-8 xl:grid-cols-[0.85fr_1.15fr]">
-              <aside className="space-y-4">
+            <div className="grid gap-8 xl:grid-cols-[0.75fr_1.25fr]">
+              <aside className="space-y-4 xl:sticky xl:top-28 xl:self-start">
+                <div className="rounded-[2rem] border border-white/10 bg-zinc-950 p-5">
+                  <p className="text-sm font-black uppercase tracking-[0.25em] text-yellow-500">
+                    Mis cursos
+                  </p>
+
+                  <p className="mt-2 text-sm leading-6 text-zinc-400">
+                    Seleccioná un curso para ver el resumen de módulos, clases y
+                    certificado.
+                  </p>
+                </div>
+
                 {cursos.map((item) => {
                   const abierto = cursoAbiertoId === item.curso.id;
                   const nivel = normalizarNivel(item.nivel_acceso);
@@ -373,22 +498,28 @@ export default function PanelAlumnoPage() {
                       onClick={() => setCursoAbiertoId(item.curso.id)}
                       className={`w-full rounded-[2rem] border p-5 text-left transition ${
                         abierto
-                          ? "border-yellow-500 bg-yellow-500/10"
+                          ? "border-yellow-500 bg-yellow-500/10 shadow-2xl"
                           : "border-white/10 bg-zinc-950 hover:border-yellow-500/40"
                       }`}
                     >
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <h2 className="text-2xl font-black">
-                            {item.curso.titulo}
-                          </h2>
+                      <div className="flex flex-col gap-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <PlanBadge nivel={nivel} />
 
-                          <p className="mt-2 text-sm leading-6 text-zinc-400">
-                            {item.curso.descripcion || "Curso SERVICAN."}
-                          </p>
+                          {item.certificado && (
+                            <span className="rounded-full border border-green-500/30 bg-green-500/10 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-green-200">
+                              Certificado
+                            </span>
+                          )}
                         </div>
 
-                        <PlanBadge nivel={nivel} />
+                        <h2 className="text-2xl font-black">
+                          {item.curso.titulo}
+                        </h2>
+
+                        <p className="text-sm leading-6 text-zinc-400">
+                          {item.curso.descripcion || "Curso SERVICAN."}
+                        </p>
                       </div>
 
                       <p className="mt-4 text-sm text-zinc-300">
@@ -415,7 +546,7 @@ export default function PanelAlumnoPage() {
                         </div>
 
                         <div className="rounded-2xl border border-white/10 bg-black p-3">
-                          <p className="text-xs text-zinc-500">Completadas</p>
+                          <p className="text-xs text-zinc-500">Hechas</p>
                           <p className="mt-1 text-xl font-black">
                             {item.clases_completadas || 0}
                           </p>
@@ -427,200 +558,240 @@ export default function PanelAlumnoPage() {
               </aside>
 
               <section>
-                {cursos
-                  .filter((item) => item.curso.id === cursoAbiertoId)
-                  .map((item) => {
-                    const nivel = normalizarNivel(item.nivel_acceso);
-                    const plan = PLANES[nivel];
+                {cursoAbierto && (
+                  <div className="rounded-[2rem] border border-white/10 bg-zinc-950 p-6 shadow-2xl">
+                    <div className="flex flex-col gap-6 border-b border-white/10 pb-6 lg:flex-row lg:items-start lg:justify-between">
+                      <div>
+                        <div className="flex flex-wrap gap-2">
+                          <PlanBadge nivel={cursoAbierto.nivel_acceso} />
 
-                    return (
-                      <div
-                        key={item.curso.id}
-                        className="rounded-[2rem] border border-white/10 bg-zinc-950 p-6 shadow-2xl"
-                      >
-                        <div className="flex flex-col gap-5 border-b border-white/10 pb-6 lg:flex-row lg:items-start lg:justify-between">
-                          <div>
-                            <PlanBadge nivel={nivel} />
-
-                            <h2 className="mt-4 text-4xl font-black">
-                              {item.curso.titulo}
-                            </h2>
-
-                            <p className="mt-4 max-w-3xl leading-7 text-zinc-300">
-                              Estás viendo el contenido habilitado para el plan{" "}
-                              <span className="font-black text-yellow-500">
-                                {plan.nombre}
-                              </span>
-                              . Los materiales de planes superiores no se
-                              muestran en tu panel.
-                            </p>
-                          </div>
-
-                          <div className="rounded-3xl border border-yellow-500/30 bg-yellow-500/10 p-5 lg:min-w-72">
-                            <p className="text-sm font-black uppercase tracking-[0.25em] text-yellow-400">
-                              Tu plan
-                            </p>
-                            <p className="mt-2 text-3xl font-black">
-                              {plan.nombre}
-                            </p>
-                            <p className="mt-3 text-sm leading-6 text-yellow-100">
-                              {plan.resumen}
-                            </p>
-                          </div>
+                          <span className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-zinc-300">
+                            Acceso activo
+                          </span>
                         </div>
 
-                        {item.error_contenido && (
-                          <div className="mt-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-red-200">
-                            {item.error_contenido}
-                          </div>
-                        )}
+                        <h2 className="mt-4 text-4xl font-black">
+                          {cursoAbierto.curso.titulo}
+                        </h2>
 
-                        {!item.modulos?.length && (
-                          <div className="mt-8 rounded-3xl border border-white/10 bg-black p-8 text-center">
-                            <h3 className="text-2xl font-black">
-                              No hay contenido visible para este plan todavía
-                            </h3>
-                            <p className="mt-3 text-zinc-400">
-                              Cuando SERVICAN cargue módulos y clases para tu
-                              plan, aparecerán acá.
-                            </p>
-                          </div>
-                        )}
+                        <p className="mt-4 max-w-3xl leading-7 text-zinc-300">
+                          Estás viendo el resumen del contenido habilitado para
+                          tu plan. Para reproducir videos, abrir materiales y
+                          marcar clases como completadas, entrá al aula privada.
+                        </p>
 
-                        <div className="mt-8 space-y-6">
-                          {item.modulos?.map((modulo, moduloIndex) => (
-                            <article
-                              key={modulo.id}
-                              className="overflow-hidden rounded-[2rem] border border-white/10 bg-black"
+                        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                          <Link
+                            href={`/panel/cursos/${cursoAbierto.curso.slug}`}
+                            className="rounded-2xl bg-yellow-500 px-6 py-4 text-center text-sm font-black text-black transition hover:bg-yellow-400"
+                          >
+                            Entrar al aula
+                          </Link>
+
+                          <Link
+                            href="/cursos"
+                            className="rounded-2xl border border-white/10 bg-white/10 px-6 py-4 text-center text-sm font-black text-white transition hover:bg-white hover:text-black"
+                          >
+                            Ver más cursos
+                          </Link>
+
+                          {cursoAbierto.certificado && (
+                            <Link
+                              href={`/panel/certificados/${cursoAbierto.certificado.codigo}`}
+                              className="rounded-2xl border border-green-500/30 bg-green-500/10 px-6 py-4 text-center text-sm font-black text-green-200 transition hover:bg-green-500/20"
                             >
-                              <div className="border-b border-white/10 bg-white/[0.03] p-6">
-                                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                              Ver certificado
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="rounded-3xl border border-yellow-500/30 bg-yellow-500/10 p-5 lg:min-w-72">
+                        <p className="text-sm font-black uppercase tracking-[0.25em] text-yellow-400">
+                          Tu plan
+                        </p>
+
+                        <p className="mt-2 text-3xl font-black">
+                          {PLANES[normalizarNivel(cursoAbierto.nivel_acceso)]
+                            ?.nombre || "Básico"}
+                        </p>
+
+                        <p className="mt-3 text-sm leading-6 text-yellow-100">
+                          {
+                            PLANES[normalizarNivel(cursoAbierto.nivel_acceso)]
+                              ?.resumen
+                          }
+                        </p>
+
+                        <div className="mt-5">
+                          <BarraProgreso
+                            porcentaje={cursoAbierto.porcentaje || 0}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {cursoAbierto.error_contenido && (
+                      <div className="mt-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-red-200">
+                        {cursoAbierto.error_contenido}
+                      </div>
+                    )}
+
+                    {!cursoAbierto.modulos?.length && (
+                      <div className="mt-8 rounded-3xl border border-white/10 bg-black p-8 text-center">
+                        <h3 className="text-2xl font-black">
+                          No hay contenido visible para este plan todavía
+                        </h3>
+
+                        <p className="mt-3 text-zinc-400">
+                          Cuando SERVICAN cargue módulos y clases para tu plan,
+                          aparecerán acá.
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="mt-8 space-y-6">
+                      {cursoAbierto.modulos?.map((modulo, moduloIndex) => (
+                        <article
+                          key={modulo.id}
+                          className="overflow-hidden rounded-[2rem] border border-white/10 bg-black"
+                        >
+                          <div className="border-b border-white/10 bg-white/[0.03] p-6">
+                            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                              <div>
+                                <p className="text-sm font-black uppercase tracking-[0.25em] text-yellow-500">
+                                  Módulo {moduloIndex + 1}
+                                </p>
+
+                                <h3 className="mt-2 text-2xl font-black">
+                                  {modulo.titulo || "Módulo sin título"}
+                                </h3>
+
+                                {modulo.descripcion && (
+                                  <p className="mt-3 leading-7 text-zinc-400">
+                                    {modulo.descripcion}
+                                  </p>
+                                )}
+                              </div>
+
+                              <span className="rounded-full border border-white/10 bg-zinc-950 px-4 py-2 text-xs font-bold uppercase tracking-wide text-zinc-300">
+                                {modulo.clases?.length || 0} clase
+                                {(modulo.clases?.length || 0) === 1 ? "" : "s"}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="divide-y divide-white/10">
+                            {!modulo.clases?.length && (
+                              <div className="p-6 text-zinc-500">
+                                Este módulo todavía no tiene clases visibles
+                                para tu plan.
+                              </div>
+                            )}
+
+                            {modulo.clases?.map((clase, claseIndex) => (
+                              <div
+                                key={clase.id}
+                                className="flex flex-col gap-4 p-6 md:flex-row md:items-start md:justify-between"
+                              >
+                                <div className="flex gap-4">
+                                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-yellow-500 text-xl text-black">
+                                    {obtenerIconoClase(clase)}
+                                  </div>
+
                                   <div>
-                                    <p className="text-sm font-black uppercase tracking-[0.25em] text-yellow-500">
-                                      Módulo {moduloIndex + 1}
-                                    </p>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="rounded-full border border-white/10 bg-zinc-950 px-3 py-1 text-xs font-bold uppercase tracking-wide text-zinc-300">
+                                        {obtenerTipoClase(clase)}
+                                      </span>
 
-                                    <h3 className="mt-2 text-2xl font-black">
-                                      {modulo.titulo || "Módulo sin título"}
-                                    </h3>
+                                      {clase.completada && (
+                                        <span className="rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-green-200">
+                                          Completada
+                                        </span>
+                                      )}
+                                    </div>
 
-                                    {modulo.descripcion && (
-                                      <p className="mt-3 leading-7 text-zinc-400">
-                                        {modulo.descripcion}
+                                    <h4 className="mt-3 text-xl font-black">
+                                      {claseIndex + 1}.{" "}
+                                      {clase.titulo || "Clase sin título"}
+                                    </h4>
+
+                                    {clase.descripcion && (
+                                      <p className="mt-2 leading-7 text-zinc-400">
+                                        {clase.descripcion}
                                       </p>
                                     )}
-                                  </div>
 
-                                  <span className="rounded-full border border-white/10 bg-zinc-950 px-4 py-2 text-xs font-bold uppercase tracking-wide text-zinc-300">
-                                    Nivel mínimo:{" "}
-                                    {PLANES[
-                                      normalizarNivel(
-                                        modulo.nivel_minimo_acceso
-                                      )
-                                    ]?.nombre || "Básico"}
-                                  </span>
-                                </div>
-                              </div>
+                                    <div className="mt-4 flex flex-wrap gap-2 text-xs">
+                                      {clase.video_url && (
+                                        <span className="rounded-full bg-blue-500/10 px-3 py-1 text-blue-300">
+                                          Tiene video
+                                        </span>
+                                      )}
 
-                              <div className="divide-y divide-white/10">
-                                {!modulo.clases?.length && (
-                                  <div className="p-6 text-zinc-500">
-                                    Este módulo todavía no tiene clases visibles
-                                    para tu plan.
-                                  </div>
-                                )}
+                                      {clase.pdf_url && (
+                                        <span className="rounded-full bg-yellow-500/10 px-3 py-1 text-yellow-300">
+                                          Tiene material
+                                        </span>
+                                      )}
 
-                                {modulo.clases?.map((clase, claseIndex) => (
-                                  <div
-                                    key={clase.id}
-                                    className="flex flex-col gap-4 p-6 md:flex-row md:items-start md:justify-between"
-                                  >
-                                    <div className="flex gap-4">
-                                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-yellow-500 text-xl text-black">
-                                        {obtenerIconoTipo(clase.tipo_contenido)}
-                                      </div>
-
-                                      <div>
-                                        <div className="flex flex-wrap items-center gap-2">
-                                          <span className="rounded-full border border-white/10 bg-zinc-950 px-3 py-1 text-xs font-bold uppercase tracking-wide text-zinc-300">
-                                            {obtenerNombreTipo(
-                                              clase.tipo_contenido
-                                            )}
-                                          </span>
-
-                                          <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-yellow-200">
-                                            {PLANES[
-                                              normalizarNivel(
-                                                clase.nivel_minimo_acceso
-                                              )
-                                            ]?.nombre || "Básico"}
-                                          </span>
-
-                                          {clase.completada && (
-                                            <span className="rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-green-200">
-                                              Completada
-                                            </span>
-                                          )}
-                                        </div>
-
-                                        <h4 className="mt-3 text-xl font-black">
-                                          {claseIndex + 1}.{" "}
-                                          {clase.titulo || "Clase sin título"}
-                                        </h4>
-
-                                        {clase.descripcion && (
-                                          <p className="mt-2 leading-7 text-zinc-400">
-                                            {clase.descripcion}
-                                          </p>
-                                        )}
-
-                                        {clase.descripcion_plan && (
-                                          <p className="mt-3 rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-3 text-sm leading-6 text-yellow-100">
-                                            {clase.descripcion_plan}
-                                          </p>
-                                        )}
-
-                                        {clase.url_contenido && (
-                                          <a
-                                            href={clase.url_contenido}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="mt-4 inline-block rounded-full bg-yellow-500 px-5 py-3 text-sm font-black text-black transition hover:bg-yellow-400"
-                                          >
-                                            Abrir contenido
-                                          </a>
-                                        )}
-                                      </div>
+                                      {clase.contenido && (
+                                        <span className="rounded-full bg-green-500/10 px-3 py-1 text-green-300">
+                                          Tiene texto
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
-                                ))}
+                                </div>
                               </div>
-                            </article>
-                          ))}
-                        </div>
-
-                        {item.certificado && (
-                          <div className="mt-8 rounded-[2rem] border border-green-500/30 bg-green-500/10 p-6">
-                            <h3 className="text-2xl font-black text-green-200">
-                              Certificado disponible
-                            </h3>
-
-                            <p className="mt-3 text-green-100">
-                              Código:{" "}
-                              <span className="font-black">
-                                {item.certificado.codigo || item.certificado.id}
-                              </span>
-                            </p>
-
-                            <p className="mt-2 text-sm text-green-100">
-                              Emitido:{" "}
-                              {formatearFecha(item.certificado.created_at)}
-                            </p>
+                            ))}
                           </div>
-                        )}
+                        </article>
+                      ))}
+                    </div>
+
+                    {cursoAbierto.certificado && (
+                      <div className="mt-8 rounded-[2rem] border border-green-500/30 bg-green-500/10 p-6">
+                        <h3 className="text-2xl font-black text-green-200">
+                          Certificado disponible
+                        </h3>
+
+                        <p className="mt-3 text-green-100">
+                          Código:{" "}
+                          <span className="font-black">
+                            {cursoAbierto.certificado.codigo ||
+                              cursoAbierto.certificado.id}
+                          </span>
+                        </p>
+
+                        <p className="mt-2 text-sm text-green-100">
+                          Emitido:{" "}
+                          {formatearFecha(
+                            cursoAbierto.certificado.emitido_at ||
+                              cursoAbierto.certificado.created_at
+                          )}
+                        </p>
+
+                        <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                          <Link
+                            href={`/panel/certificados/${cursoAbierto.certificado.codigo}`}
+                            className="rounded-2xl bg-yellow-500 px-6 py-3 text-center text-sm font-black text-black transition hover:bg-yellow-400"
+                          >
+                            Ver certificado
+                          </Link>
+
+                          <Link
+                            href="/verificar-certificado"
+                            className="rounded-2xl border border-green-500/30 bg-black/30 px-6 py-3 text-center text-sm font-black text-green-100 transition hover:bg-green-500/20"
+                          >
+                            Verificar código
+                          </Link>
+                        </div>
                       </div>
-                    );
-                  })}
+                    )}
+                  </div>
+                )}
               </section>
             </div>
           )}

@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import UsuariosPanel from "./UsuariosPanel";
+import { verificarAdminPage } from "@/lib/admin/verificarAdminPage";
 
 export const dynamic = "force-dynamic";
 
@@ -10,30 +9,7 @@ export const metadata = {
 };
 
 export default async function AdminUsuariosPage() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-    error: errorUsuario,
-  } = await supabase.auth.getUser();
-
-  if (errorUsuario || !user) {
-    redirect("/login?redirect=/admin/usuarios");
-  }
-
-  const { data: perfil, error: errorPerfil } = await supabase
-    .from("perfiles")
-    .select("id, user_id, email, nombre, role, created_at")
-    .eq("user_id", user.id)
-    .single();
-
-  if (errorPerfil || !perfil) {
-    redirect("/acceso-denegado");
-  }
-
-  if (perfil.role !== "admin") {
-    redirect("/acceso-denegado");
-  }
+  const { user, perfil } = await verificarAdminPage("/admin/usuarios");
 
   return <UsuariosPanel usuarioActual={user} perfilActual={perfil} />;
 }

@@ -2,6 +2,15 @@ import { NextResponse } from "next/server";
 import { createClient as createSupabaseServerClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
 
+export const dynamic = "force-dynamic";
+
+const JERARQUIA_PLANES = {
+  basico: 1,
+  extenso: 2,
+  pro: 3,
+  plantel: 4,
+};
+
 const CAMPOS_PROGRESO = `
   id,
   user_id,
@@ -44,6 +53,25 @@ function validarId(id) {
   return numero;
 }
 
+function normalizarNivel(nivel) {
+  const valor = String(nivel || "basico").toLowerCase().trim();
+
+  if (JERARQUIA_PLANES[valor]) {
+    return valor;
+  }
+
+  return "basico";
+}
+
+function nivelesPermitidos(nivelAlumno) {
+  const nivel = normalizarNivel(nivelAlumno);
+  const valorNivel = JERARQUIA_PLANES[nivel];
+
+  return Object.entries(JERARQUIA_PLANES)
+    .filter(([, valor]) => valor <= valorNivel)
+    .map(([nombre]) => nombre);
+}
+
 function generarCodigoCertificado() {
   const fecha = new Date();
   const anio = fecha.getFullYear();
@@ -73,7 +101,7 @@ async function obtenerPerfil(supabase, userId) {
     .from("perfiles")
     .select("id, user_id, nombre, email, role")
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
 
   if (error || !perfil) {
     return null;
@@ -82,11 +110,15 @@ async function obtenerPerfil(supabase, userId) {
   return perfil;
 }
 
-function clasesActivasOrdenadas(modulos) {
+function clasesActivasOrdenadas(modulos, niveles) {
   return (modulos || [])
     .flatMap((modulo) =>
       (modulo.clases || [])
-        .filter((clase) => clase.activo)
+        .filter(
+          (clase) =>
+            clase.activo &&
+            niveles.includes(normalizarNivel(clase.nivel_minimo_acceso))
+        )
         .map((clase) => ({
           ...clase,
           modulo_id: modulo.id,
@@ -132,6 +164,7 @@ async function generarOCargarCertificado({
           email_alumno: perfil?.email || user.email || "",
           titulo_curso: tituloCurso,
           estado: "emitido",
+          emitido_at: new Date().toISOString(),
         })
         .select(CAMPOS_CERTIFICADO)
         .single();
@@ -145,6 +178,7 @@ async function generarOCargarCertificado({
       String(errorCertificado?.message || "").includes("duplicate");
 
     if (!codigoDuplicado) {
+      console.error("Error generando certificado:", errorCertificado);
       break;
     }
   }
@@ -184,25 +218,29 @@ export async function POST(request) {
 
     const { data: clase, error: errorClase } = await supabaseAdmin
       .from("curso_clases")
-      .select(`
+      .select(
+        `
         id,
         titulo,
         orden,
         activo,
+        nivel_minimo_acceso,
         modulo:curso_modulos (
           id,
           curso_id,
           orden,
           activo,
+          nivel_minimo_acceso,
           curso:cursos (
             id,
             titulo,
             activo
           )
         )
-      `)
+      `
+      )
       .eq("id", claseId)
-      .single();
+      .maybeSingle();
 
     if (errorClase || !clase) {
       return crearRespuestaError("Clase no encontrada.", 404);
@@ -229,37 +267,58 @@ export async function POST(request) {
     const esAdminOInstructor =
       perfil.role === "admin" || perfil.role === "instructor";
 
+    let nivelAlumno = "plantel";
+
     if (!esAdminOInstructor) {
-      const { data: acceso } = await supabaseAdmin
+      const { data: acceso, error: errorAcceso } = await supabaseAdmin
         .from("alumno_cursos")
-        .select("id, estado")
+        .select("id, estado, nivel_acceso")
         .eq("user_id", user.id)
         .eq("curso_id", cursoId)
         .eq("estado", "activo")
         .maybeSingle();
 
-      if (!acceso) {
+      if (errorAcceso || !acceso) {
         return crearRespuestaError(
           "No tenés acceso activo a este curso.",
           403
         );
       }
+
+      nivelAlumno = normalizarNivel(acceso.nivel_acceso);
+    }
+
+    const niveles = nivelesPermitidos(nivelAlumno);
+
+    const nivelClase = normalizarNivel(clase.nivel_minimo_acceso);
+    const nivelModulo = normalizarNivel(clase.modulo?.nivel_minimo_acceso);
+
+    if (!niveles.includes(nivelModulo) || !niveles.includes(nivelClase)) {
+      return crearRespuestaError(
+        "Esta clase no está incluida en tu plan.",
+        403
+      );
     }
 
     const { data: modulos, error: errorModulos } = await supabaseAdmin
       .from("curso_modulos")
-      .select(`
+      .select(
+        `
         id,
         orden,
         activo,
+        nivel_minimo_acceso,
         clases:curso_clases (
           id,
           orden,
-          activo
+          activo,
+          nivel_minimo_acceso
         )
-      `)
+      `
+      )
       .eq("curso_id", cursoId)
       .eq("activo", true)
+      .in("nivel_minimo_acceso", niveles)
       .order("orden", { ascending: true })
       .order("orden", {
         referencedTable: "curso_clases",
@@ -267,16 +326,21 @@ export async function POST(request) {
       });
 
     if (errorModulos) {
+      console.error("Error verificando módulos del curso:", errorModulos);
+
       return crearRespuestaError("No se pudo verificar el curso.", 500);
     }
 
-    const clasesOrdenadas = clasesActivasOrdenadas(modulos);
+    const clasesOrdenadas = clasesActivasOrdenadas(modulos, niveles);
     const indiceClaseActual = clasesOrdenadas.findIndex(
       (item) => item.id === claseId
     );
 
     if (indiceClaseActual === -1) {
-      return crearRespuestaError("La clase no pertenece al curso activo.", 400);
+      return crearRespuestaError(
+        "La clase no pertenece al contenido habilitado para tu plan.",
+        403
+      );
     }
 
     if (completada && indiceClaseActual > 0) {
@@ -315,6 +379,8 @@ export async function POST(request) {
       .single();
 
     if (errorProgreso || !progreso) {
+      console.error("Error guardando progreso:", errorProgreso);
+
       return crearRespuestaError("No se pudo guardar el progreso.", 500);
     }
 
@@ -345,6 +411,8 @@ export async function POST(request) {
             tituloCurso: curso.titulo,
           });
         }
+      } else {
+        console.error("Error verificando progreso total:", errorProgresos);
       }
     }
 
@@ -354,6 +422,8 @@ export async function POST(request) {
       certificado,
     });
   } catch (error) {
+    console.error("Error POST /api/panel/progreso:", error);
+
     return crearRespuestaError("Error interno del servidor.", 500);
   }
 }
