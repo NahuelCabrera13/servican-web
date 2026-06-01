@@ -1,4 +1,5 @@
 import Image from "next/image";
+import HeaderAcceso from "./components/HeaderAcceso";
 
 export default function Home() {
   const whatsapp = "59898188257";
@@ -131,10 +132,9 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-black text-white">
-      {/* MENÚ */}
       <header className="sticky top-0 z-50 border-b border-yellow-500/20 bg-black/90 backdrop-blur">
-        <div className="mx-auto flex max-w-[1600px] items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <a href="#inicio" className="flex items-center gap-3">
+        <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
+          <a href="#inicio" className="flex shrink-0 items-center gap-3">
             <Image
               src="/logo-servican.jpeg"
               alt="Logo SERVICAN"
@@ -154,7 +154,7 @@ export default function Home() {
             </div>
           </a>
 
-          <nav className="hidden gap-6 text-sm font-semibold text-zinc-300 md:flex">
+          <nav className="hidden gap-6 text-sm font-semibold text-zinc-300 lg:flex">
             <a href="#quienes-somos" className="hover:text-yellow-500">
               Quiénes somos
             </a>
@@ -175,18 +175,10 @@ export default function Home() {
             </a>
           </nav>
 
-          <a
-            href={linkWhatsApp("Hola SERVICAN, quiero consultar información")}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-full bg-yellow-500 px-5 py-3 text-sm font-bold text-black transition hover:bg-yellow-400"
-          >
-            Contactar
-          </a>
+          <HeaderAcceso />
         </div>
       </header>
 
-      {/* HERO INSTITUCIONAL */}
       <section
         id="inicio"
         className="relative min-h-[86vh] overflow-hidden bg-black"
@@ -271,7 +263,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* QUIÉNES SOMOS */}
       <section
         id="quienes-somos"
         className="border-y border-zinc-800 bg-zinc-950 px-4 py-20 sm:px-6 lg:px-8"
@@ -307,7 +298,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* NUESTROS PERROS */}
       <section id="perros" className="px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-[1450px]">
           <div className="mx-auto max-w-3xl text-center">
@@ -363,7 +353,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* SERVICIOS */}
       <section id="servicios" className="bg-zinc-950 px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-[1450px]">
           <div className="mx-auto max-w-3xl text-center">
@@ -397,7 +386,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* GALERÍA */}
       <section className="px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-[1450px]">
           <div className="rounded-[2rem] border border-yellow-500/30 bg-gradient-to-br from-zinc-950 to-black p-8 md:p-12">
@@ -446,7 +434,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CURSOS RESUMEN */}
       <section className="bg-zinc-950 px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-[1450px] gap-10 md:grid-cols-2 md:items-center">
           <div>
@@ -481,7 +468,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* VERIFICACIÓN DE CERTIFICADOS */}
       <section className="bg-black px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-[1450px]">
           <div className="grid gap-10 rounded-[2rem] border border-yellow-500/30 bg-gradient-to-br from-zinc-950 via-black to-zinc-950 p-8 md:grid-cols-[1fr_0.8fr] md:items-center md:p-12">
@@ -553,7 +539,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CONTACTO */}
       <section
         id="contacto"
         className="bg-yellow-500 px-4 py-20 text-black sm:px-6 lg:px-8"
@@ -588,7 +573,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FOOTER */}
       <footer className="border-t border-zinc-900 px-6 py-10 text-center">
         <p className="text-xl font-black tracking-[0.25em] text-yellow-500">
           SERVICAN

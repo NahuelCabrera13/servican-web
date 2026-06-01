@@ -1,34 +1,40 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 function LoginContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const redirectTo = searchParams.get("redirect");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const [verificandoSesion, setVerificandoSesion] = useState(true);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
 
-  async function obtenerDestinoPorRol(supabase, userId) {
-    const { data: perfil } = await supabase
-      .from("perfiles")
-      .select("role")
-      .eq("user_id", userId)
-      .single();
+  useEffect(() => {
+    async function verificarSesionActiva() {
+      const supabase = createClient();
 
-    if (perfil?.role === "admin") {
-      return "/admin";
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        router.replace("/");
+        router.refresh();
+        return;
+      }
+
+      setVerificandoSesion(false);
     }
 
-    return "/panel";
-  }
+    verificarSesionActiva();
+  }, [router]);
 
   async function iniciarSesion(event) {
     event.preventDefault();
@@ -36,23 +42,33 @@ function LoginContent() {
     setCargando(true);
     setError("");
 
+    const emailLimpio = email.trim().toLowerCase();
+
+    if (!emailLimpio || !password) {
+      setError("Ingresá tu email y contraseña.");
+      setCargando(false);
+      return;
+    }
+
     const supabase = createClient();
 
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
+      email: emailLimpio,
       password,
     });
 
-    if (error) {
+    if (error || !data?.user) {
       setError("Email o contraseña incorrectos.");
       setCargando(false);
       return;
     }
 
-    const destino = redirectTo || (await obtenerDestinoPorRol(supabase, data.user.id));
-
-    router.push(destino);
+    router.push("/");
     router.refresh();
+  }
+
+  if (verificandoSesion) {
+    return <LoginLoading texto="Verificando sesión..." />;
   }
 
   return (
@@ -60,22 +76,24 @@ function LoginContent() {
       <section className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16">
         <div className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl">
           <div className="mb-8 text-center">
-            <img
+            <Image
               src="/logo-servican.jpeg"
               alt="Logo SERVICAN"
-              className="mx-auto mb-5 h-24 w-24 rounded-full object-cover ring-4 ring-yellow-500/30"
+              width={96}
+              height={96}
+              priority
+              className="mx-auto mb-5 h-24 w-24 rounded-full object-contain ring-4 ring-yellow-500/30"
             />
 
             <p className="mb-2 text-sm font-semibold uppercase tracking-[0.3em] text-yellow-400">
               SERVICAN
             </p>
 
-            <h1 className="text-3xl font-bold">
-              Iniciar sesión
-            </h1>
+            <h1 className="text-3xl font-bold">Iniciar sesión</h1>
 
             <p className="mt-3 text-sm text-neutral-300">
-              Acceso privado para administradores, instructores y alumnos.
+              Ingresá a tu cuenta. Después vas a poder entrar a tu panel desde
+              la página principal.
             </p>
           </div>
 
@@ -87,6 +105,8 @@ function LoginContent() {
 
               <input
                 type="email"
+                required
+                autoComplete="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="tu@email.com"
@@ -101,6 +121,8 @@ function LoginContent() {
 
               <input
                 type="password"
+                required
+                autoComplete="current-password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="Tu contraseña"
@@ -123,33 +145,53 @@ function LoginContent() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-xs text-neutral-500">
-            Si sos alumno o instructor, el administrador debe habilitar tu acceso.
-          </p>
+          <div className="mt-6 rounded-2xl border border-white/10 bg-neutral-900/70 p-4 text-center">
+            <p className="text-sm text-neutral-300">
+              ¿Querés acceder a un curso?
+            </p>
+
+            <Link
+              href="/registro"
+              className="mt-3 inline-block rounded-2xl border border-yellow-500/40 bg-yellow-500/10 px-5 py-3 text-sm font-bold text-yellow-200 transition hover:bg-yellow-500/20"
+            >
+              Crear cuenta de alumno
+            </Link>
+          </div>
+
+          <div className="mt-5 flex flex-col gap-3 text-center text-sm">
+            <Link href="/" className="font-semibold text-neutral-300 hover:text-yellow-400">
+              Volver al inicio
+            </Link>
+
+            <Link href="/cursos" className="font-semibold text-neutral-300 hover:text-yellow-400">
+              Ver cursos disponibles
+            </Link>
+          </div>
         </div>
       </section>
     </main>
   );
 }
 
-function LoginLoading() {
+function LoginLoading({ texto = "Cargando acceso..." }) {
   return (
     <main className="min-h-screen bg-neutral-950 text-white">
       <section className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16">
         <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center shadow-2xl">
-          <img
+          <Image
             src="/logo-servican.jpeg"
             alt="Logo SERVICAN"
-            className="mx-auto mb-5 h-24 w-24 rounded-full object-cover ring-4 ring-yellow-500/30"
+            width={96}
+            height={96}
+            priority
+            className="mx-auto mb-5 h-24 w-24 rounded-full object-contain ring-4 ring-yellow-500/30"
           />
 
           <p className="mb-2 text-sm font-semibold uppercase tracking-[0.3em] text-yellow-400">
             SERVICAN
           </p>
 
-          <h1 className="text-3xl font-bold">
-            Cargando acceso...
-          </h1>
+          <h1 className="text-3xl font-bold">{texto}</h1>
         </div>
       </section>
     </main>

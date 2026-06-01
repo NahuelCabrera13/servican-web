@@ -436,24 +436,45 @@ export default function AdminPanel({ usuario, perfil }) {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <button
-              onClick={actualizarTodo}
-              disabled={cargando}
-              className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-semibold transition hover:bg-white/20 disabled:opacity-60"
-            >
-              {cargando ? "Actualizando..." : "Actualizar"}
-            </button>
+<div className="flex flex-col gap-3 sm:flex-row">
+  <Link
+    href="/"
+    className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-semibold transition hover:bg-white/20"
+  >
+    Volver al inicio
+  </Link>
 
-            <form action="/auth/logout" method="post">
-              <button
-                type="submit"
-                className="w-full rounded-2xl bg-red-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-400"
-              >
-                Cerrar sesión
-              </button>
-            </form>
-          </div>
+  <Link
+    href="/cursos"
+    className="rounded-2xl border border-yellow-500/40 bg-yellow-500/10 px-5 py-3 text-center text-sm font-semibold text-yellow-200 transition hover:bg-yellow-500/20"
+  >
+    Ver cursos
+  </Link>
+
+  <Link
+    href="/panel"
+    className="rounded-2xl border border-green-500/30 bg-green-500/10 px-5 py-3 text-center text-sm font-semibold text-green-200 transition hover:bg-green-500/20"
+  >
+    Panel privado
+  </Link>
+
+  <button
+    onClick={actualizarTodo}
+    disabled={cargando}
+    className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-semibold transition hover:bg-white/20 disabled:opacity-60"
+  >
+    {cargando ? "Actualizando..." : "Actualizar"}
+  </button>
+
+  <form action="/auth/logout" method="post">
+    <button
+      type="submit"
+      className="w-full rounded-2xl bg-red-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-400"
+    >
+      Cerrar sesión
+    </button>
+  </form>
+</div>
         </header>
 
 <nav className="mb-6 flex flex-col gap-3 rounded-3xl border border-white/10 bg-white/5 p-3 sm:flex-row">
