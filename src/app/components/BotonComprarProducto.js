@@ -7,6 +7,20 @@ function normalizarEmail(email) {
   return String(email || "").trim().toLowerCase();
 }
 
+async function leerRespuestaSegura(respuesta) {
+  const texto = await respuesta.text();
+
+  try {
+    return JSON.parse(texto);
+  } catch {
+    return {
+      error:
+        "La API de pago respondió con una página de error en vez de JSON. Revisá la terminal o los logs de Vercel.",
+      detalle: texto.slice(0, 500),
+    };
+  }
+}
+
 export default function BotonComprarProducto({ producto }) {
   const cantidadMaximaUsuarios = Number(
     producto?.cantidad_maxima_usuarios || 1
@@ -89,7 +103,7 @@ export default function BotonComprarProducto({ producto }) {
         }),
       });
 
-      const data = await respuesta.json();
+      const data = await leerRespuestaSegura(respuesta);
 
       if (!respuesta.ok) {
         if (Array.isArray(data?.emails_no_registrados)) {
@@ -99,8 +113,16 @@ export default function BotonComprarProducto({ producto }) {
             )}`
           );
         } else {
-          setError(data?.error || "No se pudo iniciar el pago.");
+          setError(
+            data?.error ||
+              `No se pudo iniciar el pago. Código: ${respuesta.status}`
+          );
         }
+
+        console.error("Error de API pago:", {
+          status: respuesta.status,
+          data,
+        });
 
         setCargando(false);
         return;
@@ -109,6 +131,7 @@ export default function BotonComprarProducto({ producto }) {
       const urlPago = data.init_point || data.sandbox_init_point;
 
       if (!urlPago) {
+        console.error("Respuesta sin link de pago:", data);
         setError("Mercado Pago no devolvió un link de pago.");
         setCargando(false);
         return;
@@ -116,6 +139,7 @@ export default function BotonComprarProducto({ producto }) {
 
       window.location.href = urlPago;
     } catch (error) {
+      console.error("Error iniciando compra:", error);
       setError(error?.message || "Error al iniciar el pago.");
       setCargando(false);
     }
