@@ -9,6 +9,32 @@ export default function Home() {
 
   const fotoPortada = "/fotos/portada-servican.jpeg";
 
+  const notaElPaisUrl =
+    "https://www.elpais.com.uy/informacion/policiales/droga-explosivos-y-desaparecidos-como-es-el-entrenamiento-de-los-perros-policia-que-son-un-companero-mas";
+
+  const metodologia = [
+    {
+      titulo: "Entrenamiento por asociación",
+      texto: "El trabajo olfativo se desarrolla de forma progresiva, asociando olores específicos con una recompensa y una conducta clara de marcación.",
+      icono: "🧠",
+    },
+    {
+      titulo: "Kits de olores",
+      texto: "SERVICAN trabaja con kits de olores para entrenar perros de detección de forma técnica, controlada y segura.",
+      icono: "🧪",
+    },
+    {
+      titulo: "Binomio guía-perro",
+      texto: "La base del trabajo está en la comunicación entre el guía y el perro: lectura corporal, control, confianza y respuesta ante indicaciones.",
+      icono: "🤝",
+    },
+    {
+      titulo: "Práctica en entornos reales",
+      texto: "Los perros trabajan en escenarios variados para acostumbrarse a diferentes superficies, estímulos, olores y contextos de búsqueda.",
+      icono: "📍",
+    },
+  ];
+
   const servicios = [
     {
       titulo: "Formación canina",
@@ -353,7 +379,133 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="servicios" className="bg-zinc-950 px-4 py-20 sm:px-6 lg:px-8">
+      <section className="bg-black px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1450px]">
+          <div className="grid gap-10 rounded-[2rem] border border-yellow-500/30 bg-gradient-to-br from-zinc-950 via-black to-zinc-950 p-8 md:grid-cols-[0.9fr_1.1fr] md:items-center md:p-12">
+            <div className="rounded-[2rem] border border-zinc-800 bg-black p-8 shadow-2xl">
+              <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
+                SERVICAN en prensa
+              </p>
+
+              <h2 className="text-4xl font-black md:text-5xl">
+                Reconocimiento al trabajo técnico de detección canina
+              </h2>
+
+              <p className="mt-5 leading-8 text-zinc-300">
+                SERVICAN fue mencionada por El País Uruguay en una nota sobre
+                entrenamiento de perros de trabajo, detección de drogas,
+                explosivos y búsqueda de personas.
+              </p>
+
+              <a
+                href={notaElPaisUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-8 inline-block rounded-full bg-yellow-500 px-8 py-4 font-black text-black transition hover:bg-yellow-400"
+              >
+                Ver nota en El País
+              </a>
+            </div>
+
+            <div className="space-y-5 text-lg leading-8 text-zinc-300">
+              <p>
+                En la publicación se menciona a SERVICAN como una empresa
+                privada externa al K9, dedicada al adiestramiento y al trabajo
+                con perros de detección mediante kits de olores.
+              </p>
+
+              <p>
+                La nota destaca el entrenamiento para búsqueda de sustancias
+                como cocaína, marihuana, fentanilo, metanfetamina, LSD, éxtasis
+                y heroína, además de certificaciones emitidas en Brasil por
+                pruebas con sustancia real.
+              </p>
+
+              <p>
+                También se menciona el trabajo de inspección en zona franca,
+                revisando cargamentos con perros y aplicando entrenamiento
+                olfativo en contextos vinculados al comercio internacional.
+              </p>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                  <p className="text-2xl font-black text-yellow-500">
+                    Detección
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-zinc-400">
+                    Trabajo olfativo aplicado a escenarios reales.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                  <p className="text-2xl font-black text-yellow-500">
+                    Técnica
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-zinc-400">
+                    Entrenamiento progresivo con kits de olores.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                  <p className="text-2xl font-black text-yellow-500">
+                    Campo real
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-zinc-400">
+                    Aplicación en zonas de trabajo e inspección.
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-sm leading-6 text-zinc-500">
+                Fuente: nota publicada por El País Uruguay el 19/10/2025.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-y border-zinc-800 bg-zinc-950 px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1450px]">
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
+              Metodología
+            </p>
+
+            <h2 className="text-4xl font-black md:text-5xl">
+              Cómo trabaja SERVICAN
+            </h2>
+
+            <p className="mt-4 text-zinc-300">
+              El entrenamiento canino profesional requiere método, paciencia,
+              lectura del perro y práctica constante. SERVICAN trabaja sobre
+              procesos progresivos, con foco en el vínculo, la conducta y la
+              confiabilidad del resultado.
+            </p>
+          </div>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-4">
+            {metodologia.map((item) => (
+              <div
+                key={item.titulo}
+                className="rounded-3xl border border-zinc-800 bg-black p-7 transition hover:border-yellow-500/60"
+              >
+                <p className="mb-4 text-4xl">{item.icono}</p>
+
+                <h3 className="text-xl font-black text-yellow-500">
+                  {item.titulo}
+                </h3>
+
+                <p className="mt-3 leading-7 text-zinc-300">{item.texto}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="servicios"
+        className="bg-zinc-950 px-4 py-20 sm:px-6 lg:px-8"
+      >
         <div className="mx-auto max-w-[1450px]">
           <div className="mx-auto max-w-3xl text-center">
             <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">

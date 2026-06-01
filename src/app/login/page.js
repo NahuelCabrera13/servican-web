@@ -63,7 +63,7 @@ function LoginContent() {
       return;
     }
 
-    router.push("/");
+    router.replace("/");
     router.refresh();
   }
 
@@ -159,11 +159,17 @@ function LoginContent() {
           </div>
 
           <div className="mt-5 flex flex-col gap-3 text-center text-sm">
-            <Link href="/" className="font-semibold text-neutral-300 hover:text-yellow-400">
+            <Link
+              href="/"
+              className="font-semibold text-neutral-300 hover:text-yellow-400"
+            >
               Volver al inicio
             </Link>
 
-            <Link href="/cursos" className="font-semibold text-neutral-300 hover:text-yellow-400">
+            <Link
+              href="/cursos"
+              className="font-semibold text-neutral-300 hover:text-yellow-400"
+            >
               Ver cursos disponibles
             </Link>
           </div>

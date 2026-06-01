@@ -87,9 +87,13 @@ export default function RegistroForm() {
         mensajeError.includes("already exists") ||
         mensajeError.includes("user already")
       ) {
-        setError("Ya existe una cuenta registrada con ese email. Probá iniciar sesión.");
+        setError(
+          "Ya existe una cuenta registrada con ese email. Probá iniciar sesión."
+        );
       } else {
-        setError("No se pudo crear la cuenta. Revisá los datos e intentá nuevamente.");
+        setError(
+          "No se pudo crear la cuenta. Revisá los datos e intentá nuevamente."
+        );
       }
 
       setCargando(false);
@@ -107,7 +111,7 @@ export default function RegistroForm() {
     setMensaje("Cuenta creada correctamente. Volviendo al inicio...");
 
     setTimeout(() => {
-      router.push("/");
+      router.replace("/");
       router.refresh();
     }, 700);
   }
@@ -239,15 +243,24 @@ export default function RegistroForm() {
           </div>
 
           <div className="mt-6 flex flex-col gap-3 text-center text-sm">
-            <Link href="/login" className="font-semibold text-neutral-300 hover:text-yellow-400">
+            <Link
+              href="/login"
+              className="font-semibold text-neutral-300 hover:text-yellow-400"
+            >
               Ya tengo cuenta, iniciar sesión
             </Link>
 
-            <Link href="/cursos" className="font-semibold text-neutral-300 hover:text-yellow-400">
+            <Link
+              href="/cursos"
+              className="font-semibold text-neutral-300 hover:text-yellow-400"
+            >
               Ver cursos disponibles
             </Link>
 
-            <Link href="/" className="font-semibold text-neutral-300 hover:text-yellow-400">
+            <Link
+              href="/"
+              className="font-semibold text-neutral-300 hover:text-yellow-400"
+            >
               Volver al inicio
             </Link>
           </div>
