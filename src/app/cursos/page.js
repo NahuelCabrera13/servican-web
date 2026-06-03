@@ -567,11 +567,6 @@ export default async function CursosPage() {
             <h2 className="text-4xl font-black md:text-5xl">
               Una plataforma pensada para vender y formar
             </h2>
-
-            <p className="mt-4 leading-8 text-zinc-300">
-              SERVICAN combina página pública, productos pagos, panel privado,
-              progreso del alumno, certificación y beneficios para miembros.
-            </p>
           </div>
 
           <div className="mt-12 grid gap-6 md:grid-cols-4">
