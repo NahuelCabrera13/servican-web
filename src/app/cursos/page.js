@@ -577,7 +577,7 @@ export default async function CursosPage() {
                 texto={item.texto}
                 icono={item.icono}
               />
-            ))}
+            ))}   
           </div>
         </div>
       </section>
