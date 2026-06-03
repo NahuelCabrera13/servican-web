@@ -48,41 +48,36 @@ function respuestaError(mensaje, status = 400, extra = {}) {
   );
 }
 
-function sumarDias(fecha, dias) {
-  const date = fecha ? new Date(fecha) : new Date();
+function normalizarEstadoMercadoPago(status) {
+  const estado = String(status || "").toLowerCase().trim();
 
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  date.setDate(date.getDate() + dias);
-  return date.toISOString();
-}
-
-function normalizarEstadoPreapproval(status) {
-  const estado = String(status || "").toLowerCase();
-
-  if (estado === "authorized") {
+  if (["authorized", "autorizado", "approved", "aprobado", "accredited"].includes(estado)) {
     return "activa";
   }
 
-  if (
-    estado === "cancelled" ||
-    estado === "canceled" ||
-    estado === "finished"
-  ) {
+  if (["cancelled", "canceled", "cancelado", "finished", "finalizado"].includes(estado)) {
     return "cancelada";
   }
 
-  if (
-    estado === "paused" ||
-    estado === "pending" ||
-    estado === "pendiente"
-  ) {
+  if (["paused", "pausado", "pending", "pendiente", "in_process", "en_proceso"].includes(estado)) {
     return "pausada";
   }
 
   return "pausada";
+}
+
+function calcularFechaFin(preapproval) {
+  if (preapproval?.next_payment_date) {
+    const fecha = new Date(preapproval.next_payment_date);
+
+    if (!Number.isNaN(fecha.getTime())) {
+      return fecha.toISOString();
+    }
+  }
+
+  const fecha = new Date();
+  fecha.setDate(fecha.getDate() + 32);
+  return fecha.toISOString();
 }
 
 function extraerTopicYId(requestUrl, body) {
@@ -110,37 +105,39 @@ function extraerTopicYId(requestUrl, body) {
   };
 }
 
+function extraerReferenciaCompacta(valor) {
+  const externalReference = String(valor || "").trim();
+
+  if (!externalReference.startsWith("MEMB|")) {
+    return null;
+  }
+
+  const partes = externalReference.split("|");
+
+  return {
+    productoId: partes[1] || null,
+    userId: partes[2] || null,
+    raw: externalReference,
+  };
+}
+
 function extraerReferenciaPreapproval(preapproval) {
-  const externalReference = String(preapproval?.external_reference || "").trim();
+  const refCompacta = extraerReferenciaCompacta(preapproval?.external_reference);
 
-  if (externalReference.startsWith("MEMB|")) {
-    const partes = externalReference.split("|");
-
+  if (refCompacta) {
     return {
-      productoId: partes[1] || null,
-      userId: partes[2] || null,
-      email:
-        preapproval?.payer_email ||
-        preapproval?.payer?.email ||
-        "",
-      referencia: {
-        formato: "compacto",
-        raw: externalReference,
-      },
+      ...refCompacta,
+      email: preapproval?.payer_email || preapproval?.payer?.email || "",
+      formato: "compacto",
     };
   }
 
   return {
     productoId: preapproval?.metadata?.producto_id || null,
     userId: preapproval?.metadata?.comprador_user_id || null,
-    email:
-      preapproval?.payer_email ||
-      preapproval?.payer?.email ||
-      "",
-    referencia: {
-      formato: "metadata",
-      raw: externalReference,
-    },
+    email: preapproval?.payer_email || preapproval?.payer?.email || "",
+    raw: preapproval?.external_reference || "",
+    formato: "metadata",
   };
 }
 
@@ -182,9 +179,7 @@ async function consultarAuthorizedPayment(authorizedPaymentId) {
     throw new Error("Falta ID de authorized payment.");
   }
 
-  return consultarMercadoPago(
-    `/authorized_payments/${authorizedPaymentId}`
-  );
+  return consultarMercadoPago(`/authorized_payments/${authorizedPaymentId}`);
 }
 
 async function consultarPayment(paymentId) {
@@ -260,18 +255,31 @@ async function buscarAccesoPorPreapproval(supabaseAdmin, preapprovalId) {
     .maybeSingle();
 
   if (error) {
-    throw new Error(`No se pudo buscar la membresía: ${error.message}`);
+    throw new Error(`No se pudo buscar la membresía por preapproval: ${error.message}`);
   }
 
   return data;
 }
 
-function calcularFechaFin(preapproval) {
-  if (preapproval?.next_payment_date) {
-    return new Date(preapproval.next_payment_date).toISOString();
+async function buscarAccesoPorUsuario(supabaseAdmin, userId) {
+  if (!userId) {
+    return null;
   }
 
-  return sumarDias(new Date().toISOString(), 32);
+  const { data, error } = await supabaseAdmin
+    .from("membresias_accesos")
+    .select("*")
+    .eq("user_id", userId)
+    .in("estado", ["pausada", "activa"])
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`No se pudo buscar la membresía del usuario: ${error.message}`);
+  }
+
+  return data;
 }
 
 async function actualizarAccesoDesdePreapproval({
@@ -280,7 +288,7 @@ async function actualizarAccesoDesdePreapproval({
   payment = null,
   authorizedPayment = null,
 }) {
-  const preapprovalId = preapproval?.id;
+  const preapprovalId = preapproval?.id || preapproval?.subscription_id;
 
   if (!preapprovalId) {
     throw new Error("La preapproval no tiene ID.");
@@ -304,18 +312,21 @@ async function actualizarAccesoDesdePreapproval({
     throw new Error("No se encontró el perfil del usuario.");
   }
 
+  const accesoExistente =
+    (await buscarAccesoPorPreapproval(supabaseAdmin, preapprovalId)) ||
+    (await buscarAccesoPorUsuario(supabaseAdmin, referencia.userId));
+
   const estadoPreapproval = String(preapproval?.status || "").toLowerCase();
-  const estadoMembresia = normalizarEstadoPreapproval(estadoPreapproval);
+  const estadoPago = String(payment?.status || authorizedPayment?.status || "").toLowerCase();
+
+  let estadoMembresia = normalizarEstadoMercadoPago(estadoPreapproval);
+
+  if (["approved", "aprobado", "accredited", "authorized", "autorizado"].includes(estadoPago)) {
+    estadoMembresia = "activa";
+  }
 
   const fechaFin =
-    estadoMembresia === "activa"
-      ? calcularFechaFin(preapproval)
-      : null;
-
-  const accesoExistente = await buscarAccesoPorPreapproval(
-    supabaseAdmin,
-    preapprovalId
-  );
+    estadoMembresia === "activa" ? calcularFechaFin(preapproval) : null;
 
   const detalle = {
     ...(accesoExistente?.detalle || {}),
@@ -332,7 +343,7 @@ async function actualizarAccesoDesdePreapproval({
       email: perfil.email,
     },
     preapproval: {
-      id: preapproval.id,
+      id: preapprovalId,
       status: preapproval.status || null,
       reason: preapproval.reason || null,
       external_reference: preapproval.external_reference || null,
@@ -344,6 +355,10 @@ async function actualizarAccesoDesdePreapproval({
           id: authorizedPayment.id || null,
           status: authorizedPayment.status || null,
           payment_id: authorizedPayment.payment_id || null,
+          preapproval_id:
+            authorizedPayment.preapproval_id ||
+            authorizedPayment.subscription_id ||
+            null,
         }
       : null,
     payment: payment
@@ -351,6 +366,7 @@ async function actualizarAccesoDesdePreapproval({
           id: payment.id || null,
           status: payment.status || null,
           status_detail: payment.status_detail || null,
+          external_reference: payment.external_reference || null,
           transaction_amount: payment.transaction_amount || null,
           currency_id: payment.currency_id || null,
         }
@@ -366,7 +382,7 @@ async function actualizarAccesoDesdePreapproval({
     descuento_porcentaje: 10,
     curso_pequeno_disponible: true,
     mercadopago_preapproval_id: preapprovalId,
-    mercadopago_status: preapproval.status || null,
+    mercadopago_status: preapproval.status || payment?.status || null,
     ultimo_pago_id:
       String(payment?.id || authorizedPayment?.payment_id || "") || null,
     ultimo_pago_estado:
@@ -382,8 +398,6 @@ async function actualizarAccesoDesdePreapproval({
     updated_at: new Date().toISOString(),
   };
 
-  let resultado;
-
   if (accesoExistente?.id) {
     const { data, error } = await supabaseAdmin
       .from("membresias_accesos")
@@ -396,27 +410,136 @@ async function actualizarAccesoDesdePreapproval({
       throw new Error(`No se pudo actualizar la membresía: ${error.message}`);
     }
 
-    resultado = data;
-  } else {
+    return data;
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("membresias_accesos")
+    .insert(datosActualizados)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(`No se pudo crear la membresía: ${error.message}`);
+  }
+
+  return data;
+}
+
+async function activarDesdePaymentConReferencia({
+  supabaseAdmin,
+  payment,
+}) {
+  const referencia = extraerReferenciaCompacta(payment?.external_reference);
+
+  if (!referencia?.userId || !referencia?.productoId) {
+    return {
+      procesado: false,
+      motivo: "Payment sin referencia MEMB válida.",
+      payment_status: payment?.status || null,
+    };
+  }
+
+  const producto = await obtenerProducto(supabaseAdmin, referencia.productoId);
+
+  if (!producto) {
+    throw new Error("El producto de membresía no existe o no es válido.");
+  }
+
+  const perfil = await obtenerPerfil(supabaseAdmin, referencia.userId);
+
+  if (!perfil) {
+    throw new Error("No se encontró el perfil del usuario.");
+  }
+
+  const accesoExistente = await buscarAccesoPorUsuario(
+    supabaseAdmin,
+    referencia.userId
+  );
+
+  const estadoPago = String(payment?.status || "").toLowerCase();
+  const estadoMembresia = normalizarEstadoMercadoPago(estadoPago);
+
+  const detalle = {
+    ...(accesoExistente?.detalle || {}),
+    origen: "mercadopago_webhook_payment",
+    referencia,
+    producto: {
+      id: producto.id,
+      nombre: producto.nombre,
+      precio: producto.precio,
+      moneda: producto.moneda,
+    },
+    perfil: {
+      user_id: perfil.user_id,
+      email: perfil.email,
+    },
+    payment: {
+      id: payment.id || null,
+      status: payment.status || null,
+      status_detail: payment.status_detail || null,
+      external_reference: payment.external_reference || null,
+      transaction_amount: payment.transaction_amount || null,
+      currency_id: payment.currency_id || null,
+    },
+    actualizado_en: new Date().toISOString(),
+  };
+
+  const datosActualizados = {
+    user_id: referencia.userId,
+    estado: estadoMembresia,
+    fecha_inicio: accesoExistente?.fecha_inicio || new Date().toISOString(),
+    fecha_fin:
+      estadoMembresia === "activa" ? calcularFechaFin(null) : null,
+    descuento_porcentaje: 10,
+    curso_pequeno_disponible: true,
+    mercadopago_status: payment.status || null,
+    ultimo_pago_id: String(payment.id || "") || null,
+    ultimo_pago_estado: payment.status || null,
+    detalle,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (accesoExistente?.id) {
     const { data, error } = await supabaseAdmin
       .from("membresias_accesos")
-      .insert(datosActualizados)
+      .update(datosActualizados)
+      .eq("id", accesoExistente.id)
       .select("*")
       .single();
 
     if (error) {
-      throw new Error(`No se pudo crear la membresía: ${error.message}`);
+      throw new Error(`No se pudo actualizar la membresía por payment: ${error.message}`);
     }
 
-    resultado = data;
+    return {
+      procesado: true,
+      tipo: "payment_external_reference",
+      estado: data.estado,
+      membresia_id: data.id,
+    };
   }
 
-  return resultado;
+  const { data, error } = await supabaseAdmin
+    .from("membresias_accesos")
+    .insert(datosActualizados)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(`No se pudo crear la membresía por payment: ${error.message}`);
+  }
+
+  return {
+    procesado: true,
+    tipo: "payment_external_reference",
+    estado: data.estado,
+    membresia_id: data.id,
+  };
 }
 
 async function manejarEvento({ topic, id }) {
   const supabaseAdmin = crearSupabaseAdmin();
-
   const topicNormalizado = String(topic || "").toLowerCase();
 
   if (!id) {
@@ -457,7 +580,20 @@ async function manejarEvento({ topic, id }) {
       authorizedPayment?.preapproval?.id ||
       null;
 
+    let payment = null;
+
+    if (authorizedPayment?.payment_id) {
+      payment = await consultarPayment(authorizedPayment.payment_id);
+    }
+
     if (!preapprovalId) {
+      if (payment) {
+        return activarDesdePaymentConReferencia({
+          supabaseAdmin,
+          payment,
+        });
+      }
+
       return {
         procesado: false,
         motivo: "Authorized payment sin preapproval_id.",
@@ -465,12 +601,6 @@ async function manejarEvento({ topic, id }) {
     }
 
     const preapproval = await consultarPreapproval(preapprovalId);
-
-    let payment = null;
-
-    if (authorizedPayment?.payment_id) {
-      payment = await consultarPayment(authorizedPayment.payment_id);
-    }
 
     const acceso = await actualizarAccesoDesdePreapproval({
       supabaseAdmin,
@@ -494,31 +624,29 @@ async function manejarEvento({ topic, id }) {
       payment?.metadata?.preapproval_id ||
       payment?.metadata?.subscription_id ||
       payment?.additional_info?.items?.[0]?.id ||
-      payment?.external_reference ||
       null;
 
-    if (!preapprovalId) {
+    if (preapprovalId) {
+      const preapproval = await consultarPreapproval(preapprovalId);
+
+      const acceso = await actualizarAccesoDesdePreapproval({
+        supabaseAdmin,
+        preapproval,
+        payment,
+      });
+
       return {
-        procesado: false,
-        motivo: "Payment sin preapproval_id claro.",
-        payment_status: payment?.status || null,
+        procesado: true,
+        tipo: "payment_con_preapproval",
+        estado: acceso.estado,
+        membresia_id: acceso.id,
       };
     }
 
-    const preapproval = await consultarPreapproval(preapprovalId);
-
-    const acceso = await actualizarAccesoDesdePreapproval({
+    return activarDesdePaymentConReferencia({
       supabaseAdmin,
-      preapproval,
       payment,
     });
-
-    return {
-      procesado: true,
-      tipo: "payment",
-      estado: acceso.estado,
-      membresia_id: acceso.id,
-    };
   }
 
   return {
