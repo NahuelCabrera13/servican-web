@@ -119,11 +119,23 @@ function limpiarTexto(valor) {
 function normalizarEstadoMercadoPago(status) {
   const estado = String(status || "").toLowerCase().trim();
 
-  if (["authorized", "autorizado", "approved", "aprobado", "accredited"].includes(estado)) {
+  if (
+    ["authorized", "autorizado", "approved", "aprobado", "accredited"].includes(
+      estado
+    )
+  ) {
     return "activa";
   }
 
-  if (["cancelled", "canceled", "cancelado", "finished", "finalizado"].includes(estado)) {
+  if (
+    [
+      "cancelled",
+      "canceled",
+      "cancelado",
+      "finished",
+      "finalizado",
+    ].includes(estado)
+  ) {
     return "cancelada";
   }
 
@@ -174,9 +186,7 @@ async function consultarMercadoPago(path) {
 }
 
 async function buscarMembresia(supabaseAdmin, { id, preapprovalId }) {
-  let consulta = supabaseAdmin
-    .from("membresias_accesos")
-    .select("*");
+  let consulta = supabaseAdmin.from("membresias_accesos").select("*");
 
   if (id) {
     consulta = consulta.eq("id", id);
