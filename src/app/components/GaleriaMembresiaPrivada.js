@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+
 function obtenerYoutubeEmbedUrl(urlOriginal) {
   const urlTexto = String(urlOriginal || "").trim();
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import BotonCerrarSesion from "@/app/components/BotonCerrarSesion";
 
 function nombreRol(role) {
   if (role === "admin") return "Administrador";
@@ -125,14 +126,8 @@ export default function PanelUsuario({
               Ver cursos
             </Link>
 
-            <form action="/auth/logout" method="post">
-              <button
-                type="submit"
-                className="w-full rounded-2xl bg-red-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-400"
-              >
-                Cerrar sesión
-              </button>
-            </form>
+<BotonCerrarSesion className="..." />
+
           </div>
         </header>
 

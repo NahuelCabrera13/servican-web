@@ -899,12 +899,7 @@ export default function AdminPanel({ usuario, perfil }) {
                   Panel alumno
                 </Link>
 
-                <Link
-                  href="/auth/logout"
-                  className="rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-3 text-center text-sm font-bold text-red-100 transition hover:bg-red-500/20"
-                >
-                  Cerrar sesión
-                </Link>
+<BotonCerrarSesion className="..." />
               </div>
             </div>
           </div>

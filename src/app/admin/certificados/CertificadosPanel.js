@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import BotonCerrarSesion from "@/app/components/BotonCerrarSesion";
 
 const ESTADOS = ["emitido", "anulado"];
 
@@ -185,14 +186,8 @@ export default function CertificadosPanel({ usuario, perfil }) {
               {cargando ? "Actualizando..." : "Actualizar"}
             </button>
 
-            <form action="/auth/logout" method="post">
-              <button
-                type="submit"
-                className="w-full rounded-2xl bg-red-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-400"
-              >
-                Cerrar sesión
-              </button>
-            </form>
+<BotonCerrarSesion className="..." />
+
           </div>
         </header>
 

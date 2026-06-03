@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import BotonCerrarSesion from "@/app/components/BotonCerrarSesion";
 
 const COLORES_PLAN = {
   basico: "border-zinc-500/30 bg-zinc-500/10 text-zinc-200",
@@ -397,14 +398,7 @@ export default function PanelAlumnoPage() {
               Actualizar
             </button>
 
-            <form action="/auth/logout" method="post">
-              <button
-                type="submit"
-                className="w-full rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-3 text-sm font-bold text-red-100 transition hover:bg-red-500/20"
-              >
-                Cerrar sesión
-              </button>
-            </form>
+<BotonCerrarSesion className="w-full rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-3 text-sm font-bold text-red-100 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60" />
           </div>
         </div>
       </header>

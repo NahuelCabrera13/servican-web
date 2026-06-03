@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import BotonCerrarSesion from "@/app/components/BotonCerrarSesion";
 
 export default function HeaderAcceso() {
   const [cargando, setCargando] = useState(true);
@@ -11,32 +12,38 @@ export default function HeaderAcceso() {
 
   useEffect(() => {
     async function verificarSesion() {
-      const supabase = createClient();
+      try {
+        const supabase = createClient();
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!user) {
+        if (!user) {
+          setLogueado(false);
+          setCargando(false);
+          return;
+        }
+
+        const { data: perfil } = await supabase
+          .from("perfiles")
+          .select("role")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (perfil?.role === "admin") {
+          setDestinoPanel("/admin");
+        } else {
+          setDestinoPanel("/panel");
+        }
+
+        setLogueado(true);
+      } catch (error) {
+        console.error("Error verificando sesión:", error);
         setLogueado(false);
+      } finally {
         setCargando(false);
-        return;
       }
-
-      const { data: perfil } = await supabase
-        .from("perfiles")
-        .select("role")
-        .eq("user_id", user.id)
-        .single();
-
-      if (perfil?.role === "admin") {
-        setDestinoPanel("/admin");
-      } else {
-        setDestinoPanel("/panel");
-      }
-
-      setLogueado(true);
-      setCargando(false);
     }
 
     verificarSesion();
@@ -75,14 +82,9 @@ export default function HeaderAcceso() {
         Entrar a mi panel
       </Link>
 
-      <form action="/auth/logout" method="post" className="hidden sm:block">
-        <button
-          type="submit"
-          className="rounded-full border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-200 transition hover:bg-red-500 hover:text-white"
-        >
-          Cerrar sesión
-        </button>
-      </form>
+      <BotonCerrarSesion
+        className="hidden rounded-full border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-200 transition hover:bg-red-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60 sm:inline-block"
+      />
     </div>
   );
 }

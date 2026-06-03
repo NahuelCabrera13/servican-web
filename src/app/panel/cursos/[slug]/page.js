@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import BotonCompletarClase from "./BotonCompletarClase";
+import BotonCerrarSesion from "@/app/components/BotonCerrarSesion";
 
 export const dynamic = "force-dynamic";
 
@@ -439,14 +440,8 @@ export default async function CursoPrivadoPage({ params }) {
               Inicio
             </Link>
 
-            <form action="/auth/logout" method="post">
-              <button
-                type="submit"
-                className="w-full rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-3 text-sm font-bold text-red-100 transition hover:bg-red-500/20"
-              >
-                Cerrar sesión
-              </button>
-            </form>
+<BotonCerrarSesion className="..." />
+
           </div>
         </div>
       </header>
