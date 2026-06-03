@@ -121,7 +121,7 @@ function CargandoPanel() {
         <h1 className="mt-3 text-4xl font-black">Cargando tu panel</h1>
 
         <p className="mt-4 text-zinc-400">
-          Estamos verificando tus cursos, progreso y certificados.
+          Estamos verificando tus cursos, progreso, certificados y membresía.
         </p>
       </section>
     </main>
@@ -152,6 +152,59 @@ function ResumenCard({ titulo, valor, texto, destacado = false }) {
   );
 }
 
+function AccesosRapidosAlumno() {
+  return (
+    <div className="mt-8 rounded-[2rem] border border-yellow-500/25 bg-yellow-500/10 p-6">
+      <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+        <div>
+          <p className="text-sm font-black uppercase tracking-[0.25em] text-yellow-300">
+            Accesos rápidos
+          </p>
+
+          <h2 className="mt-2 text-2xl font-black text-white">
+            Membresía mensual SERVICAN
+          </h2>
+
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-yellow-100">
+            Desde acá podés consultar el estado de tu membresía, entrar a la
+            galería privada, ver cursos disponibles y acceder a tus beneficios.
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[560px]">
+          <Link
+            href="/panel/membresia"
+            className="rounded-2xl bg-yellow-500 px-5 py-4 text-center text-sm font-black text-black transition hover:bg-yellow-400"
+          >
+            Mi membresía
+          </Link>
+
+          <Link
+            href="/panel/membresia/galeria"
+            className="rounded-2xl border border-yellow-500/40 bg-black/30 px-5 py-4 text-center text-sm font-black text-yellow-100 transition hover:bg-yellow-500 hover:text-black"
+          >
+            Galería privada
+          </Link>
+
+          <Link
+            href="/cursos#membresia"
+            className="rounded-2xl border border-white/10 bg-white/10 px-5 py-4 text-center text-sm font-black text-white transition hover:bg-white hover:text-black"
+          >
+            Ver membresía
+          </Link>
+
+          <Link
+            href="/cursos"
+            className="rounded-2xl border border-white/10 bg-white/10 px-5 py-4 text-center text-sm font-black text-white transition hover:bg-white hover:text-black"
+          >
+            Cursos disponibles
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EmptyState() {
   return (
     <div className="rounded-[2rem] border border-white/10 bg-zinc-950 p-10 text-center shadow-2xl">
@@ -176,6 +229,13 @@ function EmptyState() {
           className="rounded-full bg-yellow-500 px-8 py-4 font-black text-black transition hover:bg-yellow-400"
         >
           Ver cursos disponibles
+        </Link>
+
+        <Link
+          href="/panel/membresia"
+          className="rounded-full border border-yellow-500/40 bg-yellow-500/10 px-8 py-4 font-black text-yellow-100 transition hover:bg-yellow-500 hover:text-black"
+        >
+          Mi membresía
         </Link>
 
         <Link
@@ -315,6 +375,13 @@ export default function PanelAlumnoPage() {
             </Link>
 
             <Link
+              href="/panel/membresia"
+              className="rounded-2xl border border-yellow-500/40 bg-yellow-500/10 px-5 py-3 text-center text-sm font-bold text-yellow-200 transition hover:bg-yellow-500/20"
+            >
+              Mi membresía
+            </Link>
+
+            <Link
               href="/cursos"
               className="rounded-2xl border border-yellow-500/40 bg-yellow-500/10 px-5 py-3 text-center text-sm font-bold text-yellow-200 transition hover:bg-yellow-500/20"
             >
@@ -354,13 +421,13 @@ export default function PanelAlumnoPage() {
               </p>
 
               <h1 className="mt-4 text-4xl font-black md:text-6xl">
-                Tus cursos habilitados
+                Tu panel SERVICAN
               </h1>
 
               <p className="mt-5 max-w-3xl leading-8 text-zinc-300">
                 Este panel muestra tus cursos activos, progreso, clases
-                disponibles y certificados. El contenido se filtra según el plan
-                comprado y tu avance dentro de cada curso.
+                disponibles, certificados y accesos a los beneficios de
+                membresía mensual.
               </p>
 
               {usuario?.email && (
@@ -427,29 +494,7 @@ export default function PanelAlumnoPage() {
             />
           </div>
 
-          <div className="mt-8 rounded-[2rem] border border-yellow-500/20 bg-yellow-500/10 p-6">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p className="text-sm font-black uppercase tracking-[0.25em] text-yellow-300">
-                  Próximamente
-                </p>
-
-                <h2 className="mt-2 text-2xl font-black">
-                  Membresía mensual SERVICAN
-                </h2>
-
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-yellow-100">
-                  Más adelante este panel también tendrá acceso a contenido
-                  exclusivo, galería privada, videos, fotos y beneficios de
-                  membresía mensual.
-                </p>
-              </div>
-
-              <span className="rounded-full border border-yellow-500/30 bg-black/30 px-5 py-3 text-sm font-black text-yellow-200">
-                En desarrollo
-              </span>
-            </div>
-          </div>
+          <AccesosRapidosAlumno />
         </div>
       </section>
 
@@ -586,6 +631,13 @@ export default function PanelAlumnoPage() {
                             className="rounded-2xl bg-yellow-500 px-6 py-4 text-center text-sm font-black text-black transition hover:bg-yellow-400"
                           >
                             Entrar al aula
+                          </Link>
+
+                          <Link
+                            href="/panel/membresia"
+                            className="rounded-2xl border border-yellow-500/40 bg-yellow-500/10 px-6 py-4 text-center text-sm font-black text-yellow-100 transition hover:bg-yellow-500 hover:text-black"
+                          >
+                            Mi membresía
                           </Link>
 
                           <Link
