@@ -5,6 +5,8 @@ import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const BUCKET_MEMBRESIA = "membresia-galeria";
+
 function crearSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -100,6 +102,75 @@ async function obtenerContenidos(supabaseAdmin) {
   return data || [];
 }
 
+function esUrlHttp(valor) {
+  const texto = String(valor || "").trim();
+
+  if (!texto) return false;
+
+  try {
+    const url = new URL(texto);
+    return ["http:", "https:"].includes(url.protocol);
+  } catch {
+    return false;
+  }
+}
+
+function esRutaLocal(valor) {
+  return String(valor || "").trim().startsWith("/");
+}
+
+function esRutaStoragePrivada(valor) {
+  const texto = String(valor || "").trim();
+
+  if (!texto) return false;
+  if (texto === "#") return false;
+  if (esUrlHttp(texto)) return false;
+  if (esRutaLocal(texto)) return false;
+
+  return true;
+}
+
+async function firmarContenido(supabaseAdmin, contenido) {
+  let urlFinal = contenido.url;
+  let portadaFinal = contenido.portada_url;
+
+  if (contenido.tipo === "foto" && esRutaStoragePrivada(contenido.url)) {
+    const { data, error } = await supabaseAdmin.storage
+      .from(BUCKET_MEMBRESIA)
+      .createSignedUrl(contenido.url, 60 * 60);
+
+    if (!error && data?.signedUrl) {
+      urlFinal = data.signedUrl;
+    }
+  }
+
+  if (esRutaStoragePrivada(contenido.portada_url)) {
+    const { data, error } = await supabaseAdmin.storage
+      .from(BUCKET_MEMBRESIA)
+      .createSignedUrl(contenido.portada_url, 60 * 60);
+
+    if (!error && data?.signedUrl) {
+      portadaFinal = data.signedUrl;
+    }
+  }
+
+  return {
+    ...contenido,
+    url: urlFinal,
+    portada_url: portadaFinal,
+  };
+}
+
+async function firmarContenidos(supabaseAdmin, contenidos) {
+  const resultado = [];
+
+  for (const contenido of contenidos || []) {
+    resultado.push(await firmarContenido(supabaseAdmin, contenido));
+  }
+
+  return resultado;
+}
+
 export async function GET() {
   try {
     const usuario = await obtenerUsuarioActual();
@@ -136,12 +207,16 @@ export async function GET() {
     }
 
     const contenidos = await obtenerContenidos(supabaseAdmin);
+    const contenidosFirmados = await firmarContenidos(
+      supabaseAdmin,
+      contenidos
+    );
 
     return NextResponse.json({
       ok: true,
       membresia,
-      contenidos,
-      total: contenidos.length,
+      contenidos: contenidosFirmados,
+      total: contenidosFirmados.length,
     });
   } catch (error) {
     console.error("Error cargando galería privada:", error);

@@ -5,6 +5,8 @@ import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const BUCKET_MEMBRESIA = "membresia-galeria";
+
 function crearSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -116,6 +118,35 @@ function limpiarTexto(valor, fallback = "") {
   return String(valor ?? fallback).trim();
 }
 
+function esUrlHttp(valor) {
+  const texto = limpiarTexto(valor);
+
+  if (!texto) return false;
+
+  try {
+    const url = new URL(texto);
+    return ["http:", "https:"].includes(url.protocol);
+  } catch {
+    return false;
+  }
+}
+
+function esRutaLocal(valor) {
+  const texto = limpiarTexto(valor);
+  return texto.startsWith("/");
+}
+
+function esRutaStoragePrivada(valor) {
+  const texto = limpiarTexto(valor);
+
+  if (!texto) return false;
+  if (esUrlHttp(texto)) return false;
+  if (esRutaLocal(texto)) return false;
+  if (texto === "#") return false;
+
+  return true;
+}
+
 function limpiarUrl(valor) {
   const texto = limpiarTexto(valor);
 
@@ -123,21 +154,15 @@ function limpiarUrl(valor) {
     return "";
   }
 
-  try {
-    const url = new URL(texto);
-
-    if (!["http:", "https:"].includes(url.protocol)) {
-      return "";
-    }
-
-    return url.toString();
-  } catch {
-    if (texto.startsWith("/")) {
-      return texto;
-    }
-
-    return "";
+  if (esUrlHttp(texto)) {
+    return texto;
   }
+
+  if (esRutaLocal(texto)) {
+    return texto;
+  }
+
+  return texto.replace(/^\/+/, "");
 }
 
 function normalizarTipo(valor) {
@@ -181,10 +206,10 @@ function validarDatosContenido(body) {
     };
   }
 
-  if (!url && tipo !== "texto") {
+  if (tipo !== "texto" && !url) {
     return {
       ok: false,
-      error: "La URL del contenido es obligatoria.",
+      error: "La URL o archivo del contenido es obligatorio.",
     };
   }
 
@@ -209,6 +234,39 @@ function validarDatosContenido(body) {
       updated_at: new Date().toISOString(),
     },
   };
+}
+
+async function agregarUrlsFirmadasAdmin(supabaseAdmin, contenidos) {
+  const resultado = [];
+
+  for (const contenido of contenidos || []) {
+    let previewUrl = contenido.url;
+    let portadaPreviewUrl = contenido.portada_url;
+
+    if (contenido.tipo === "foto" && esRutaStoragePrivada(contenido.url)) {
+      const { data } = await supabaseAdmin.storage
+        .from(BUCKET_MEMBRESIA)
+        .createSignedUrl(contenido.url, 60 * 60);
+
+      previewUrl = data?.signedUrl || contenido.url;
+    }
+
+    if (esRutaStoragePrivada(contenido.portada_url)) {
+      const { data } = await supabaseAdmin.storage
+        .from(BUCKET_MEMBRESIA)
+        .createSignedUrl(contenido.portada_url, 60 * 60);
+
+      portadaPreviewUrl = data?.signedUrl || contenido.portada_url;
+    }
+
+    resultado.push({
+      ...contenido,
+      preview_url: previewUrl,
+      portada_preview_url: portadaPreviewUrl,
+    });
+  }
+
+  return resultado;
 }
 
 export async function GET() {
@@ -245,10 +303,15 @@ export async function GET() {
       throw new Error(`No se pudieron cargar contenidos: ${error.message}`);
     }
 
+    const contenidosConPreview = await agregarUrlsFirmadasAdmin(
+      admin.supabaseAdmin,
+      contenidos || []
+    );
+
     return NextResponse.json({
       ok: true,
-      contenidos: contenidos || [],
-      total: contenidos?.length || 0,
+      contenidos: contenidosConPreview,
+      total: contenidosConPreview.length,
     });
   } catch (error) {
     console.error("Error cargando contenidos admin:", error);

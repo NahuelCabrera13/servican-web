@@ -3,6 +3,63 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+function obtenerYoutubeEmbedUrl(urlOriginal) {
+  const urlTexto = String(urlOriginal || "").trim();
+
+  if (!urlTexto) {
+    return "";
+  }
+
+  try {
+    const url = new URL(urlTexto);
+
+    if (url.hostname.includes("youtube.com")) {
+      const videoId = url.searchParams.get("v");
+
+      if (videoId) {
+        return `https://www.youtube.com/embed/${videoId}`;
+      }
+
+      if (url.pathname.startsWith("/shorts/")) {
+        const shortsId = url.pathname.split("/shorts/")[1]?.split("/")[0];
+
+        if (shortsId) {
+          return `https://www.youtube.com/embed/${shortsId}`;
+        }
+      }
+
+      if (url.pathname.startsWith("/embed/")) {
+        return urlTexto;
+      }
+    }
+
+    if (url.hostname.includes("youtu.be")) {
+      const videoId = url.pathname.replace("/", "").split("?")[0];
+
+      if (videoId) {
+        return `https://www.youtube.com/embed/${videoId}`;
+      }
+    }
+
+    return "";
+  } catch {
+    return "";
+  }
+}
+
+function esArchivoVideoDirecto(url) {
+  const texto = String(url || "").toLowerCase();
+
+  return (
+    texto.endsWith(".mp4") ||
+    texto.endsWith(".webm") ||
+    texto.endsWith(".ogg") ||
+    texto.includes(".mp4?") ||
+    texto.includes(".webm?") ||
+    texto.includes(".ogg?")
+  );
+}
+
 export default function GaleriaMembresiaPrivada() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
@@ -139,6 +196,10 @@ function ContenidoCard({ contenido }) {
   const tipo = String(contenido.tipo || "foto").toLowerCase();
   const esImagen = tipo === "foto";
   const esVideo = tipo === "video";
+  const youtubeEmbedUrl = esVideo
+    ? obtenerYoutubeEmbedUrl(contenido.url)
+    : "";
+  const videoDirecto = esVideo && esArchivoVideoDirecto(contenido.url);
 
   return (
     <article className="overflow-hidden rounded-[2rem] border border-white/10 bg-zinc-950">
@@ -149,7 +210,15 @@ function ContenidoCard({ contenido }) {
             alt={contenido.titulo}
             className="h-full w-full object-cover"
           />
-        ) : esVideo ? (
+        ) : youtubeEmbedUrl ? (
+          <iframe
+            src={youtubeEmbedUrl}
+            title={contenido.titulo}
+            className="h-full w-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        ) : videoDirecto ? (
           <video
             src={contenido.url}
             poster={contenido.portada_url || undefined}
@@ -163,10 +232,19 @@ function ContenidoCard({ contenido }) {
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <p className="text-sm font-bold uppercase tracking-[0.25em] text-zinc-500">
-              {tipo}
-            </p>
+          <div className="flex h-full w-full items-center justify-center px-6 text-center">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.25em] text-zinc-500">
+                {tipo}
+              </p>
+
+              {esVideo ? (
+                <p className="mt-3 text-xs leading-5 text-zinc-500">
+                  No se pudo cargar el video. Usá una URL válida de YouTube,
+                  por ejemplo: https://www.youtube.com/watch?v=ID
+                </p>
+              ) : null}
+            </div>
           </div>
         )}
 
@@ -190,6 +268,17 @@ function ContenidoCard({ contenido }) {
           <p className="mt-3 text-sm leading-6 text-zinc-400">
             {contenido.descripcion}
           </p>
+        ) : null}
+
+        {esVideo && !youtubeEmbedUrl && !videoDirecto ? (
+          <a
+            href={contenido.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-5 inline-flex rounded-2xl border border-yellow-500 px-5 py-3 text-sm font-black text-yellow-500 transition hover:bg-yellow-500 hover:text-black"
+          >
+            Abrir video
+          </a>
         ) : null}
 
         {!esImagen && !esVideo ? (
