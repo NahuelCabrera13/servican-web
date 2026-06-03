@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import HeaderAcceso from "../components/HeaderAcceso";
 import BotonComprarProducto from "../components/BotonComprarProducto";
+import BotonComprarMembresia from "../components/BotonComprarMembresia";
+import MembresiaDestacadaCursos from "../components/MembresiaDestacadaCursos";
 import { obtenerCursosActivos } from "@/lib/cursosPublicos";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -149,8 +151,8 @@ function beneficiosPlan(producto) {
     return [
       "Acceso mensual a contenido exclusivo",
       "Galería privada de fotos y videos",
-      "Contenido actualizado semanalmente",
-      "Sistema recurrente en desarrollo",
+      "10% de descuento en cursos principales",
+      "1 curso pequeño a elección cuando estén disponibles",
     ];
   }
 
@@ -205,6 +207,7 @@ function obtenerProductosDelCurso(curso, productos) {
 
 function ProductoCard({ producto }) {
   const esRecurrente = Boolean(producto.es_recurrente);
+  const esMembresia = producto.tipo_producto === "membresia";
 
   return (
     <article
@@ -221,6 +224,10 @@ function ProductoCard({ producto }) {
 
         {producto.tipo_producto === "paquete" && (
           <Badge color="blue">Paquete</Badge>
+        )}
+
+        {producto.tipo_producto === "membresia" && (
+          <Badge color="yellow">Membresía</Badge>
         )}
 
         {producto.es_recurrente && <Badge color="green">Mensual</Badge>}
@@ -261,13 +268,19 @@ function ProductoCard({ producto }) {
       </ul>
 
       <div className="mt-6">
-        <BotonComprarProducto producto={producto} />
+        {esMembresia ? (
+          <BotonComprarMembresia
+            texto={producto.texto_boton || "Contratar membresía mensual"}
+          />
+        ) : (
+          <BotonComprarProducto producto={producto} />
+        )}
       </div>
 
-      {esRecurrente && (
-        <p className="mt-4 rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-3 text-xs leading-5 text-yellow-100">
-          La membresía mensual está preparada visualmente, pero el cobro
-          recurrente real se activará en el próximo bloque de desarrollo.
+      {esRecurrente && esMembresia && (
+        <p className="mt-4 rounded-2xl border border-green-500/20 bg-green-500/10 p-3 text-xs leading-5 text-green-100">
+          La membresía se activa automáticamente cuando Mercado Pago confirma el
+          pago por webhook.
         </p>
       )}
     </article>
@@ -285,6 +298,8 @@ export default async function CursosPage() {
   const membresias = productos.filter(
     (producto) => producto.tipo_producto === "membresia"
   );
+
+  const membresiaPrincipal = membresias[0] || null;
 
   const beneficios = [
     {
@@ -337,6 +352,11 @@ export default async function CursosPage() {
       pregunta: "¿Crear una cuenta habilita automáticamente un curso?",
       respuesta:
         "No. La cuenta permite ingresar al panel, pero los cursos privados se habilitan cuando se confirma el pago o cuando SERVICAN autoriza el acceso.",
+    },
+    {
+      pregunta: "¿Qué incluye la membresía mensual?",
+      respuesta:
+        "Incluye acceso a galería privada, contenido exclusivo, 10% de descuento en cursos principales y 1 curso pequeño a elección cuando esa sección esté disponible.",
     },
     {
       pregunta: "¿Qué pasa si compro un plan Plantel?",
@@ -416,7 +436,7 @@ export default async function CursosPage() {
             </p>
 
             <h1 className="text-5xl font-black leading-tight md:text-7xl">
-              Cursos y planes de formación canina
+              Cursos, planes y membresía SERVICAN
             </h1>
 
             <p className="mt-6 max-w-3xl text-lg leading-8 text-zinc-300">
@@ -429,23 +449,23 @@ export default async function CursosPage() {
               <Badge>Planes de curso</Badge>
               <Badge>Mercado Pago</Badge>
               <Badge>Acceso privado</Badge>
-              <Badge>Certificación</Badge>
+              <Badge>Membresía mensual</Badge>
               <Badge>K9</Badge>
             </div>
 
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
               <a
-                href="#cursos-disponibles"
+                href="#membresia"
                 className="rounded-full bg-yellow-500 px-8 py-4 text-center font-black text-black transition hover:bg-yellow-400"
               >
-                Ver cursos y planes
+                Ver membresía
               </a>
 
               <a
-                href="#paquetes"
+                href="#cursos-disponibles"
                 className="rounded-full border border-yellow-500 bg-black/40 px-8 py-4 text-center font-black text-yellow-500 transition hover:bg-yellow-500 hover:text-black"
               >
-                Ver paquetes
+                Ver cursos y planes
               </a>
 
               <a
@@ -526,6 +546,17 @@ export default async function CursosPage() {
         </section>
       )}
 
+      {membresiaPrincipal && (
+        <section
+          id="membresia"
+          className="border-b border-zinc-900 bg-black px-4 py-20 sm:px-6 lg:px-8"
+        >
+          <div className="mx-auto max-w-[1450px]">
+            <MembresiaDestacadaCursos membresia={membresiaPrincipal} />
+          </div>
+        </section>
+      )}
+
       <section className="border-b border-zinc-900 bg-zinc-950 px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-[1450px]">
           <div className="mx-auto max-w-3xl text-center">
@@ -539,7 +570,7 @@ export default async function CursosPage() {
 
             <p className="mt-4 leading-8 text-zinc-300">
               SERVICAN combina página pública, productos pagos, panel privado,
-              progreso del alumno y certificación.
+              progreso del alumno, certificación y beneficios para miembros.
             </p>
           </div>
 
@@ -592,8 +623,9 @@ export default async function CursosPage() {
 
                   <p className="mt-4 max-w-2xl leading-8 text-zinc-400">
                     Elegí un curso, revisá sus planes y comprá el acceso
-                    correspondiente. Si necesitás asesoramiento, también podés
-                    consultar antes de comprar.
+                    correspondiente. Si tenés membresía activa, más adelante se
+                    aplicará automáticamente el 10% de descuento desde el
+                    servidor.
                   </p>
                 </div>
 
@@ -760,9 +792,8 @@ export default async function CursosPage() {
               </h2>
 
               <p className="mt-4 max-w-3xl leading-8 text-zinc-400">
-                Además de planes por curso, SERVICAN puede ofrecer paquetes de
-                varios cursos y una futura membresía mensual con contenido
-                exclusivo.
+                Además de planes por curso, SERVICAN ofrece paquetes de varios
+                cursos y membresía mensual con contenido exclusivo y beneficios.
               </p>
             </div>
           </div>
@@ -798,7 +829,7 @@ export default async function CursosPage() {
             </p>
 
             <h2 className="text-4xl font-black md:text-5xl">
-              Cómo se habilita un curso
+              Cómo se habilita un curso o membresía
             </h2>
 
             <p className="mt-4 leading-8 text-zinc-300">
@@ -836,12 +867,13 @@ export default async function CursosPage() {
             </p>
 
             <h2 className="text-4xl font-black md:text-5xl">
-              Dudas comunes sobre cursos y pagos
+              Dudas comunes sobre cursos, membresías y pagos
             </h2>
 
             <p className="mt-5 leading-8 text-zinc-300">
               Esta sección ayuda a que el alumno entienda cómo funciona el
-              registro, la compra, el acceso privado y los certificados.
+              registro, la compra, el acceso privado, la membresía y los
+              certificados.
             </p>
 
             <div className="mt-8 rounded-[2rem] border border-yellow-500/25 bg-yellow-500/10 p-6">
@@ -852,7 +884,8 @@ export default async function CursosPage() {
               <p className="mt-3 leading-7 text-yellow-100">
                 Para comprar necesitás iniciar sesión. En planes grupales, todos
                 los participantes deben tener una cuenta registrada antes de la
-                compra.
+                compra. La membresía se activa solo cuando Mercado Pago confirma
+                el pago.
               </p>
             </div>
           </div>
