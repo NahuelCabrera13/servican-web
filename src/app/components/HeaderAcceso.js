@@ -21,7 +21,6 @@ export default function HeaderAcceso() {
 
         if (!user) {
           setLogueado(false);
-          setCargando(false);
           return;
         }
 

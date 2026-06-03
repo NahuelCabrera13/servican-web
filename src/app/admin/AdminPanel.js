@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import BotonCerrarSesion from "@/app/components/BotonCerrarSesion";
 
 const ESTADOS = [
   "pendiente",
