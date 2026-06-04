@@ -22,6 +22,36 @@ function crearSupabaseAdmin() {
   });
 }
 
+function productoDisponible(producto) {
+  if (!producto) {
+    return false;
+  }
+
+  if (!producto.activo || !producto.visible_en_web) {
+    return false;
+  }
+
+  if (producto.tipo_producto !== "membresia") {
+    return false;
+  }
+
+  if (producto.plan !== "mensual") {
+    return false;
+  }
+
+  if (!producto.es_recurrente) {
+    return false;
+  }
+
+  const precio = Number(producto.precio || 0);
+
+  if (!Number.isFinite(precio) || precio <= 0) {
+    return false;
+  }
+
+  return true;
+}
+
 export async function GET() {
   try {
     const supabaseAdmin = crearSupabaseAdmin();
@@ -42,7 +72,8 @@ export async function GET() {
         activo,
         visible_en_web,
         destacado,
-        texto_boton
+        texto_boton,
+        updated_at
       `
       )
       .eq("slug", SLUG_MEMBRESIA)
@@ -51,16 +82,19 @@ export async function GET() {
       .eq("es_recurrente", true)
       .eq("activo", true)
       .eq("visible_en_web", true)
+      .order("updated_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (error) {
       throw new Error(error.message);
     }
 
-    if (!producto) {
+    if (!producto || !productoDisponible(producto)) {
       return NextResponse.json({
         ok: true,
         disponible: false,
+        mensaje: "La membresía mensual no está disponible en este momento.",
         producto: null,
       });
     }
@@ -68,6 +102,7 @@ export async function GET() {
     return NextResponse.json({
       ok: true,
       disponible: true,
+      mensaje: "Membresía mensual disponible.",
       producto,
     });
   } catch (error) {
@@ -76,8 +111,10 @@ export async function GET() {
     return NextResponse.json(
       {
         ok: false,
+        disponible: false,
         error:
           error?.message || "No se pudo cargar el producto de membresía.",
+        producto: null,
       },
       { status: 500 }
     );

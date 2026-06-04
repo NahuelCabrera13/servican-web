@@ -6,7 +6,35 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const BUCKET_MEMBRESIA = "membresia-galeria";
-const MAX_FILE_SIZE = 8 * 1024 * 1024;
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
+
+const MIME_PERMITIDOS = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+  "video/ogg": "ogg",
+
+  "application/pdf": "pdf",
+  "application/zip": "zip",
+  "application/x-zip-compressed": "zip",
+  "application/vnd.rar": "rar",
+  "application/x-rar-compressed": "rar",
+
+  "application/msword": "doc",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+    "docx",
+
+  "application/vnd.ms-excel": "xls",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+
+  "application/vnd.ms-powerpoint": "ppt",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+    "pptx",
+};
 
 function crearSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -115,19 +143,8 @@ function respuestaError(mensaje, status = 400) {
   );
 }
 
-function obtenerExtensionDesdeMime(mimeType) {
-  const tipo = String(mimeType || "").toLowerCase();
-
-  if (tipo === "image/jpeg") return "jpg";
-  if (tipo === "image/png") return "png";
-  if (tipo === "image/webp") return "webp";
-  if (tipo === "image/gif") return "gif";
-
-  return "";
-}
-
 function limpiarNombreArchivo(nombre) {
-  return String(nombre || "foto")
+  return String(nombre || "archivo")
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -135,6 +152,54 @@ function limpiarNombreArchivo(nombre) {
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 70);
+}
+
+function obtenerExtensionDesdeNombre(nombre) {
+  const texto = String(nombre || "").toLowerCase();
+  const partes = texto.split(".");
+  const extension = partes.length > 1 ? partes.pop() : "";
+
+  return String(extension || "").replace(/[^a-z0-9]/g, "").slice(0, 10);
+}
+
+function obtenerExtensionArchivo(archivo) {
+  const extensionMime = MIME_PERMITIDOS[archivo.type];
+
+  if (extensionMime) {
+    return extensionMime;
+  }
+
+  return obtenerExtensionDesdeNombre(archivo.name);
+}
+
+function obtenerCarpetaPorMime(mimeType) {
+  const tipo = String(mimeType || "").toLowerCase();
+
+  if (tipo.startsWith("image/")) {
+    return "fotos";
+  }
+
+  if (tipo.startsWith("video/")) {
+    return "videos";
+  }
+
+  return "archivos";
+}
+
+function validarArchivo(archivo) {
+  if (!archivo || typeof archivo === "string") {
+    return "Tenés que seleccionar un archivo.";
+  }
+
+  if (archivo.size > MAX_FILE_SIZE) {
+    return "El archivo no puede superar los 50 MB.";
+  }
+
+  if (!MIME_PERMITIDOS[archivo.type]) {
+    return "Formato no permitido. Podés subir imágenes, videos MP4/WEBM/OGG, PDF, documentos Office, ZIP o RAR.";
+  }
+
+  return "";
 }
 
 export async function POST(request) {
@@ -148,33 +213,28 @@ export async function POST(request) {
     const formData = await request.formData();
     const archivo = formData.get("archivo");
 
-    if (!archivo || typeof archivo === "string") {
-      return respuestaError("Tenés que seleccionar una imagen.", 400);
+    const errorArchivo = validarArchivo(archivo);
+
+    if (errorArchivo) {
+      return respuestaError(errorArchivo, 400);
     }
 
-    if (!archivo.type?.startsWith("image/")) {
-      return respuestaError("Solo se permiten archivos de imagen.", 400);
-    }
-
-    if (archivo.size > MAX_FILE_SIZE) {
-      return respuestaError("La imagen no puede superar los 8 MB.", 400);
-    }
-
-    const extension = obtenerExtensionDesdeMime(archivo.type);
+    const extension = obtenerExtensionArchivo(archivo);
 
     if (!extension) {
-      return respuestaError(
-        "Formato no permitido. Usá JPG, PNG, WEBP o GIF.",
-        400
-      );
+      return respuestaError("No se pudo detectar la extensión del archivo.", 400);
     }
 
     const bytes = await archivo.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
+    const carpeta = obtenerCarpetaPorMime(archivo.type);
     const nombreBase = limpiarNombreArchivo(archivo.name);
-    const nombreFinal = `${Date.now()}-${crypto.randomUUID()}-${nombreBase}.${extension}`;
-    const rutaStorage = `fotos/${nombreFinal}`;
+    const nombreFinal = `${Date.now()}-${crypto.randomUUID()}-${nombreBase}`;
+    const nombreConExtension = nombreFinal.endsWith(`.${extension}`)
+      ? nombreFinal
+      : `${nombreFinal}.${extension}`;
+    const rutaStorage = `${carpeta}/${nombreConExtension}`;
 
     const { error: uploadError } = await admin.supabaseAdmin.storage
       .from(BUCKET_MEMBRESIA)
@@ -184,7 +244,7 @@ export async function POST(request) {
       });
 
     if (uploadError) {
-      throw new Error(`No se pudo subir la imagen: ${uploadError.message}`);
+      throw new Error(`No se pudo subir el archivo: ${uploadError.message}`);
     }
 
     const { data: signedData, error: signedError } =
@@ -194,7 +254,7 @@ export async function POST(request) {
 
     if (signedError) {
       throw new Error(
-        `La imagen se subió, pero no se pudo generar vista previa: ${signedError.message}`
+        `El archivo se subió, pero no se pudo generar vista previa: ${signedError.message}`
       );
     }
 
@@ -204,12 +264,14 @@ export async function POST(request) {
       path: rutaStorage,
       url: rutaStorage,
       preview_url: signedData?.signedUrl || "",
+      mime_type: archivo.type,
+      size: archivo.size,
     });
   } catch (error) {
-    console.error("Error subiendo imagen de membresía:", error);
+    console.error("Error subiendo archivo de membresía:", error);
 
     return respuestaError(
-      error?.message || "No se pudo subir la imagen.",
+      error?.message || "No se pudo subir el archivo.",
       500
     );
   }

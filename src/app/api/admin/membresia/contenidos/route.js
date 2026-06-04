@@ -6,6 +6,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const BUCKET_MEMBRESIA = "membresia-galeria";
+const DURACION_URL_FIRMADA_SEGUNDOS = 60 * 60;
 
 function crearSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -121,7 +122,9 @@ function limpiarTexto(valor, fallback = "") {
 function esUrlHttp(valor) {
   const texto = limpiarTexto(valor);
 
-  if (!texto) return false;
+  if (!texto) {
+    return false;
+  }
 
   try {
     const url = new URL(texto);
@@ -139,10 +142,21 @@ function esRutaLocal(valor) {
 function esRutaStoragePrivada(valor) {
   const texto = limpiarTexto(valor);
 
-  if (!texto) return false;
-  if (esUrlHttp(texto)) return false;
-  if (esRutaLocal(texto)) return false;
-  if (texto === "#") return false;
+  if (!texto) {
+    return false;
+  }
+
+  if (texto === "#") {
+    return false;
+  }
+
+  if (esUrlHttp(texto)) {
+    return false;
+  }
+
+  if (esRutaLocal(texto)) {
+    return false;
+  }
 
   return true;
 }
@@ -236,37 +250,43 @@ function validarDatosContenido(body) {
   };
 }
 
-async function agregarUrlsFirmadasAdmin(supabaseAdmin, contenidos) {
-  const resultado = [];
-
-  for (const contenido of contenidos || []) {
-    let previewUrl = contenido.url;
-    let portadaPreviewUrl = contenido.portada_url;
-
-    if (contenido.tipo === "foto" && esRutaStoragePrivada(contenido.url)) {
-      const { data } = await supabaseAdmin.storage
-        .from(BUCKET_MEMBRESIA)
-        .createSignedUrl(contenido.url, 60 * 60);
-
-      previewUrl = data?.signedUrl || contenido.url;
-    }
-
-    if (esRutaStoragePrivada(contenido.portada_url)) {
-      const { data } = await supabaseAdmin.storage
-        .from(BUCKET_MEMBRESIA)
-        .createSignedUrl(contenido.portada_url, 60 * 60);
-
-      portadaPreviewUrl = data?.signedUrl || contenido.portada_url;
-    }
-
-    resultado.push({
-      ...contenido,
-      preview_url: previewUrl,
-      portada_preview_url: portadaPreviewUrl,
-    });
+async function crearUrlFirmada(supabaseAdmin, ruta) {
+  if (!esRutaStoragePrivada(ruta)) {
+    return ruta;
   }
 
-  return resultado;
+  const { data, error } = await supabaseAdmin.storage
+    .from(BUCKET_MEMBRESIA)
+    .createSignedUrl(ruta, DURACION_URL_FIRMADA_SEGUNDOS);
+
+  if (error || !data?.signedUrl) {
+    console.error("No se pudo firmar preview de archivo privado:", {
+      ruta,
+      error: error?.message,
+    });
+
+    return ruta;
+  }
+
+  return data.signedUrl;
+}
+
+async function agregarUrlsFirmadasAdmin(supabaseAdmin, contenidos) {
+  return Promise.all(
+    (contenidos || []).map(async (contenido) => {
+      const previewUrl = await crearUrlFirmada(supabaseAdmin, contenido.url);
+      const portadaPreviewUrl = await crearUrlFirmada(
+        supabaseAdmin,
+        contenido.portada_url
+      );
+
+      return {
+        ...contenido,
+        preview_url: previewUrl,
+        portada_preview_url: portadaPreviewUrl,
+      };
+    })
+  );
 }
 
 export async function GET() {

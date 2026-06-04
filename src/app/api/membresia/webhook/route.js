@@ -51,15 +51,40 @@ function respuestaError(mensaje, status = 400, extra = {}) {
 function normalizarEstadoMercadoPago(status) {
   const estado = String(status || "").toLowerCase().trim();
 
-  if (["authorized", "autorizado", "approved", "aprobado", "accredited"].includes(estado)) {
+  if (
+    [
+      "authorized",
+      "autorizado",
+      "approved",
+      "aprobado",
+      "accredited",
+    ].includes(estado)
+  ) {
     return "activa";
   }
 
-  if (["cancelled", "canceled", "cancelado", "finished", "finalizado"].includes(estado)) {
+  if (
+    [
+      "cancelled",
+      "canceled",
+      "cancelado",
+      "finished",
+      "finalizado",
+    ].includes(estado)
+  ) {
     return "cancelada";
   }
 
-  if (["paused", "pausado", "pending", "pendiente", "in_process", "en_proceso"].includes(estado)) {
+  if (
+    [
+      "paused",
+      "pausado",
+      "pending",
+      "pendiente",
+      "in_process",
+      "en_proceso",
+    ].includes(estado)
+  ) {
     return "pausada";
   }
 
@@ -122,7 +147,9 @@ function extraerReferenciaCompacta(valor) {
 }
 
 function extraerReferenciaPreapproval(preapproval) {
-  const refCompacta = extraerReferenciaCompacta(preapproval?.external_reference);
+  const refCompacta = extraerReferenciaCompacta(
+    preapproval?.external_reference
+  );
 
   if (refCompacta) {
     return {
@@ -255,7 +282,9 @@ async function buscarAccesoPorPreapproval(supabaseAdmin, preapprovalId) {
     .maybeSingle();
 
   if (error) {
-    throw new Error(`No se pudo buscar la membresía por preapproval: ${error.message}`);
+    throw new Error(
+      `No se pudo buscar la membresía por preapproval: ${error.message}`
+    );
   }
 
   return data;
@@ -276,7 +305,9 @@ async function buscarAccesoPorUsuario(supabaseAdmin, userId) {
     .maybeSingle();
 
   if (error) {
-    throw new Error(`No se pudo buscar la membresía del usuario: ${error.message}`);
+    throw new Error(
+      `No se pudo buscar la membresía del usuario: ${error.message}`
+    );
   }
 
   return data;
@@ -317,16 +348,28 @@ async function actualizarAccesoDesdePreapproval({
     (await buscarAccesoPorUsuario(supabaseAdmin, referencia.userId));
 
   const estadoPreapproval = String(preapproval?.status || "").toLowerCase();
-  const estadoPago = String(payment?.status || authorizedPayment?.status || "").toLowerCase();
+  const estadoPago = String(
+    payment?.status || authorizedPayment?.status || ""
+  ).toLowerCase();
 
   let estadoMembresia = normalizarEstadoMercadoPago(estadoPreapproval);
 
-  if (["approved", "aprobado", "accredited", "authorized", "autorizado"].includes(estadoPago)) {
+  if (
+    [
+      "approved",
+      "aprobado",
+      "accredited",
+      "authorized",
+      "autorizado",
+    ].includes(estadoPago)
+  ) {
     estadoMembresia = "activa";
   }
 
   const fechaFin =
-    estadoMembresia === "activa" ? calcularFechaFin(preapproval) : null;
+    estadoMembresia === "activa"
+      ? calcularFechaFin(preapproval)
+      : accesoExistente?.fecha_fin || null;
 
   const detalle = {
     ...(accesoExistente?.detalle || {}),
@@ -385,15 +428,10 @@ async function actualizarAccesoDesdePreapproval({
     mercadopago_status: preapproval.status || payment?.status || null,
     ultimo_pago_id:
       String(payment?.id || authorizedPayment?.payment_id || "") || null,
-    ultimo_pago_estado:
-      payment?.status ||
-      authorizedPayment?.status ||
-      null,
+    ultimo_pago_estado: payment?.status || authorizedPayment?.status || null,
     proximo_cobro_at: preapproval.next_payment_date || null,
     cancelada_at:
-      estadoMembresia === "cancelada"
-        ? new Date().toISOString()
-        : null,
+      estadoMembresia === "cancelada" ? new Date().toISOString() : null,
     detalle,
     updated_at: new Date().toISOString(),
   };
@@ -426,10 +464,7 @@ async function actualizarAccesoDesdePreapproval({
   return data;
 }
 
-async function activarDesdePaymentConReferencia({
-  supabaseAdmin,
-  payment,
-}) {
+async function activarDesdePaymentConReferencia({ supabaseAdmin, payment }) {
   const referencia = extraerReferenciaCompacta(payment?.external_reference);
 
   if (!referencia?.userId || !referencia?.productoId) {
@@ -490,7 +525,9 @@ async function activarDesdePaymentConReferencia({
     estado: estadoMembresia,
     fecha_inicio: accesoExistente?.fecha_inicio || new Date().toISOString(),
     fecha_fin:
-      estadoMembresia === "activa" ? calcularFechaFin(null) : null,
+      estadoMembresia === "activa"
+        ? calcularFechaFin(null)
+        : accesoExistente?.fecha_fin || null,
     descuento_porcentaje: 10,
     curso_pequeno_disponible: true,
     mercadopago_status: payment.status || null,
@@ -509,7 +546,9 @@ async function activarDesdePaymentConReferencia({
       .single();
 
     if (error) {
-      throw new Error(`No se pudo actualizar la membresía por payment: ${error.message}`);
+      throw new Error(
+        `No se pudo actualizar la membresía por payment: ${error.message}`
+      );
     }
 
     return {
@@ -527,7 +566,9 @@ async function activarDesdePaymentConReferencia({
     .single();
 
   if (error) {
-    throw new Error(`No se pudo crear la membresía por payment: ${error.message}`);
+    throw new Error(
+      `No se pudo crear la membresía por payment: ${error.message}`
+    );
   }
 
   return {

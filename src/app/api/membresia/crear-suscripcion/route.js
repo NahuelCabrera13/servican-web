@@ -5,6 +5,8 @@ import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const SLUG_MEMBRESIA = "membresia-mensual-servican";
+
 function crearRespuestaError(mensaje, status = 400, extra = {}) {
   return NextResponse.json(
     {
@@ -78,6 +80,54 @@ function normalizarPrecio(precio) {
   return Math.round(numero * 100) / 100;
 }
 
+function membresiaSigueVigente(membresia) {
+  if (!membresia) {
+    return false;
+  }
+
+  if (membresia.estado !== "activa") {
+    return false;
+  }
+
+  if (!membresia.fecha_fin) {
+    return true;
+  }
+
+  const fechaFin = new Date(membresia.fecha_fin);
+
+  if (Number.isNaN(fechaFin.getTime())) {
+    return false;
+  }
+
+  return fechaFin.getTime() > Date.now();
+}
+
+function productoDisponible(producto) {
+  if (!producto) {
+    return false;
+  }
+
+  if (!producto.activo || !producto.visible_en_web) {
+    return false;
+  }
+
+  if (producto.tipo_producto !== "membresia") {
+    return false;
+  }
+
+  if (producto.plan !== "mensual") {
+    return false;
+  }
+
+  if (!producto.es_recurrente) {
+    return false;
+  }
+
+  const precio = normalizarPrecio(producto.precio);
+
+  return precio > 0;
+}
+
 async function obtenerUsuarioActual() {
   const supabase = await createSupabaseServerClient();
 
@@ -122,19 +172,25 @@ async function obtenerProductoMembresia(supabaseAdmin) {
       moneda,
       es_recurrente,
       activo,
-      visible_en_web
+      visible_en_web,
+      texto_boton,
+      updated_at
     `
     )
-    .eq("slug", "membresia-mensual-servican")
+    .eq("slug", SLUG_MEMBRESIA)
     .eq("tipo_producto", "membresia")
     .eq("plan", "mensual")
     .eq("es_recurrente", true)
     .eq("activo", true)
     .eq("visible_en_web", true)
+    .order("updated_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (error) {
-    throw new Error(`No se pudo buscar el producto de membresía: ${error.message}`);
+    throw new Error(
+      `No se pudo buscar el producto de membresía: ${error.message}`
+    );
   }
 
   return data;
@@ -151,12 +207,13 @@ async function buscarMembresiaActivaOPausada(supabaseAdmin, userId) {
       fecha_fin,
       mercadopago_preapproval_id,
       mercadopago_status,
-      created_at
+      created_at,
+      updated_at
     `
     )
     .eq("user_id", userId)
     .in("estado", ["activa", "pausada"])
-    .order("created_at", { ascending: false })
+    .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
@@ -218,26 +275,25 @@ async function intentarReutilizarMembresiaPausada(membresiaExistente) {
   }
 
   const estadoMp = String(preapproval.status || "").toLowerCase();
+  const estadosReutilizables = ["pending", "pendiente", "paused", "pausado"];
 
-  if (
-    estadoMp === "pending" ||
-    estadoMp === "pendiente" ||
-    estadoMp === "paused"
-  ) {
-    const initPoint = preapproval.init_point || preapproval.sandbox_init_point;
-
-    if (initPoint) {
-      return {
-        ok: true,
-        reutilizada: true,
-        init_point: initPoint,
-        preapproval_id: preapproval.id,
-        membresia: membresiaExistente,
-      };
-    }
+  if (!estadosReutilizables.includes(estadoMp)) {
+    return null;
   }
 
-  return null;
+  const initPoint = preapproval.init_point || preapproval.sandbox_init_point;
+
+  if (!initPoint) {
+    return null;
+  }
+
+  return {
+    ok: true,
+    reutilizada: true,
+    init_point: initPoint,
+    preapproval_id: preapproval.id || membresiaExistente.mercadopago_preapproval_id,
+    membresia: membresiaExistente,
+  };
 }
 
 async function crearPreapprovalMercadoPago({
@@ -281,8 +337,10 @@ async function crearPreapprovalMercadoPago({
     metadata: {
       tipo: "membresia",
       producto_id: producto.id,
+      producto_slug: producto.slug,
       comprador_user_id: usuario.id,
       perfil_email: perfil?.email || usuario.email,
+      perfil_nombre: perfil?.nombre || null,
     },
   };
 
@@ -293,11 +351,14 @@ async function crearPreapprovalMercadoPago({
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
+    cache: "no-store",
   });
 
   const data = await respuesta.json().catch(() => null);
 
   if (!respuesta.ok) {
+    console.error("Mercado Pago rechazó la creación de preapproval:", data);
+
     throw new Error(
       data?.message ||
         data?.error ||
@@ -324,8 +385,10 @@ async function guardarAccesoPendiente({
     origen: "mercadopago_preapproval_pending",
     producto_id: producto.id,
     producto_nombre: producto.nombre,
+    producto_slug: producto.slug,
     producto_precio: producto.precio,
     producto_moneda: producto.moneda,
+    creado_desde: "api_membresia_crear_suscripcion",
     preapproval: {
       id: preapproval.id,
       status: preapproval.status || null,
@@ -357,15 +420,19 @@ async function guardarAccesoPendiente({
     .select(
       `
       id,
+      user_id,
       estado,
       mercadopago_preapproval_id,
-      mercadopago_status
+      mercadopago_status,
+      updated_at
     `
     )
     .single();
 
   if (error) {
-    throw new Error(`No se pudo guardar la membresía pendiente: ${error.message}`);
+    throw new Error(
+      `No se pudo guardar la membresía pendiente: ${error.message}`
+    );
   }
 
   return data;
@@ -378,7 +445,10 @@ export async function POST(request) {
     if (!usuario) {
       return crearRespuestaError(
         "Tenés que iniciar sesión antes de contratar la membresía.",
-        401
+        401,
+        {
+          requiere_login: true,
+        }
       );
     }
 
@@ -401,40 +471,34 @@ export async function POST(request) {
 
     const producto = await obtenerProductoMembresia(supabaseAdmin);
 
-    if (!producto) {
+    if (!producto || !productoDisponible(producto)) {
       return crearRespuestaError(
         "La membresía mensual no está disponible para comprar.",
         404
       );
     }
 
-const membresiaExistente = await buscarMembresiaActivaOPausada(
-  supabaseAdmin,
-  usuario.id
-);
+    const membresiaExistente = await buscarMembresiaActivaOPausada(
+      supabaseAdmin,
+      usuario.id
+    );
 
-if (
-  membresiaExistente?.estado === "activa" &&
-  (!membresiaExistente.fecha_fin ||
-    new Date(membresiaExistente.fecha_fin).getTime() > Date.now())
-) {
-  return crearRespuestaError(
-    "Ya tenés una membresía activa.",
-    409,
-    {
-      membresia: membresiaExistente,
+    if (membresiaSigueVigente(membresiaExistente)) {
+      return crearRespuestaError(
+        "Ya tenés una membresía activa.",
+        409,
+        {
+          membresia: membresiaExistente,
+        }
+      );
     }
-  );
-}
 
-const membresiaReutilizable =
-  await intentarReutilizarMembresiaPausada(membresiaExistente);
+    const membresiaReutilizable =
+      await intentarReutilizarMembresiaPausada(membresiaExistente);
 
-if (membresiaReutilizable) {
-  return NextResponse.json(membresiaReutilizable);
-}
-
-
+    if (membresiaReutilizable) {
+      return NextResponse.json(membresiaReutilizable);
+    }
 
     const preapproval = await crearPreapprovalMercadoPago({
       producto,
@@ -457,13 +521,14 @@ if (membresiaReutilizable) {
         "Mercado Pago no devolvió un enlace de pago válido.",
         500,
         {
-          acceso,
+          membresia: acceso,
         }
       );
     }
 
     return NextResponse.json({
       ok: true,
+      reutilizada: false,
       init_point: initPoint,
       preapproval_id: preapproval.id,
       membresia: acceso,

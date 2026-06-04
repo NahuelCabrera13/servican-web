@@ -2,6 +2,20 @@
 
 import { useEffect, useState } from "react";
 
+function formatearPrecio(moneda, precio) {
+  const numero = Number(precio || 0);
+
+  try {
+    return new Intl.NumberFormat("es-UY", {
+      style: "currency",
+      currency: moneda || "UYU",
+      maximumFractionDigits: 0,
+    }).format(numero);
+  } catch {
+    return `${moneda || "UYU"} ${numero}`;
+  }
+}
+
 export default function BotonComprarMembresia({
   texto = "",
   className = "",
@@ -48,6 +62,10 @@ export default function BotonComprarMembresia({
   }, []);
 
   async function contratarMembresia() {
+    if (cargando || cargandoProducto || !disponible || !producto) {
+      return;
+    }
+
     setCargando(true);
     setError("");
 
@@ -98,8 +116,24 @@ export default function BotonComprarMembresia({
 
   if (!disponible || !producto) {
     return (
-      <div className="rounded-2xl border border-orange-500/30 bg-orange-500/10 px-4 py-3 text-sm text-orange-100">
-        La membresía mensual no está disponible en este momento.
+      <div className="space-y-3">
+        <div className="rounded-2xl border border-orange-500/30 bg-orange-500/10 px-4 py-3 text-sm leading-6 text-orange-100">
+          La membresía mensual no está disponible en este momento.
+        </div>
+
+        {error ? (
+          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-200">
+            {error}
+          </div>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={cargarProducto}
+          className="w-full rounded-2xl border border-white/10 bg-white/10 px-6 py-3 text-sm font-black text-white transition hover:bg-white hover:text-black"
+        >
+          Reintentar
+        </button>
       </div>
     );
   }
@@ -117,8 +151,14 @@ export default function BotonComprarMembresia({
         </p>
 
         <p className="mt-1 text-3xl font-black text-white">
-          {moneda} {precio}
+          {formatearPrecio(moneda, precio)}
         </p>
+
+        {producto.descripcion ? (
+          <p className="mt-2 text-sm leading-6 text-zinc-400">
+            {producto.descripcion}
+          </p>
+        ) : null}
       </div>
 
       <button
@@ -134,7 +174,7 @@ export default function BotonComprarMembresia({
       </button>
 
       {error ? (
-        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-200">
           {error}
         </div>
       ) : null}

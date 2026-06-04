@@ -58,12 +58,47 @@ function obtenerYoutubeEmbedUrl(urlOriginal) {
   }
 }
 
+function obtenerEtiquetaTipo(tipo) {
+  const valor = String(tipo || "").toLowerCase();
+
+  if (valor === "foto") return "Foto";
+  if (valor === "video") return "Video";
+  if (valor === "archivo") return "Archivo";
+  if (valor === "texto") return "Texto";
+
+  return "Contenido";
+}
+
+function validarFormulario(form) {
+  const titulo = String(form.titulo || "").trim();
+  const tipo = String(form.tipo || "").trim();
+  const url = String(form.url || "").trim();
+
+  if (!titulo) {
+    return "El título es obligatorio.";
+  }
+
+  if (!tipo) {
+    return "Seleccioná un tipo de contenido.";
+  }
+
+  if (tipo !== "texto" && !url) {
+    return "La URL o ruta del contenido es obligatoria.";
+  }
+
+  if (tipo === "video" && !obtenerYoutubeEmbedUrl(url) && !url.startsWith("http")) {
+    return "Para videos, usá una URL válida de YouTube o un enlace directo.";
+  }
+
+  return "";
+}
+
 export default function AdminGaleriaMembresiaClient() {
   const [contenidos, setContenidos] = useState([]);
   const [form, setForm] = useState(estadoInicial);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
-  const [subiendoFoto, setSubiendoFoto] = useState(false);
+  const [subiendoArchivo, setSubiendoArchivo] = useState(false);
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
 
@@ -72,11 +107,15 @@ export default function AdminGaleriaMembresiaClient() {
   const resumen = useMemo(() => {
     const activos = contenidos.filter((item) => item.activo).length;
     const destacados = contenidos.filter((item) => item.destacado).length;
+    const fotos = contenidos.filter((item) => item.tipo === "foto").length;
+    const videos = contenidos.filter((item) => item.tipo === "video").length;
 
     return {
       total: contenidos.length,
       activos,
       destacados,
+      fotos,
+      videos,
     };
   }, [contenidos]);
 
@@ -100,7 +139,7 @@ export default function AdminGaleriaMembresiaClient() {
         return;
       }
 
-      setContenidos(data?.contenidos || []);
+      setContenidos(Array.isArray(data?.contenidos) ? data.contenidos : []);
     } catch (error) {
       console.error("Error cargando contenidos:", error);
       setError("Error de conexión al cargar contenidos.");
@@ -149,14 +188,14 @@ export default function AdminGaleriaMembresiaClient() {
     });
   }
 
-  async function subirFoto(event) {
+  async function subirArchivo(event) {
     const archivo = event.target.files?.[0];
 
     if (!archivo) {
       return;
     }
 
-    setSubiendoFoto(true);
+    setSubiendoArchivo(true);
     setError("");
     setMensaje("");
 
@@ -173,28 +212,39 @@ export default function AdminGaleriaMembresiaClient() {
       const data = await respuesta.json().catch(() => null);
 
       if (!respuesta.ok) {
-        setError(data?.error || "No se pudo subir la foto.");
+        setError(data?.error || "No se pudo subir el archivo.");
         return;
       }
 
+      const ruta = data?.path || data?.url || "";
+
       setForm((actual) => ({
         ...actual,
-        tipo: "foto",
-        url: data?.path || data?.url || "",
+        url: ruta,
       }));
 
-      setMensaje("Foto subida correctamente. Ahora podés guardar el contenido.");
+      setMensaje(
+        "Archivo subido correctamente. Ahora podés completar los datos y guardar el contenido."
+      );
     } catch (error) {
-      console.error("Error subiendo foto:", error);
-      setError("Error de conexión al subir la foto.");
+      console.error("Error subiendo archivo:", error);
+      setError("Error de conexión al subir el archivo.");
     } finally {
-      setSubiendoFoto(false);
+      setSubiendoArchivo(false);
       event.target.value = "";
     }
   }
 
   async function guardarContenido(event) {
     event.preventDefault();
+
+    const errorValidacion = validarFormulario(form);
+
+    if (errorValidacion) {
+      setError(errorValidacion);
+      setMensaje("");
+      return;
+    }
 
     setGuardando(true);
     setError("");
@@ -212,14 +262,14 @@ export default function AdminGaleriaMembresiaClient() {
         },
         body: JSON.stringify({
           id: form.id,
-          titulo: form.titulo,
-          descripcion: form.descripcion,
+          titulo: String(form.titulo || "").trim(),
+          descripcion: String(form.descripcion || "").trim(),
           tipo: form.tipo,
-          url: form.url,
-          portada_url: form.portada_url,
+          url: String(form.url || "").trim(),
+          portada_url: String(form.portada_url || "").trim(),
           activo: form.activo,
           destacado: form.destacado,
-          orden: Number(form.orden),
+          orden: Number(form.orden || 0),
         }),
       });
 
@@ -297,11 +347,13 @@ export default function AdminGaleriaMembresiaClient() {
           <ResumenCard titulo="Total" valor={resumen.total} />
           <ResumenCard titulo="Activos" valor={resumen.activos} />
           <ResumenCard titulo="Destacados" valor={resumen.destacados} />
+          <ResumenCard titulo="Fotos" valor={resumen.fotos} />
+          <ResumenCard titulo="Videos" valor={resumen.videos} />
         </div>
 
         <form
           onSubmit={guardarContenido}
-          className="rounded-[2rem] border border-white/10 bg-zinc-950 p-6"
+          className="rounded-[2rem] border border-white/10 bg-zinc-950 p-6 shadow-xl shadow-black/20"
         >
           <div className="mb-5">
             <p className="text-sm font-black uppercase tracking-[0.25em] text-yellow-500">
@@ -311,19 +363,20 @@ export default function AdminGaleriaMembresiaClient() {
             <h2 className="mt-2 text-2xl font-black">
               {editando ? "Modificar publicación" : "Agregar a galería"}
             </h2>
+
+            <p className="mt-2 text-sm leading-6 text-zinc-500">
+              Este contenido se mostrará únicamente a alumnos con membresía
+              mensual activa.
+            </p>
           </div>
 
           <div className="grid gap-4">
             {error ? (
-              <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-                {error}
-              </div>
+              <Alerta tipo="error" texto={error} />
             ) : null}
 
             {mensaje ? (
-              <div className="rounded-2xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-200">
-                {mensaje}
-              </div>
+              <Alerta tipo="ok" texto={mensaje} />
             ) : null}
 
             <CampoTexto
@@ -349,29 +402,33 @@ export default function AdminGaleriaMembresiaClient() {
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none transition focus:border-yellow-500"
               >
                 <option value="foto">Foto</option>
-                <option value="video">Video de YouTube</option>
+                <option value="video">Video</option>
                 <option value="archivo">Archivo</option>
                 <option value="texto">Texto</option>
               </select>
             </div>
 
-            {form.tipo === "foto" ? (
+            {form.tipo === "foto" || form.tipo === "archivo" ? (
               <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-4">
                 <label className="text-sm font-bold text-yellow-100">
-                  Subir foto desde archivos
+                  Subir archivo al bucket privado
                 </label>
 
                 <input
                   type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  onChange={subirFoto}
-                  disabled={subiendoFoto}
-                  className="mt-3 block w-full cursor-pointer rounded-2xl border border-white/10 bg-black px-4 py-3 text-sm text-zinc-300 file:mr-4 file:rounded-xl file:border-0 file:bg-yellow-500 file:px-4 file:py-2 file:text-sm file:font-black file:text-black"
+                  accept={
+                    form.tipo === "foto"
+                      ? "image/jpeg,image/png,image/webp,image/gif"
+                      : ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,image/*,video/*"
+                  }
+                  onChange={subirArchivo}
+                  disabled={subiendoArchivo}
+                  className="mt-3 block w-full cursor-pointer rounded-2xl border border-white/10 bg-black px-4 py-3 text-sm text-zinc-300 file:mr-4 file:rounded-xl file:border-0 file:bg-yellow-500 file:px-4 file:py-2 file:text-sm file:font-black file:text-black disabled:cursor-not-allowed disabled:opacity-60"
                 />
 
                 <p className="mt-3 text-xs leading-5 text-yellow-100/70">
-                  Las fotos se guardan en Supabase Storage privado. El alumno
-                  solo las ve si tiene membresía activa.
+                  El archivo queda en Supabase Storage privado. La API firma la
+                  URL solo cuando el alumno tiene membresía activa.
                 </p>
 
                 {form.url ? (
@@ -385,29 +442,29 @@ export default function AdminGaleriaMembresiaClient() {
             {form.tipo === "video" ? (
               <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-4">
                 <p className="text-sm font-bold text-blue-100">
-                  Video por URL de YouTube
+                  Video por URL
                 </p>
 
                 <p className="mt-2 text-xs leading-5 text-blue-100/70">
-                  Pegá un enlace directo a un video. Ejemplos:
-                  https://www.youtube.com/watch?v=ID o https://youtu.be/ID
+                  Podés pegar un enlace de YouTube, por ejemplo
+                  https://www.youtube.com/watch?v=ID o https://youtu.be/ID.
                 </p>
               </div>
             ) : null}
 
-            {form.tipo !== "foto" ? (
+            {form.tipo !== "foto" && form.tipo !== "archivo" ? (
               <CampoTexto
                 label={
                   form.tipo === "video"
-                    ? "URL de YouTube"
-                    : "URL del contenido"
+                    ? "URL del video"
+                    : "Contenido o URL"
                 }
                 value={form.url}
                 onChange={(valor) => cambiarCampo("url", valor)}
                 placeholder={
                   form.tipo === "video"
                     ? "https://www.youtube.com/watch?v=..."
-                    : "https://... o /archivo.pdf"
+                    : "Texto corto, enlace o ruta"
                 }
               />
             ) : null}
@@ -444,13 +501,13 @@ export default function AdminGaleriaMembresiaClient() {
             <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 type="submit"
-                disabled={guardando || subiendoFoto}
+                disabled={guardando || subiendoArchivo}
                 className="rounded-2xl bg-yellow-500 px-6 py-3 text-sm font-black text-black transition hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {guardando
                   ? "Guardando..."
-                  : subiendoFoto
-                    ? "Subiendo foto..."
+                  : subiendoArchivo
+                    ? "Subiendo archivo..."
                     : editando
                       ? "Guardar cambios"
                       : "Crear contenido"}
@@ -470,7 +527,7 @@ export default function AdminGaleriaMembresiaClient() {
         </form>
       </aside>
 
-      <section className="rounded-[2rem] border border-white/10 bg-zinc-950 p-6">
+      <section className="rounded-[2rem] border border-white/10 bg-zinc-950 p-6 shadow-xl shadow-black/20">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-black uppercase tracking-[0.25em] text-yellow-500">
@@ -485,27 +542,17 @@ export default function AdminGaleriaMembresiaClient() {
           <button
             type="button"
             onClick={cargarContenidos}
-            className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white hover:text-black"
+            disabled={cargando}
+            className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white hover:text-black disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Recargar
+            {cargando ? "Cargando..." : "Recargar"}
           </button>
         </div>
 
         {cargando ? (
-          <p className="rounded-2xl border border-white/10 bg-black p-5 text-sm text-zinc-400">
-            Cargando contenidos...
-          </p>
+          <EstadoCargando />
         ) : contenidos.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-black p-8 text-center">
-            <h3 className="text-2xl font-black">
-              Todavía no hay contenido
-            </h3>
-
-            <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-zinc-400">
-              Agregá el primer contenido exclusivo. Cuando el alumno tenga
-              membresía activa, lo verá en su galería privada.
-            </p>
-          </div>
+          <EstadoVacio />
         ) : (
           <div className="grid gap-5 xl:grid-cols-2">
             {contenidos.map((contenido) => (
@@ -523,12 +570,50 @@ export default function AdminGaleriaMembresiaClient() {
   );
 }
 
+function Alerta({ tipo, texto }) {
+  const clases =
+    tipo === "ok"
+      ? "border-green-500/30 bg-green-500/10 text-green-200"
+      : "border-red-500/30 bg-red-500/10 text-red-200";
+
+  return (
+    <div className={`rounded-2xl border px-4 py-3 text-sm leading-6 ${clases}`}>
+      {texto}
+    </div>
+  );
+}
+
+function EstadoCargando() {
+  return (
+    <div className="grid gap-5 xl:grid-cols-2">
+      <div className="h-80 rounded-[1.7rem] border border-white/10 bg-black" />
+      <div className="h-80 rounded-[1.7rem] border border-white/10 bg-black" />
+    </div>
+  );
+}
+
+function EstadoVacio() {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-black p-8 text-center">
+      <h3 className="text-2xl font-black">
+        Todavía no hay contenido
+      </h3>
+
+      <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-zinc-400">
+        Agregá el primer contenido exclusivo. Cuando el alumno tenga membresía
+        activa, lo verá en su galería privada.
+      </p>
+    </div>
+  );
+}
+
 function ResumenCard({ titulo, valor }) {
   return (
     <div className="rounded-[1.5rem] border border-white/10 bg-zinc-950 p-5">
       <p className="text-xs font-black uppercase tracking-[0.25em] text-zinc-500">
         {titulo}
       </p>
+
       <p className="mt-2 text-3xl font-black text-yellow-500">{valor}</p>
     </div>
   );
@@ -536,6 +621,7 @@ function ResumenCard({ titulo, valor }) {
 
 function ContenidoAdminCard({ contenido, onEditar, onEliminar }) {
   const tipo = String(contenido.tipo || "foto").toLowerCase();
+  const etiquetaTipo = obtenerEtiquetaTipo(tipo);
   const esImagen = tipo === "foto";
   const esVideo = tipo === "video";
   const youtubeEmbedUrl = esVideo ? obtenerYoutubeEmbedUrl(contenido.url) : "";
@@ -545,16 +631,17 @@ function ContenidoAdminCard({ contenido, onEditar, onEliminar }) {
   return (
     <article className="overflow-hidden rounded-[1.7rem] border border-white/10 bg-black">
       <div className="relative aspect-video bg-zinc-950">
-        {esImagen ? (
+        {esImagen && imagenPreview ? (
           <img
             src={imagenPreview}
-            alt={contenido.titulo}
+            alt={contenido.titulo || "Contenido SERVICAN"}
             className="h-full w-full object-cover"
+            loading="lazy"
           />
         ) : youtubeEmbedUrl ? (
           <iframe
             src={youtubeEmbedUrl}
-            title={contenido.titulo}
+            title={contenido.titulo || "Video SERVICAN"}
             className="h-full w-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
@@ -562,14 +649,21 @@ function ContenidoAdminCard({ contenido, onEditar, onEliminar }) {
         ) : portadaPreview ? (
           <img
             src={portadaPreview}
-            alt={contenido.titulo}
+            alt={contenido.titulo || "Portada SERVICAN"}
             className="h-full w-full object-cover"
+            loading="lazy"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <p className="text-sm font-black uppercase tracking-[0.25em] text-zinc-500">
-              {tipo}
-            </p>
+          <div className="flex h-full w-full items-center justify-center px-6 text-center">
+            <div>
+              <p className="text-sm font-black uppercase tracking-[0.25em] text-zinc-500">
+                {etiquetaTipo}
+              </p>
+
+              <p className="mt-3 text-xs leading-5 text-zinc-600">
+                Sin vista previa disponible.
+              </p>
+            </div>
           </div>
         )}
 
@@ -594,11 +688,11 @@ function ContenidoAdminCard({ contenido, onEditar, onEliminar }) {
 
       <div className="p-5">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-yellow-500">
-          {tipo} · Orden {contenido.orden || 0}
+          {etiquetaTipo} · Orden {contenido.orden || 0}
         </p>
 
         <h3 className="mt-2 text-xl font-black text-white">
-          {contenido.titulo}
+          {contenido.titulo || "Sin título"}
         </h3>
 
         {contenido.descripcion ? (
@@ -611,10 +705,23 @@ function ContenidoAdminCard({ contenido, onEditar, onEliminar }) {
           <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">
             URL / Ruta
           </p>
+
           <p className="mt-1 break-all text-xs text-zinc-300">
-            {contenido.url}
+            {contenido.url || "Sin URL"}
           </p>
         </div>
+
+        {contenido.portada_url ? (
+          <div className="mt-3 rounded-2xl border border-white/10 bg-zinc-950 p-3">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">
+              Portada
+            </p>
+
+            <p className="mt-1 break-all text-xs text-zinc-300">
+              {contenido.portada_url}
+            </p>
+          </div>
+        ) : null}
 
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
           <button
