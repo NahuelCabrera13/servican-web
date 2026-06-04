@@ -134,11 +134,29 @@ function formatearPrecio(producto) {
     return new Intl.NumberFormat("es-UY", {
       style: "currency",
       currency: producto?.moneda || "USD",
-      maximumFractionDigits: producto?.precio < 100 ? 2 : 0,
+      maximumFractionDigits: precio < 100 ? 2 : 0,
     }).format(precio);
   } catch {
     return `${producto?.moneda || "USD"} ${precio}`;
   }
+}
+
+function PrecioBloque({ producto, textoAyuda = "Pago único. Acceso según el plan seleccionado." }) {
+  return (
+    <div className="mt-5 min-w-0 rounded-2xl border border-white/10 bg-zinc-950 p-4">
+      <p className="text-xs font-black uppercase tracking-wide text-zinc-500">
+        Precio
+      </p>
+
+      <p className="mt-2 min-w-0 max-w-full break-words text-[clamp(1.7rem,5vw,2.6rem)] font-black leading-tight text-yellow-500">
+        {formatearPrecio(producto)}
+      </p>
+
+      {textoAyuda ? (
+        <p className="mt-2 text-xs leading-5 text-zinc-500">{textoAyuda}</p>
+      ) : null}
+    </div>
+  );
 }
 
 function nombrePlan(plan) {
@@ -352,7 +370,7 @@ function ProductoCursoCard({ producto, curso }) {
 
   return (
     <article
-      className={`flex h-full flex-col rounded-[1.7rem] border p-5 ${
+      className={`min-w-0 flex h-full flex-col rounded-[1.7rem] border p-5 ${
         destacado
           ? "border-yellow-500/50 bg-yellow-500/10"
           : plantel
@@ -374,7 +392,7 @@ function ProductoCursoCard({ producto, curso }) {
         )}
       </div>
 
-      <h4 className="mt-4 text-2xl font-black text-white">
+      <h4 className="mt-4 min-w-0 break-words text-2xl font-black leading-tight text-white">
         {producto.nombre}
       </h4>
 
@@ -382,19 +400,7 @@ function ProductoCursoCard({ producto, curso }) {
         {producto.descripcion || obtenerDescripcionPlan(producto, curso)}
       </p>
 
-      <div className="mt-5 rounded-2xl border border-white/10 bg-zinc-950 p-4">
-        <p className="text-xs font-black uppercase tracking-wide text-zinc-500">
-          Precio
-        </p>
-
-        <p className="mt-1 text-3xl font-black text-yellow-500">
-          {formatearPrecio(producto)}
-        </p>
-
-        <p className="mt-2 text-xs leading-5 text-zinc-500">
-          Pago único. Acceso según el plan seleccionado.
-        </p>
-      </div>
+      <PrecioBloque producto={producto} />
 
       <div className="mt-5 flex-1">
         <p className="text-sm font-black uppercase tracking-[0.2em] text-yellow-400">
@@ -433,7 +439,7 @@ function ProductoPaqueteCard({ producto }) {
 
   return (
     <article
-      className={`flex h-full flex-col rounded-[1.7rem] border p-6 ${
+      className={`min-w-0 flex h-full flex-col rounded-[1.7rem] border p-6 ${
         destacado
           ? "border-yellow-500/50 bg-yellow-500/10"
           : "border-white/10 bg-black"
@@ -450,7 +456,7 @@ function ProductoPaqueteCard({ producto }) {
         )}
       </div>
 
-      <h4 className="mt-4 text-2xl font-black text-white">
+      <h4 className="mt-4 min-w-0 break-words text-2xl font-black leading-tight text-white">
         {producto.nombre}
       </h4>
 
@@ -459,15 +465,7 @@ function ProductoPaqueteCard({ producto }) {
           "Paquete de cursos SERVICAN para avanzar con una ruta completa de formación."}
       </p>
 
-      <div className="mt-5 rounded-2xl border border-white/10 bg-zinc-950 p-4">
-        <p className="text-xs font-black uppercase tracking-wide text-zinc-500">
-          Precio
-        </p>
-
-        <p className="mt-1 text-3xl font-black text-yellow-500">
-          {formatearPrecio(producto)}
-        </p>
-      </div>
+      <PrecioBloque producto={producto} textoAyuda="" />
 
       <ul className="mt-5 flex-1 space-y-3 text-sm leading-6 text-zinc-300">
         {beneficios.map((beneficio) => (
@@ -482,56 +480,6 @@ function ProductoPaqueteCard({ producto }) {
 
       <div className="mt-6">
         <BotonComprarProducto producto={producto} />
-      </div>
-    </article>
-  );
-}
-
-function MembresiaFallbackCard({ membresia }) {
-  return (
-    <article className="overflow-hidden rounded-[2rem] border border-yellow-500/40 bg-gradient-to-br from-yellow-500/15 via-zinc-950 to-black p-7 shadow-2xl">
-      <div className="grid gap-8 lg:grid-cols-[1fr_380px] lg:items-center">
-        <div>
-          <Badge color="yellow">Membresía mensual</Badge>
-
-          <h2 className="mt-5 text-4xl font-black md:text-5xl">
-            Comunidad privada SERVICAN
-          </h2>
-
-          <p className="mt-5 max-w-3xl leading-8 text-zinc-300">
-            Acceso mensual a contenido exclusivo, galería privada, beneficios de
-            comunidad y descuentos para cursos principales.
-          </p>
-
-          <ul className="mt-6 grid gap-3 text-sm leading-6 text-zinc-200 md:grid-cols-2">
-            <li>✓ Galería privada de fotos y videos.</li>
-            <li>✓ Actualización semanal de contenido.</li>
-            <li>✓ 10% de descuento en cursos.</li>
-            <li>✓ 1 curso pequeño a elección cuando estén disponibles.</li>
-            <li>✓ Contenido educativo corto.</li>
-            <li>✓ Beneficios de comunidad.</li>
-          </ul>
-        </div>
-
-        <div className="rounded-[1.5rem] border border-white/10 bg-black p-5">
-          <p className="text-sm font-black uppercase tracking-[0.25em] text-zinc-500">
-            Precio mensual
-          </p>
-
-          <p className="mt-2 text-4xl font-black text-yellow-500">
-            {formatearPrecio(membresia)}
-          </p>
-
-          <p className="mt-3 text-sm leading-6 text-zinc-400">
-            La membresía se activa cuando Mercado Pago confirma la suscripción.
-          </p>
-
-          <div className="mt-5">
-            <BotonComprarMembresia
-              texto={membresia?.texto_boton || "Contratar membresía mensual"}
-            />
-          </div>
-        </div>
       </div>
     </article>
   );
@@ -974,7 +922,7 @@ export default async function CursosPage() {
                           <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-black/90 to-transparent" />
                         </div>
 
-                        <div className="p-7 md:p-9">
+                        <div className="min-w-0 p-7 md:p-9">
                           <div className="mb-4 flex flex-wrap gap-2">
                             {curso.categoria && <Badge>{curso.categoria}</Badge>}
                             {curso.modalidad && <Badge>{curso.modalidad}</Badge>}
@@ -984,7 +932,7 @@ export default async function CursosPage() {
                             )}
                           </div>
 
-                          <h3 className="text-4xl font-black text-white">
+                          <h3 className="min-w-0 break-words text-4xl font-black leading-tight text-white">
                             {curso.titulo}
                           </h3>
 
@@ -1029,7 +977,7 @@ export default async function CursosPage() {
                             </Link>
                           </div>
 
-                          <div className="mt-8">
+                          <div className="mt-8 min-w-0">
                             <div className="mb-4 flex items-center justify-between gap-4">
                               <h4 className="text-2xl font-black">
                                 Planes disponibles
@@ -1050,7 +998,7 @@ export default async function CursosPage() {
                             )}
 
                             {productosCurso.length > 0 && (
-                              <div className="grid gap-4 xl:grid-cols-3">
+                              <div className="grid min-w-0 gap-4 xl:grid-cols-3">
                                 {productosCurso.map((producto) => (
                                   <ProductoCursoCard
                                     key={producto.id}
@@ -1109,7 +1057,7 @@ export default async function CursosPage() {
           )}
 
           {paquetes.length > 0 && (
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid min-w-0 gap-5 md:grid-cols-2 xl:grid-cols-3">
               {paquetes.map((producto) => (
                 <ProductoPaqueteCard key={producto.id} producto={producto} />
               ))}

@@ -21,6 +21,16 @@ async function leerRespuestaSegura(respuesta) {
   }
 }
 
+function esProductoGrupal(producto) {
+  const cantidadMaximaUsuarios = Number(producto?.cantidad_maxima_usuarios || 1);
+
+  return (
+    Boolean(producto?.requiere_participantes) ||
+    cantidadMaximaUsuarios > 1 ||
+    producto?.plan === "plantel"
+  );
+}
+
 export default function BotonComprarProducto({ producto }) {
   const cantidadMaximaUsuarios = Number(
     producto?.cantidad_maxima_usuarios || 1
@@ -31,6 +41,7 @@ export default function BotonComprarProducto({ producto }) {
   const requiereParticipantes =
     Boolean(producto?.requiere_participantes) || cantidadParticipantes > 0;
 
+  const productoGrupal = esProductoGrupal(producto);
   const esRecurrente = Boolean(producto?.es_recurrente);
 
   const [participantes, setParticipantes] = useState(
@@ -87,7 +98,7 @@ export default function BotonComprarProducto({ producto }) {
 
       if (esRecurrente) {
         throw new Error(
-          "Este producto corresponde a una membresía mensual. Esa compra se activará desde el sistema de suscripciones."
+          "Este producto corresponde a una membresía mensual. Esa compra se activa desde el sistema de suscripciones."
         );
       }
 
@@ -167,42 +178,75 @@ export default function BotonComprarProducto({ producto }) {
   }
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-black/30 p-5">
+    <div
+      className={`rounded-3xl border p-5 ${
+        productoGrupal
+          ? "border-blue-500/30 bg-blue-500/10"
+          : "border-white/10 bg-black/30"
+      }`}
+    >
       {requiereParticipantes && (
-        <div className="mb-5 space-y-3">
-          <div>
-            <p className="text-sm font-black uppercase tracking-[0.2em] text-yellow-400">
-              Participantes
-            </p>
+        <div className="mb-6 rounded-3xl border border-blue-500/30 bg-black/70 p-5">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-blue-300">
+                Participantes del plan
+              </p>
 
-            <p className="mt-2 text-sm leading-6 text-zinc-300">
-              Este plan incluye al comprador y {cantidadParticipantes}{" "}
-              participante{cantidadParticipantes === 1 ? "" : "s"} más. Todos
-              los correos deben tener cuenta registrada en SERVICAN antes de
-              comprar.
-            </p>
+              <h4 className="mt-2 text-2xl font-black text-white">
+                Agregá los {cantidadParticipantes} correos autorizados
+              </h4>
+
+              <p className="mt-3 text-sm leading-6 text-zinc-300">
+                El comprador ya cuenta como usuario principal. Para este plan se
+                deben agregar los otros {cantidadParticipantes} participante
+                {cantidadParticipantes === 1 ? "" : "s"}. Todos deben tener
+                cuenta registrada en SERVICAN antes de comprar.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-center">
+              <p className="text-xs font-black uppercase tracking-wide text-blue-200">
+                Cupos
+              </p>
+              <p className="mt-1 text-2xl font-black text-white">
+                {cantidadMaximaUsuarios}
+              </p>
+            </div>
           </div>
 
-          {participantes.map((email, index) => (
-            <input
-              key={index}
-              type="email"
-              value={email}
-              onChange={(event) =>
-                actualizarParticipante(index, event.target.value)
-              }
-              placeholder={`Correo participante ${index + 1}`}
-              disabled={cargando}
-              className="w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition focus:border-yellow-400 disabled:cursor-not-allowed disabled:opacity-60"
-            />
-          ))}
+          <div className="mt-5 grid gap-4">
+            {participantes.map((email, index) => (
+              <label key={index} className="block">
+                <span className="mb-2 block text-sm font-black text-zinc-200">
+                  Correo participante {index + 1}
+                </span>
+
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) =>
+                    actualizarParticipante(index, event.target.value)
+                  }
+                  placeholder={`ejemplo${index + 1}@correo.com`}
+                  disabled={cargando}
+                  className="w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-4 text-base text-white outline-none transition placeholder:text-zinc-600 focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
+                />
+              </label>
+            ))}
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm leading-6 text-yellow-100">
+            Importante: si alguno de estos correos no tiene cuenta registrada,
+            el sistema no permitirá continuar con el pago.
+          </div>
         </div>
       )}
 
       {esRecurrente && (
         <div className="mb-5 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm font-bold leading-6 text-yellow-100">
-          Este producto será parte de la futura membresía mensual SERVICAN. Las
-          suscripciones recurrentes se activarán en un bloque separado.
+          Este producto corresponde a una membresía mensual. Las suscripciones
+          recurrentes se gestionan desde el sistema de membresía.
         </div>
       )}
 
