@@ -10,79 +10,25 @@ export const dynamic = "force-dynamic";
 const PLANES_INFO = {
   basico: {
     nombre: "Básico",
-    etiqueta: "Para comenzar",
-    resumen:
-      "Ideal para alumnos que quieren acceder a la formación principal del curso con el contenido esencial.",
-    incluye: [
-      "Acceso al contenido base del curso",
-      "Videos explicativos principales",
-      "Material PDF inicial",
-      "Clases organizadas por módulos",
-      "Acceso al panel privado del alumno",
-      "Certificado al finalizar el contenido habilitado",
-    ],
-    noIncluye: [
-      "Material avanzado",
-      "Soporte personalizado semanal",
-      "Acceso para otros participantes",
-    ],
-  },
-  extenso: {
-    nombre: "Extenso",
-    etiqueta: "Más completo",
-    resumen:
-      "Pensado para quienes quieren profundizar más, con contenido ampliado y materiales adicionales.",
-    incluye: [
-      "Todo lo incluido en el Plan Básico",
-      "Videos ampliados y demostrativos",
-      "PDFs y materiales adicionales",
-      "Mayor profundidad técnica",
-      "Casos prácticos complementarios",
-      "Acceso a contenido marcado como Extenso",
-    ],
-    noIncluye: [
-      "Seguimiento personalizado semanal",
-      "Instancias individuales por videollamada o presencial",
-      "Acceso grupal para plantel",
-    ],
+    etiqueta: "Entrada profesional",
+    color: "neutral",
   },
   pro: {
     nombre: "Pro",
-    etiqueta: "Acompañamiento",
-    resumen:
-      "La opción más completa para alumnos que quieren contenido avanzado y acompañamiento personalizado.",
-    incluye: [
-      "Todo lo incluido en el Plan Extenso",
-      "Acceso a contenido Pro",
-      "Soporte semanal personalizado",
-      "Posibilidad de videollamada o instancia presencial",
-      "Correcciones, seguimiento y orientación",
-      "Ideal para formación profesional seria",
-    ],
-    noIncluye: ["Acceso automático para otros participantes"],
+    etiqueta: "Recomendado",
+    color: "yellow",
   },
   plantel: {
     nombre: "Plantel",
     etiqueta: "Hasta 4 usuarios",
-    resumen:
-      "Pensado para equipos, instituciones o grupos de trabajo que necesitan capacitar hasta 4 personas.",
-    incluye: [
-      "Todo lo incluido en el Plan Pro",
-      "Acceso para el comprador y hasta 3 participantes más",
-      "Todos los participantes deben tener cuenta registrada",
-      "Beneficios Pro para el grupo",
-      "Ideal para empresas, planteles o instituciones",
-      "Gestión de participantes por correo electrónico",
-    ],
-    noIncluye: [],
+    color: "green",
   },
 };
 
 const ORDEN_PLANES = {
   basico: 1,
-  extenso: 2,
-  pro: 3,
-  plantel: 4,
+  pro: 2,
+  plantel: 3,
 };
 
 function normalizarPlan(plan) {
@@ -95,6 +41,18 @@ function normalizarPlan(plan) {
   return "basico";
 }
 
+function esCursoK9(curso) {
+  const texto = `${curso?.titulo || ""} ${curso?.slug || ""}`.toLowerCase();
+
+  return (
+    texto.includes("k9") ||
+    texto.includes("detector") ||
+    texto.includes("detectores") ||
+    texto.includes("deteccion") ||
+    texto.includes("detección")
+  );
+}
+
 function formatearPrecio(precio, moneda) {
   const numero = Number(precio || 0);
 
@@ -105,28 +63,30 @@ function formatearPrecio(precio, moneda) {
   try {
     return new Intl.NumberFormat("es-UY", {
       style: "currency",
-      currency: moneda || "UYU",
-      maximumFractionDigits: 0,
+      currency: moneda || "USD",
+      maximumFractionDigits: numero < 100 ? 2 : 0,
     }).format(numero);
   } catch {
-    return `${moneda || "$"} ${numero}`;
+    return `${moneda || "USD"} ${numero}`;
   }
 }
 
 function ordenarProductos(productos) {
-  return [...(productos || [])].sort((a, b) => {
-    const ordenA = Number(a.orden || 0);
-    const ordenB = Number(b.orden || 0);
+  return [...(productos || [])]
+    .filter((producto) => producto.plan !== "extenso")
+    .sort((a, b) => {
+      const ordenA = Number(a.orden || 0);
+      const ordenB = Number(b.orden || 0);
 
-    if (ordenA !== ordenB) {
-      return ordenA - ordenB;
-    }
+      if (ordenA !== ordenB) {
+        return ordenA - ordenB;
+      }
 
-    const planA = ORDEN_PLANES[normalizarPlan(a.plan)] || 99;
-    const planB = ORDEN_PLANES[normalizarPlan(b.plan)] || 99;
+      const planA = ORDEN_PLANES[normalizarPlan(a.plan)] || 99;
+      const planB = ORDEN_PLANES[normalizarPlan(b.plan)] || 99;
 
-    return planA - planB;
-  });
+      return planA - planB;
+    });
 }
 
 function construirLinkConsulta(curso) {
@@ -137,22 +97,170 @@ function construirLinkConsulta(curso) {
   )}&mensaje=${encodeURIComponent(mensaje)}`;
 }
 
-function obtenerBeneficiosProducto(producto, info) {
-  if (Array.isArray(producto?.beneficios) && producto.beneficios.length > 0) {
-    return producto.beneficios;
+function obtenerResumenPlan(producto, curso) {
+  const plan = normalizarPlan(producto.plan);
+  const k9 = esCursoK9(curso);
+
+  if (plan === "plantel") {
+    return k9
+      ? "Para empresas, equipos de seguridad, instituciones o grupos de trabajo que quieran formar hasta 4 personas en detección K9."
+      : "Para equipos, familias, grupos o instituciones pequeñas que necesitan formar hasta 4 personas con acceso individual.";
   }
 
-  return info.incluye;
+  if (plan === "pro") {
+    return k9
+      ? "El plan principal del K9: contenido completo, evaluación, corrección, soporte y certificado profesional."
+      : "Para alumnos que quieren evaluación, revisión de ejercicios, soporte prioritario y certificado profesional.";
+  }
+
+  return k9
+    ? "Entrada seria al mundo K9: detección, búsqueda, asociación de olor, marcación y ejercicios iniciales."
+    : "Para alumnos que quieren una base profesional sobre el rol del guía canino, conducta, obediencia inicial y fundamentos de trabajo.";
 }
 
-function PlanCard({ producto }) {
+function obtenerBeneficiosPlan(producto, curso) {
+  const plan = normalizarPlan(producto.plan);
+  const k9 = esCursoK9(curso);
+
+  if (plan === "plantel") {
+    return k9
+      ? [
+          "Acceso para hasta 4 cuentas individuales.",
+          "Todo lo incluido en el Plan Pro K9.",
+          "Certificado individual para cada participante.",
+          "Evaluación y seguimiento por participante según condiciones del plan.",
+          "El comprador carga los correos autorizados.",
+          "Todos los participantes deben estar registrados previamente.",
+          "Soporte grupal para el plantel.",
+          "Precio pensado para empresas, equipos de seguridad, instituciones o grupos de trabajo.",
+        ]
+      : [
+          "Acceso para hasta 4 cuentas individuales.",
+          "Todo lo incluido en el Plan Pro.",
+          "Certificado individual para cada participante.",
+          "El comprador carga los correos autorizados.",
+          "Todos los participantes deben estar registrados previamente.",
+          "Soporte grupal.",
+          "Precio por persona más conveniente frente al Plan Pro individual.",
+        ];
+  }
+
+  if (plan === "pro") {
+    return k9
+      ? [
+          "Todo lo incluido en el Plan Básico K9.",
+          "Curso K9 completo con desarrollo profundo por módulos.",
+          "Videos demostrativos completos de ejercicios y progresiones.",
+          "Progresión de entrenamiento paso a paso.",
+          "Asociación y fijación de olor.",
+          "Búsqueda sistemática y metodología de trabajo.",
+          "Lectura del perro: señales, cambios de conducta y comunicación.",
+          "Manejo del guía: posición, conducción, tiempos y errores frecuentes.",
+          "Marcación pasiva y activa con criterios de corrección.",
+          "Protocolos técnicos de entrenamiento.",
+          "Casos reales y aplicación en escenarios operativos.",
+          "Evaluación teórica final.",
+          "Evaluación práctica mediante videos enviados por el alumno.",
+          "Corrección personalizada de ejercicios.",
+          "Soporte prioritario durante el curso.",
+          "Certificado profesional SERVICAN con evaluación.",
+        ]
+      : [
+          "Todo lo incluido en el Plan Básico.",
+          "Videos demostrativos ampliados y explicaciones más profundas de los ejercicios.",
+          "Evaluaciones simples o tareas por módulo.",
+          "Evaluación final teórica y/o práctica.",
+          "Revisión de ejercicios o evidencia enviada por el alumno.",
+          "Soporte prioritario por plataforma, mail o WhatsApp.",
+          "Certificado de aprobación profesional SERVICAN.",
+          "Casos prácticos y situaciones reales de entrenamiento.",
+          "Errores frecuentes y formas de corregirlos.",
+          "Actualizaciones del curso durante el período de acceso.",
+          "Descuento en el curso K9 u otros productos SERVICAN.",
+        ];
+  }
+
+  return k9
+    ? [
+        "Acceso al curso K9 online en plataforma SERVICAN.",
+        "PDF completo del curso K9.",
+        "Videos explicativos de los módulos principales.",
+        "Videos demostrativos básicos de búsqueda y detección.",
+        "Introducción al perro detector: función, perfil y objetivos.",
+        "Selección del perro y características deseadas.",
+        "Motivación y juego como base de trabajo.",
+        "Asociación de olor inicial.",
+        "Búsqueda sistemática introductoria.",
+        "Marcación pasiva y activa.",
+        "Ejercicios iniciales para comprender la progresión.",
+        "Certificado simple de participación.",
+      ]
+    : [
+        "Acceso al curso online en plataforma SERVICAN.",
+        "PDF completo del curso, ordenado por módulos.",
+        "Videos explicativos de los temas principales.",
+        "Videos demostrativos básicos y parte de los ejercicios explicados paso a paso.",
+        "Historia y rol del guía canino.",
+        "Instintos, impulsos, conducta y bases del aprendizaje.",
+        "Refuerzos, comunicación y obediencia inicial.",
+        "Ejercicios por módulo para practicar con el perro.",
+        "Material complementario básico: recomendaciones, guías y errores comunes.",
+        "Acceso extendido recomendado: 12 meses.",
+        "Certificado simple de participación.",
+      ];
+}
+
+function obtenerDetallesCurso(curso) {
+  if (esCursoK9(curso)) {
+    return [
+      {
+        titulo: "Especialización K9",
+        texto: "Formación orientada a detección, búsqueda, asociación de olor, marcación y trabajo operativo.",
+      },
+      {
+        titulo: "Trabajo técnico",
+        texto: "Incluye lectura del perro, progresiones, manejo del guía y criterios de corrección.",
+      },
+      {
+        titulo: "Marcación",
+        texto: "Se trabaja sobre marcación pasiva y activa dentro de la progresión del perro detector.",
+      },
+      {
+        titulo: "Certificación",
+        texto: "Según el plan elegido, el alumno accede a certificado simple o certificado profesional con evaluación.",
+      },
+    ];
+  }
+
+  return [
+    {
+      titulo: "Base profesional",
+      texto: "Formación inicial para comprender el rol del guía canino y los fundamentos de trabajo.",
+    },
+    {
+      titulo: "Conducta y aprendizaje",
+      texto: "Instintos, impulsos, conducta, refuerzos, comunicación y obediencia inicial.",
+    },
+    {
+      titulo: "Material guiado",
+      texto: "PDF completo, videos explicativos, demostraciones básicas y ejercicios por módulo.",
+    },
+    {
+      titulo: "Certificación",
+      texto: "Según el plan elegido, el alumno accede a certificado simple o certificado profesional con evaluación.",
+    },
+  ];
+}
+
+function PlanCard({ producto, curso }) {
   const planKey = normalizarPlan(producto.plan);
   const info = PLANES_INFO[planKey];
   const precio = formatearPrecio(producto.precio, producto.moneda);
   const esPro = planKey === "pro";
   const esPlantel = planKey === "plantel";
   const cantidadUsuarios = Number(producto.cantidad_maxima_usuarios || 1);
-  const beneficiosFinales = obtenerBeneficiosProducto(producto, info);
+  const beneficios = obtenerBeneficiosPlan(producto, curso);
+  const resumen = producto.descripcion || obtenerResumenPlan(producto, curso);
 
   return (
     <article
@@ -160,8 +268,8 @@ function PlanCard({ producto }) {
         esPro
           ? "border-yellow-500/60"
           : esPlantel
-          ? "border-green-500/50"
-          : "border-white/10"
+            ? "border-green-500/50"
+            : "border-white/10"
       }`}
     >
       {esPro && (
@@ -183,9 +291,7 @@ function PlanCard({ producto }) {
 
         <h3 className="mt-4 text-3xl font-black">Plan {info.nombre}</h3>
 
-        <p className="mt-4 min-h-20 leading-7 text-zinc-300">
-          {producto.descripcion || info.resumen}
-        </p>
+        <p className="mt-4 min-h-24 leading-7 text-zinc-300">{resumen}</p>
 
         <div className="mt-6">
           <p className="text-sm font-bold uppercase tracking-[0.2em] text-zinc-500">
@@ -227,7 +333,7 @@ function PlanCard({ producto }) {
           </h4>
 
           <ul className="mt-4 space-y-3">
-            {beneficiosFinales.map((item) => (
+            {beneficios.map((item) => (
               <li
                 key={item}
                 className="flex gap-3 text-sm leading-6 text-zinc-300"
@@ -241,27 +347,7 @@ function PlanCard({ producto }) {
           </ul>
         </div>
 
-        {info.noIncluye.length > 0 && (
-          <div className="mt-6 rounded-2xl border border-white/10 bg-black p-4">
-            <h4 className="text-sm font-black uppercase tracking-[0.2em] text-zinc-500">
-              No incluido
-            </h4>
-
-            <ul className="mt-3 space-y-2">
-              {info.noIncluye.map((item) => (
-                <li
-                  key={item}
-                  className="flex gap-3 text-sm leading-6 text-zinc-500"
-                >
-                  <span>—</span>
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {(esPlantel || cantidadUsuarios > 1) && (
+        {esPlantel && (
           <div className="mt-6 rounded-2xl border border-green-500/30 bg-green-500/10 p-4">
             <h4 className="font-black text-green-200">
               Compra para varios participantes
@@ -287,14 +373,16 @@ export default async function CursoDetallePage({ params }) {
   const parametros = await params;
   const slug = parametros?.slug;
 
-const resultadoCurso = await obtenerCursoPorSlug(slug);
-const curso = resultadoCurso?.curso || resultadoCurso;
+  const resultadoCurso = await obtenerCursoPorSlug(slug);
+  const curso = resultadoCurso?.curso || resultadoCurso;
 
-if (!curso) {
-  notFound();
-}
+  if (!curso) {
+    notFound();
+  }
 
   const productos = ordenarProductos(await obtenerProductosActivosPorCurso(curso));
+  const detallesCurso = obtenerDetallesCurso(curso);
+  const k9 = esCursoK9(curso);
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -313,7 +401,7 @@ if (!curso) {
             </Link>
 
             <p className="mt-10 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
-              Curso SERVICAN
+              {k9 ? "Curso especializado K9" : "Curso SERVICAN"}
             </p>
 
             <h1 className="mt-5 text-5xl font-black leading-tight md:text-7xl">
@@ -341,6 +429,16 @@ if (!curso) {
               {curso.modalidad && (
                 <span className="rounded-full border border-white/10 bg-white/10 px-5 py-3 text-sm font-bold text-zinc-200">
                   Modalidad: {curso.modalidad}
+                </span>
+              )}
+
+              <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-5 py-3 text-sm font-bold text-yellow-200">
+                Básico · Pro · Plantel
+              </span>
+
+              {k9 && (
+                <span className="rounded-full border border-red-500/30 bg-red-500/10 px-5 py-3 text-sm font-bold text-red-200">
+                  Detección y trabajo operativo
                 </span>
               )}
             </div>
@@ -377,53 +475,22 @@ if (!curso) {
       <section className="border-b border-white/10 bg-zinc-950 px-4 py-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-[1500px]">
           <div className="grid gap-6 md:grid-cols-4">
-            <div className="rounded-[2rem] border border-white/10 bg-black p-6">
-              <p className="text-sm font-bold uppercase tracking-[0.2em] text-zinc-500">
-                Acceso privado
-              </p>
-              <p className="mt-3 text-3xl font-black text-yellow-500">
-                Panel alumno
-              </p>
-              <p className="mt-3 text-sm leading-6 text-zinc-400">
-                Cada alumno accede solamente al contenido de su plan.
-              </p>
-            </div>
-
-            <div className="rounded-[2rem] border border-white/10 bg-black p-6">
-              <p className="text-sm font-bold uppercase tracking-[0.2em] text-zinc-500">
-                Materiales
-              </p>
-              <p className="mt-3 text-3xl font-black text-yellow-500">
-                PDFs y videos
-              </p>
-              <p className="mt-3 text-sm leading-6 text-zinc-400">
-                Los materiales se habilitan según Básico, Extenso, Pro o Plantel.
-              </p>
-            </div>
-
-            <div className="rounded-[2rem] border border-white/10 bg-black p-6">
-              <p className="text-sm font-bold uppercase tracking-[0.2em] text-zinc-500">
-                Seguimiento
-              </p>
-              <p className="mt-3 text-3xl font-black text-yellow-500">
-                Plan Pro
-              </p>
-              <p className="mt-3 text-sm leading-6 text-zinc-400">
-                El plan Pro agrega soporte y acompañamiento personalizado.
-              </p>
-            </div>
-
-            <div className="rounded-[2rem] border border-white/10 bg-black p-6">
-              <p className="text-sm font-bold uppercase tracking-[0.2em] text-zinc-500">
-                Grupal
-              </p>
-              <p className="mt-3 text-3xl font-black text-yellow-500">
-                Plantel
-              </p>
-              <p className="mt-3 text-sm leading-6 text-zinc-400">
-                Permite acceso para comprador y participantes registrados.
-              </p>
-            </div>
+            {detallesCurso.map((item) => (
+              <div
+                key={item.titulo}
+                className="rounded-[2rem] border border-white/10 bg-black p-6"
+              >
+                <p className="text-sm font-bold uppercase tracking-[0.2em] text-zinc-500">
+                  SERVICAN
+                </p>
+                <p className="mt-3 text-2xl font-black text-yellow-500">
+                  {item.titulo}
+                </p>
+                <p className="mt-3 text-sm leading-6 text-zinc-400">
+                  {item.texto}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -440,9 +507,9 @@ if (!curso) {
             </h2>
 
             <p className="mt-5 leading-8 text-zinc-300">
-              Cada plan habilita un nivel distinto de contenido dentro del panel
-              privado. Podés comenzar con un plan simple o elegir una opción más
-              completa con materiales extra y acompañamiento.
+              Este curso está organizado en tres opciones claras: Básico, Pro y
+              Plantel. El Plan Extenso fue eliminado para simplificar la oferta
+              y repartir sus beneficios entre Básico y Pro.
             </p>
           </div>
 
@@ -466,9 +533,9 @@ if (!curso) {
               </Link>
             </div>
           ) : (
-            <div className="mt-10 grid gap-8 xl:grid-cols-2 2xl:grid-cols-4">
+            <div className="mt-10 grid gap-8 xl:grid-cols-3">
               {productos.map((producto) => (
-                <PlanCard key={producto.id} producto={producto} />
+                <PlanCard key={producto.id} producto={producto} curso={curso} />
               ))}
             </div>
           )}

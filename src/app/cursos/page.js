@@ -11,11 +11,19 @@ export const dynamic = "force-dynamic";
 
 const whatsapp = "59898188257";
 
+const ORDEN_PLANES = {
+  basico: 1,
+  pro: 2,
+  plantel: 3,
+};
+
 function construirLinkConsulta(curso) {
-  const mensaje = `Hola SERVICAN, quiero consultar por el curso: ${curso.titulo}`;
+  const mensaje = curso
+    ? `Hola SERVICAN, quiero consultar por el curso: ${curso.titulo}`
+    : "Hola SERVICAN, quiero consultar por los cursos disponibles.";
 
   return `/inscripcion?curso=${encodeURIComponent(
-    curso.titulo
+    curso?.titulo || "Cursos SERVICAN"
   )}&mensaje=${encodeURIComponent(mensaje)}`;
 }
 
@@ -118,15 +126,24 @@ function InfoCard({ titulo, texto, icono }) {
 function formatearPrecio(producto) {
   const precio = Number(producto?.precio || 0);
 
-  if (!precio) return "Consultar";
+  if (!precio) {
+    return "Consultar";
+  }
 
-  return `${producto?.moneda || "UYU"} ${Math.round(precio)}`;
+  try {
+    return new Intl.NumberFormat("es-UY", {
+      style: "currency",
+      currency: producto?.moneda || "USD",
+      maximumFractionDigits: producto?.precio < 100 ? 2 : 0,
+    }).format(precio);
+  } catch {
+    return `${producto?.moneda || "USD"} ${precio}`;
+  }
 }
 
 function nombrePlan(plan) {
   const planes = {
     basico: "Básico",
-    extenso: "Extenso",
     pro: "Pro",
     plantel: "Plantel",
     mensual: "Mensual",
@@ -135,103 +152,297 @@ function nombrePlan(plan) {
   return planes[plan] || plan || "Plan";
 }
 
-function beneficiosPlan(producto) {
-  const plan = producto?.plan;
+function esCursoK9(curso) {
+  const texto = `${curso?.titulo || ""} ${curso?.slug || ""}`.toLowerCase();
 
-  if (producto?.tipo_producto === "paquete") {
-    return [
-      "Acceso a más de un curso incluido",
-      "Hasta 4 usuarios autorizados",
-      "Correos de participantes registrados",
-      "Beneficios del plan Pro",
-    ];
+  return (
+    texto.includes("k9") ||
+    texto.includes("detector") ||
+    texto.includes("detectores") ||
+    texto.includes("deteccion") ||
+    texto.includes("detección")
+  );
+}
+
+function beneficiosPlanCurso(producto, curso) {
+  const plan = String(producto?.plan || "").toLowerCase();
+  const k9 = esCursoK9(curso);
+
+  if (plan === "plantel") {
+    return k9
+      ? [
+          "Acceso para hasta 4 cuentas individuales.",
+          "Todo lo incluido en el Plan Pro K9.",
+          "Certificado individual para cada participante.",
+          "Evaluación y seguimiento por participante según condiciones.",
+          "El comprador carga los correos autorizados.",
+          "Todos los participantes deben estar registrados previamente.",
+          "Soporte grupal para el plantel.",
+        ]
+      : [
+          "Acceso para hasta 4 cuentas individuales.",
+          "Todo lo incluido en el Plan Pro.",
+          "Certificado individual para cada participante.",
+          "El comprador carga los correos autorizados.",
+          "Todos los participantes deben estar registrados previamente.",
+          "Soporte grupal.",
+        ];
   }
 
-  if (producto?.tipo_producto === "membresia") {
-    return [
-      "Acceso mensual a contenido exclusivo",
-      "Galería privada de fotos y videos",
-      "10% de descuento en cursos principales",
-      "1 curso pequeño a elección cuando estén disponibles",
-    ];
+  if (plan === "pro") {
+    return k9
+      ? [
+          "Todo lo incluido en el Plan Básico K9.",
+          "Curso K9 completo con desarrollo profundo por módulos.",
+          "Videos demostrativos completos de ejercicios y progresiones.",
+          "Asociación y fijación de olor.",
+          "Búsqueda sistemática y metodología de trabajo.",
+          "Lectura del perro: señales, cambios de conducta y comunicación.",
+          "Manejo del guía: posición, conducción, tiempos y errores frecuentes.",
+          "Marcación pasiva y activa con criterios de corrección.",
+          "Protocolos técnicos de entrenamiento.",
+          "Casos reales y aplicación en escenarios operativos.",
+          "Evaluación teórica final.",
+          "Evaluación práctica mediante videos enviados por el alumno.",
+          "Corrección personalizada de ejercicios.",
+          "Soporte prioritario durante el curso.",
+          "Certificado profesional SERVICAN con evaluación.",
+        ]
+      : [
+          "Todo lo incluido en el Plan Básico.",
+          "Videos demostrativos ampliados y explicaciones más profundas.",
+          "Evaluaciones simples o tareas por módulo.",
+          "Evaluación final teórica y/o práctica.",
+          "Revisión de ejercicios o evidencia enviada por el alumno.",
+          "Soporte prioritario por plataforma, mail o WhatsApp.",
+          "Certificado de aprobación profesional SERVICAN.",
+          "Casos prácticos y situaciones reales de entrenamiento.",
+          "Errores frecuentes y formas de corregirlos.",
+          "Actualizaciones del curso durante el período de acceso.",
+          "Descuento en el curso K9 u otros productos SERVICAN.",
+        ];
   }
+
+  return k9
+    ? [
+        "Acceso al curso K9 online en plataforma SERVICAN.",
+        "PDF completo del curso K9.",
+        "Videos explicativos de los módulos principales.",
+        "Videos demostrativos básicos de búsqueda y detección.",
+        "Introducción al perro detector: función, perfil y objetivos.",
+        "Selección del perro y características deseadas.",
+        "Motivación y juego como base de trabajo.",
+        "Asociación de olor inicial.",
+        "Búsqueda sistemática introductoria.",
+        "Marcación pasiva y activa.",
+        "Ejercicios iniciales para comprender la progresión.",
+        "Certificado simple de participación.",
+      ]
+    : [
+        "Acceso al curso online en plataforma SERVICAN.",
+        "PDF completo del curso, ordenado por módulos.",
+        "Videos explicativos de los temas principales.",
+        "Videos demostrativos básicos y ejercicios explicados paso a paso.",
+        "Historia y rol del guía canino.",
+        "Instintos, impulsos, conducta y bases del aprendizaje.",
+        "Refuerzos, comunicación y obediencia inicial.",
+        "Ejercicios por módulo para practicar con el perro.",
+        "Material complementario básico.",
+        "Acceso extendido recomendado: 12 meses.",
+        "Certificado simple de participación.",
+      ];
+}
+
+function beneficiosPaquete(producto) {
+  const plan = String(producto?.plan || "").toLowerCase();
 
   if (plan === "plantel") {
     return [
-      "Acceso para hasta 4 usuarios",
-      "Participantes con cuenta registrada",
-      "Beneficios del plan Pro",
-      "Ideal para equipos o familias",
+      "Hasta 4 cuentas individuales.",
+      "Ambos cursos completos.",
+      "Beneficios del Plan Pro.",
+      "Certificados individuales.",
+      "Correos autorizados.",
+      "Soporte grupal.",
     ];
   }
 
   if (plan === "pro") {
     return [
-      "Acceso completo al curso",
-      "Material complementario",
-      "Beneficios avanzados",
-      "Certificación según aprobación",
-    ];
-  }
-
-  if (plan === "extenso") {
-    return [
-      "Acceso ampliado al contenido",
-      "Más desarrollo que el plan básico",
-      "Material de apoyo",
-      "Progreso dentro del panel",
+      "Formación inicial Pro.",
+      "Formación K9 Pro.",
+      "Videos completos.",
+      "Ejercicios y evaluaciones.",
+      "Certificados profesionales.",
+      "Soporte prioritario.",
     ];
   }
 
   return [
-    "Acceso al contenido inicial",
-    "Panel privado de alumno",
-    "Progreso por clases",
-    "Base formativa ordenada",
+    "Formación inicial Básico.",
+    "Formación K9 Básico.",
+    "PDFs de ambos cursos.",
+    "Videos principales.",
+    "Certificados simples.",
+    "Entrada completa al sistema SERVICAN.",
   ];
 }
 
 function obtenerProductosDelCurso(curso, productos) {
-  return productos.filter((producto) => {
-    if (producto.tipo_producto !== "curso_plan") return false;
+  return productos
+    .filter((producto) => {
+      if (producto.tipo_producto !== "curso_plan") {
+        return false;
+      }
 
-    if (producto.curso_id && producto.curso_id === curso.id) return true;
+      if (producto.plan === "extenso") {
+        return false;
+      }
 
-    if (Array.isArray(producto.producto_cursos)) {
-      return producto.producto_cursos.some((item) => item.curso_id === curso.id);
-    }
+      if (producto.curso_id && producto.curso_id === curso.id) {
+        return true;
+      }
 
-    return false;
-  });
+      if (Array.isArray(producto.producto_cursos)) {
+        return producto.producto_cursos.some(
+          (item) => item.curso_id === curso.id
+        );
+      }
+
+      return false;
+    })
+    .sort((a, b) => {
+      const ordenA = ORDEN_PLANES[a.plan] || 99;
+      const ordenB = ORDEN_PLANES[b.plan] || 99;
+
+      if (ordenA !== ordenB) {
+        return ordenA - ordenB;
+      }
+
+      return Number(a.precio || 0) - Number(b.precio || 0);
+    });
 }
 
-function ProductoCard({ producto }) {
-  const esRecurrente = Boolean(producto.es_recurrente);
-  const esMembresia = producto.tipo_producto === "membresia";
+function obtenerDescripcionPlan(producto, curso) {
+  const plan = String(producto?.plan || "").toLowerCase();
+  const k9 = esCursoK9(curso);
+
+  if (plan === "plantel") {
+    return k9
+      ? "Para empresas, equipos de seguridad, grupos de trabajo o instituciones que quieran formar hasta 4 personas."
+      : "Para equipos, familias, grupos o instituciones chicas que necesitan acceso individual para hasta 4 participantes.";
+  }
+
+  if (plan === "pro") {
+    return k9
+      ? "Plan principal del K9: contenido completo, evaluación, devolución, soporte y certificado profesional."
+      : "Para alumnos que quieren respaldo, devolución, evaluación y certificado con mayor valor profesional.";
+  }
+
+  return k9
+    ? "Entrada seria al trabajo K9: detección, búsqueda, asociación de olor, marcación y progresión inicial."
+    : "Opción de entrada profesional para formar una base seria como guía canino.";
+}
+
+function ProductoCursoCard({ producto, curso }) {
+  const plan = String(producto?.plan || "basico").toLowerCase();
+  const destacado = plan === "pro" || Boolean(producto.destacado);
+  const plantel = plan === "plantel";
+  const beneficios = beneficiosPlanCurso(producto, curso);
 
   return (
     <article
-      className={`rounded-[1.7rem] border p-5 ${
-        producto.destacado
-          ? "border-yellow-500/40 bg-yellow-500/10"
+      className={`flex h-full flex-col rounded-[1.7rem] border p-5 ${
+        destacado
+          ? "border-yellow-500/50 bg-yellow-500/10"
+          : plantel
+            ? "border-green-500/40 bg-green-500/10"
+            : "border-white/10 bg-black"
+      }`}
+    >
+      <div className="flex flex-wrap gap-2">
+        <Badge color={destacado ? "yellow" : plantel ? "green" : "neutral"}>
+          {nombrePlan(producto.plan)}
+        </Badge>
+
+        {destacado && <Badge color="yellow">Recomendado</Badge>}
+
+        {plantel && (
+          <Badge color="blue">
+            Hasta {producto.cantidad_maxima_usuarios || 4} usuarios
+          </Badge>
+        )}
+      </div>
+
+      <h4 className="mt-4 text-2xl font-black text-white">
+        {producto.nombre}
+      </h4>
+
+      <p className="mt-3 min-h-24 text-sm leading-6 text-zinc-300">
+        {producto.descripcion || obtenerDescripcionPlan(producto, curso)}
+      </p>
+
+      <div className="mt-5 rounded-2xl border border-white/10 bg-zinc-950 p-4">
+        <p className="text-xs font-black uppercase tracking-wide text-zinc-500">
+          Precio
+        </p>
+
+        <p className="mt-1 text-3xl font-black text-yellow-500">
+          {formatearPrecio(producto)}
+        </p>
+
+        <p className="mt-2 text-xs leading-5 text-zinc-500">
+          Pago único. Acceso según el plan seleccionado.
+        </p>
+      </div>
+
+      <div className="mt-5 flex-1">
+        <p className="text-sm font-black uppercase tracking-[0.2em] text-yellow-400">
+          Qué incluye
+        </p>
+
+        <ul className="mt-4 space-y-3 text-sm leading-6 text-zinc-300">
+          {beneficios.map((beneficio) => (
+            <li key={beneficio} className="flex gap-3">
+              <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-500 text-xs font-black text-black">
+                ✓
+              </span>
+              <span>{beneficio}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {plantel && (
+        <div className="mt-5 rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 text-sm leading-6 text-blue-100">
+          El comprador debe ingresar los correos de los otros participantes.
+          Todos deben tener cuenta registrada antes de comprar.
+        </div>
+      )}
+
+      <div className="mt-6">
+        <BotonComprarProducto producto={producto} />
+      </div>
+    </article>
+  );
+}
+
+function ProductoPaqueteCard({ producto }) {
+  const destacado = producto.plan === "pro" || Boolean(producto.destacado);
+  const beneficios = beneficiosPaquete(producto);
+
+  return (
+    <article
+      className={`flex h-full flex-col rounded-[1.7rem] border p-6 ${
+        destacado
+          ? "border-yellow-500/50 bg-yellow-500/10"
           : "border-white/10 bg-black"
       }`}
     >
       <div className="flex flex-wrap gap-2">
-        <Badge color={producto.destacado ? "yellow" : "neutral"}>
-          {nombrePlan(producto.plan)}
-        </Badge>
-
-        {producto.tipo_producto === "paquete" && (
-          <Badge color="blue">Paquete</Badge>
-        )}
-
-        {producto.tipo_producto === "membresia" && (
-          <Badge color="yellow">Membresía</Badge>
-        )}
-
-        {producto.es_recurrente && <Badge color="green">Mensual</Badge>}
-
+        <Badge color={destacado ? "yellow" : "blue"}>Pack</Badge>
+        <Badge color="neutral">{nombrePlan(producto.plan)}</Badge>
+        {destacado && <Badge color="yellow">Mejor valor</Badge>}
         {producto.requiere_participantes && (
           <Badge color="blue">
             Hasta {producto.cantidad_maxima_usuarios || 4} usuarios
@@ -245,7 +456,7 @@ function ProductoCard({ producto }) {
 
       <p className="mt-3 min-h-20 text-sm leading-6 text-zinc-300">
         {producto.descripcion ||
-          "Plan de acceso SERVICAN con contenido privado dentro del panel del alumno."}
+          "Paquete de cursos SERVICAN para avanzar con una ruta completa de formación."}
       </p>
 
       <div className="mt-5 rounded-2xl border border-white/10 bg-zinc-950 p-4">
@@ -258,31 +469,70 @@ function ProductoCard({ producto }) {
         </p>
       </div>
 
-      <ul className="mt-5 space-y-3 text-sm leading-6 text-zinc-300">
-        {beneficiosPlan(producto).map((beneficio) => (
+      <ul className="mt-5 flex-1 space-y-3 text-sm leading-6 text-zinc-300">
+        {beneficios.map((beneficio) => (
           <li key={beneficio} className="flex gap-3">
-            <span className="mt-1 text-yellow-500">✓</span>
+            <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-500 text-xs font-black text-black">
+              ✓
+            </span>
             <span>{beneficio}</span>
           </li>
         ))}
       </ul>
 
       <div className="mt-6">
-        {esMembresia ? (
-          <BotonComprarMembresia
-            texto={producto.texto_boton || "Contratar membresía mensual"}
-          />
-        ) : (
-          <BotonComprarProducto producto={producto} />
-        )}
+        <BotonComprarProducto producto={producto} />
       </div>
+    </article>
+  );
+}
 
-      {esRecurrente && esMembresia && (
-        <p className="mt-4 rounded-2xl border border-green-500/20 bg-green-500/10 p-3 text-xs leading-5 text-green-100">
-          La membresía se activa automáticamente cuando Mercado Pago confirma el
-          pago por webhook.
-        </p>
-      )}
+function MembresiaFallbackCard({ membresia }) {
+  return (
+    <article className="overflow-hidden rounded-[2rem] border border-yellow-500/40 bg-gradient-to-br from-yellow-500/15 via-zinc-950 to-black p-7 shadow-2xl">
+      <div className="grid gap-8 lg:grid-cols-[1fr_380px] lg:items-center">
+        <div>
+          <Badge color="yellow">Membresía mensual</Badge>
+
+          <h2 className="mt-5 text-4xl font-black md:text-5xl">
+            Comunidad privada SERVICAN
+          </h2>
+
+          <p className="mt-5 max-w-3xl leading-8 text-zinc-300">
+            Acceso mensual a contenido exclusivo, galería privada, beneficios de
+            comunidad y descuentos para cursos principales.
+          </p>
+
+          <ul className="mt-6 grid gap-3 text-sm leading-6 text-zinc-200 md:grid-cols-2">
+            <li>✓ Galería privada de fotos y videos.</li>
+            <li>✓ Actualización semanal de contenido.</li>
+            <li>✓ 10% de descuento en cursos.</li>
+            <li>✓ 1 curso pequeño a elección cuando estén disponibles.</li>
+            <li>✓ Contenido educativo corto.</li>
+            <li>✓ Beneficios de comunidad.</li>
+          </ul>
+        </div>
+
+        <div className="rounded-[1.5rem] border border-white/10 bg-black p-5">
+          <p className="text-sm font-black uppercase tracking-[0.25em] text-zinc-500">
+            Precio mensual
+          </p>
+
+          <p className="mt-2 text-4xl font-black text-yellow-500">
+            {formatearPrecio(membresia)}
+          </p>
+
+          <p className="mt-3 text-sm leading-6 text-zinc-400">
+            La membresía se activa cuando Mercado Pago confirma la suscripción.
+          </p>
+
+          <div className="mt-5">
+            <BotonComprarMembresia
+              texto={membresia?.texto_boton || "Contratar membresía mensual"}
+            />
+          </div>
+        </div>
+      </div>
     </article>
   );
 }
@@ -291,11 +541,24 @@ export default async function CursosPage() {
   const { cursos, error } = await obtenerCursosActivos();
   const { productos, error: errorProductos } = await obtenerProductosPublicos();
 
-  const paquetes = productos.filter(
-    (producto) => producto.tipo_producto === "paquete"
+  const productosSinExtenso = productos.filter(
+    (producto) => producto.plan !== "extenso"
   );
 
-  const membresias = productos.filter(
+  const paquetes = productosSinExtenso
+    .filter((producto) => producto.tipo_producto === "paquete")
+    .sort((a, b) => {
+      const ordenA = ORDEN_PLANES[a.plan] || 99;
+      const ordenB = ORDEN_PLANES[b.plan] || 99;
+
+      if (ordenA !== ordenB) {
+        return ordenA - ordenB;
+      }
+
+      return Number(a.precio || 0) - Number(b.precio || 0);
+    });
+
+  const membresias = productosSinExtenso.filter(
     (producto) => producto.tipo_producto === "membresia"
   );
 
@@ -303,23 +566,23 @@ export default async function CursosPage() {
 
   const beneficios = [
     {
-      titulo: "Compra y acceso privado",
-      texto: "El alumno puede comprar un plan y acceder desde su panel cuando el pago queda confirmado.",
-      icono: "🔐",
+      titulo: "Membresía arriba",
+      texto: "La membresía queda destacada antes de los cursos para mostrar comunidad, beneficios y descuento.",
+      icono: "⭐",
     },
     {
-      titulo: "Planes por nivel",
-      texto: "Cada curso puede tener plan Básico, Extenso, Pro o Plantel según el nivel de acceso.",
+      titulo: "Planes claros",
+      texto: "Cada curso muestra Básico, Pro y Plantel con una lista concreta de beneficios.",
       icono: "📚",
     },
     {
-      titulo: "Paquetes grupales",
-      texto: "Los planes para más de una persona solicitan correos de participantes registrados.",
-      icono: "👥",
+      titulo: "Compra protegida",
+      texto: "Los planes grupales solicitan correos de participantes registrados antes de pagar.",
+      icono: "🔐",
     },
     {
       titulo: "Certificación",
-      texto: "La plataforma permite emitir certificados privados con verificación pública por código.",
+      texto: "Los planes muestran si incluyen certificado simple, profesional o individual por participante.",
       icono: "🎓",
     },
   ];
@@ -327,51 +590,51 @@ export default async function CursosPage() {
   const pasos = [
     {
       numero: "01",
-      titulo: "Elegís curso o plan",
-      texto: "Revisás los cursos, comparás planes disponibles y elegís el acceso que mejor se adapte a tu objetivo.",
+      titulo: "Elegís membresía, curso o pack",
+      texto: "Primero podés revisar la membresía mensual y luego comparar los cursos y paquetes disponibles.",
     },
     {
       numero: "02",
-      titulo: "Iniciás sesión",
-      texto: "Para comprar necesitás tener una cuenta creada. Si el plan es grupal, los otros correos también deben estar registrados.",
+      titulo: "Comparás planes",
+      texto: "Cada curso muestra Básico, Pro y Plantel con precio, beneficios y tipo de certificado.",
     },
     {
       numero: "03",
-      titulo: "Pagás con Mercado Pago",
-      texto: "La plataforma genera la preferencia de pago y procesa el estado mediante webhook.",
+      titulo: "Iniciás sesión",
+      texto: "Para comprar necesitás tener cuenta. En planes grupales, los otros correos también deben estar registrados.",
     },
     {
       numero: "04",
-      titulo: "Accedés al panel",
-      texto: "Cuando el pago queda aprobado, el curso se habilita en tu panel privado de alumno.",
+      titulo: "Pagás con Mercado Pago",
+      texto: "Cuando Mercado Pago confirma el pago, la plataforma habilita el acceso correspondiente.",
     },
   ];
 
   const preguntas = [
     {
-      pregunta: "¿Crear una cuenta habilita automáticamente un curso?",
+      pregunta: "¿La membresía reemplaza a los cursos principales?",
       respuesta:
-        "No. La cuenta permite ingresar al panel, pero los cursos privados se habilitan cuando se confirma el pago o cuando SERVICAN autoriza el acceso.",
+        "No. La membresía es un producto mensual separado para contenido privado, galería, descuentos y comunidad.",
     },
     {
-      pregunta: "¿Qué incluye la membresía mensual?",
+      pregunta: "¿Qué planes tienen los cursos principales?",
       respuesta:
-        "Incluye acceso a galería privada, contenido exclusivo, 10% de descuento en cursos principales y 1 curso pequeño a elección cuando esa sección esté disponible.",
+        "Cada curso queda organizado en Básico, Pro y Plantel. El plan Extenso se elimina para simplificar la oferta.",
     },
     {
       pregunta: "¿Qué pasa si compro un plan Plantel?",
       respuesta:
-        "El comprador debe indicar los correos de los otros participantes. Todos tienen que tener cuenta registrada para poder continuar.",
+        "El comprador debe ingresar los correos de los otros participantes. Todos tienen que tener cuenta registrada antes de comprar.",
+    },
+    {
+      pregunta: "¿El K9 se muestra igual que un curso común?",
+      respuesta:
+        "No. El K9 se presenta como formación especializada en detección, búsqueda, asociación de olor, marcación y trabajo operativo.",
     },
     {
       pregunta: "¿Puedo consultar antes de comprar?",
       respuesta:
         "Sí. Podés enviar una consulta desde el formulario o comunicarte directamente por WhatsApp antes de elegir un plan.",
-    },
-    {
-      pregunta: "¿Los cursos tienen certificado?",
-      respuesta:
-        "La plataforma permite emitir certificados privados para alumnos y verificar públicamente su validez mediante un código único.",
     },
   ];
 
@@ -408,16 +671,16 @@ export default async function CursosPage() {
               Quiénes somos
             </Link>
 
-            <Link href="/#servicios" className="hover:text-yellow-500">
-              Servicios
+            <Link href="#membresia" className="hover:text-yellow-500">
+              Membresía
             </Link>
 
-            <Link href="/verificar-certificado" className="hover:text-yellow-500">
-              Verificar certificado
+            <Link href="#cursos-disponibles" className="hover:text-yellow-500">
+              Cursos
             </Link>
 
-            <Link href="/#contacto" className="hover:text-yellow-500">
-              Contacto
+            <Link href="#paquetes" className="hover:text-yellow-500">
+              Packs
             </Link>
           </nav>
 
@@ -436,21 +699,21 @@ export default async function CursosPage() {
             </p>
 
             <h1 className="text-5xl font-black leading-tight md:text-7xl">
-              Cursos, planes y membresía SERVICAN
+              Cursos, packs y membresía profesional
             </h1>
 
             <p className="mt-6 max-w-3xl text-lg leading-8 text-zinc-300">
-              Formación para guías caninos, trabajo guía-perro, manejo,
-              obediencia, control, especialización K9 y acceso privado a
-              contenido profesional dentro de la plataforma SERVICAN.
+              Formación online para guías caninos, base profesional, trabajo
+              guía-perro, especialización K9, packs de formación completa y
+              membresía mensual con contenido privado.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
-              <Badge>Planes de curso</Badge>
-              <Badge>Mercado Pago</Badge>
-              <Badge>Acceso privado</Badge>
+              <Badge>Básico</Badge>
+              <Badge>Pro</Badge>
+              <Badge>Plantel</Badge>
               <Badge>Membresía mensual</Badge>
-              <Badge>K9</Badge>
+              <Badge>K9 especializado</Badge>
             </div>
 
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
@@ -465,7 +728,7 @@ export default async function CursosPage() {
                 href="#cursos-disponibles"
                 className="rounded-full border border-yellow-500 bg-black/40 px-8 py-4 text-center font-black text-yellow-500 transition hover:bg-yellow-500 hover:text-black"
               >
-                Ver cursos y planes
+                Ver cursos
               </a>
 
               <a
@@ -497,7 +760,7 @@ export default async function CursosPage() {
                   Plataforma privada
                 </p>
                 <h2 className="mt-2 text-3xl font-black">
-                  Compra, acceso y progreso en un solo lugar
+                  Cursos, comunidad y acceso por plan
                 </h2>
               </div>
             </div>
@@ -514,17 +777,19 @@ export default async function CursosPage() {
 
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <p className="text-2xl font-black text-yellow-500">
-                  {productos?.length || 0}
+                  {paquetes?.length || 0}
                 </p>
                 <p className="mt-1 text-xs leading-5 text-zinc-400">
-                  Productos visibles
+                  Packs visibles
                 </p>
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="text-2xl font-black text-yellow-500">MP</p>
+                <p className="text-2xl font-black text-yellow-500">
+                  {membresiaPrincipal ? "Sí" : "No"}
+                </p>
                 <p className="mt-1 text-xs leading-5 text-zinc-400">
-                  Mercado Pago
+                  Membresía activa
                 </p>
               </div>
             </div>
@@ -546,26 +811,53 @@ export default async function CursosPage() {
         </section>
       )}
 
-      {membresiaPrincipal && (
-        <section
-          id="membresia"
-          className="border-b border-zinc-900 bg-black px-4 py-20 sm:px-6 lg:px-8"
-        >
-          <div className="mx-auto max-w-[1450px]">
-            <MembresiaDestacadaCursos membresia={membresiaPrincipal} />
-          </div>
-        </section>
-      )}
+      <section
+        id="membresia"
+        className="border-b border-yellow-500/20 bg-zinc-950 px-4 py-20 sm:px-6 lg:px-8"
+      >
+        <div className="mx-auto max-w-[1450px]">
+          <div className="mb-10 max-w-4xl">
+            <p className="text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
+              Primero: membresía SERVICAN
+            </p>
 
-      <section className="border-b border-zinc-900 bg-zinc-950 px-4 py-20 sm:px-6 lg:px-8">
+            <h2 className="mt-4 text-4xl font-black md:text-6xl">
+              Acceso mensual a contenido privado y beneficios
+            </h2>
+
+            <p className="mt-5 leading-8 text-zinc-300">
+              La membresía no reemplaza a los cursos principales. Funciona como
+              producto mensual para comunidad, galería privada, contenido corto,
+              beneficios y descuentos.
+            </p>
+          </div>
+
+          {membresiaPrincipal ? (
+            <MembresiaDestacadaCursos membresia={membresiaPrincipal} />
+          ) : (
+            <div className="rounded-[2rem] border border-yellow-500/30 bg-yellow-500/10 p-8">
+              <h3 className="text-3xl font-black">
+                La membresía mensual todavía no está visible
+              </h3>
+
+              <p className="mt-4 max-w-3xl leading-7 text-yellow-100">
+                Cuando actives el producto de membresía desde el admin,
+                aparecerá en esta parte superior de cursos.
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="border-b border-zinc-900 bg-black px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-[1450px]">
           <div className="mx-auto max-w-3xl text-center">
             <p className="mb-3 text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
-              Qué ofrece la formación
+              Organización clara
             </p>
 
             <h2 className="text-4xl font-black md:text-5xl">
-              Una plataforma pensada para vender y formar
+              Qué vas a encontrar en esta sección
             </h2>
           </div>
 
@@ -577,7 +869,7 @@ export default async function CursosPage() {
                 texto={item.texto}
                 icono={item.icono}
               />
-            ))}   
+            ))}
           </div>
         </div>
       </section>
@@ -609,18 +901,17 @@ export default async function CursosPage() {
               <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-[0.3em] text-yellow-500">
-                    Programas disponibles
+                    Cursos principales
                   </p>
 
                   <h2 className="mt-2 text-4xl font-black md:text-5xl">
-                    Cursos activos
+                    Elegí tu formación
                   </h2>
 
-                  <p className="mt-4 max-w-2xl leading-8 text-zinc-400">
-                    Elegí un curso, revisá sus planes y comprá el acceso
-                    correspondiente. Si tenés membresía activa, más adelante se
-                    aplicará automáticamente el 10% de descuento desde el
-                    servidor.
+                  <p className="mt-4 max-w-3xl leading-8 text-zinc-400">
+                    Cada curso queda organizado en tres opciones: Básico, Pro y
+                    Plantel. El Plan Extenso se elimina para que la oferta sea
+                    más clara.
                   </p>
                 </div>
 
@@ -634,7 +925,7 @@ export default async function CursosPage() {
                 {cursos.map((curso) => {
                   const productosCurso = obtenerProductosDelCurso(
                     curso,
-                    productos
+                    productosSinExtenso
                   );
 
                   return (
@@ -642,7 +933,7 @@ export default async function CursosPage() {
                       key={curso.id}
                       className="overflow-hidden rounded-[2rem] border border-zinc-800 bg-zinc-950 shadow-2xl"
                     >
-                      <div className="grid gap-0 lg:grid-cols-[0.85fr_1.15fr]">
+                      <div className="grid gap-0 lg:grid-cols-[0.78fr_1.22fr]">
                         <div className="relative min-h-[360px] bg-zinc-900">
                           {curso.imagen_url ? (
                             <img
@@ -674,6 +965,12 @@ export default async function CursosPage() {
                             </div>
                           )}
 
+                          {esCursoK9(curso) && (
+                            <div className="absolute right-4 top-4 rounded-full border border-red-500/30 bg-red-500/20 px-4 py-2 text-xs font-black uppercase tracking-wide text-red-100">
+                              K9 especializado
+                            </div>
+                          )}
+
                           <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-black/90 to-transparent" />
                         </div>
 
@@ -682,6 +979,9 @@ export default async function CursosPage() {
                             {curso.categoria && <Badge>{curso.categoria}</Badge>}
                             {curso.modalidad && <Badge>{curso.modalidad}</Badge>}
                             <Badge color="green">Acceso privado</Badge>
+                            {esCursoK9(curso) && (
+                              <Badge color="red">Detección</Badge>
+                            )}
                           </div>
 
                           <h3 className="text-4xl font-black text-white">
@@ -690,16 +990,16 @@ export default async function CursosPage() {
 
                           <p className="mt-4 max-w-4xl leading-8 text-zinc-300">
                             {curso.descripcion ||
-                              "Curso de formación SERVICAN. Consultá por información, modalidad, contenidos y próximos cupos."}
+                              "Curso de formación SERVICAN. Revisá sus planes, beneficios y acceso correspondiente."}
                           </p>
 
                           <div className="mt-6 grid gap-3 sm:grid-cols-2">
                             <div className="rounded-2xl border border-white/10 bg-black p-4">
                               <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">
-                                Precio visible
+                                Planes
                               </p>
                               <p className="mt-1 font-black text-yellow-500">
-                                {curso.precio || "Ver planes"}
+                                Básico, Pro y Plantel
                               </p>
                             </div>
 
@@ -750,11 +1050,12 @@ export default async function CursosPage() {
                             )}
 
                             {productosCurso.length > 0 && (
-                              <div className="grid gap-4 xl:grid-cols-2">
+                              <div className="grid gap-4 xl:grid-cols-3">
                                 {productosCurso.map((producto) => (
-                                  <ProductoCard
+                                  <ProductoCursoCard
                                     key={producto.id}
                                     producto={producto}
+                                    curso={curso}
                                   />
                                 ))}
                               </div>
@@ -779,37 +1080,38 @@ export default async function CursosPage() {
           <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-sm font-black uppercase tracking-[0.35em] text-yellow-500">
-                Paquetes y membresías
+                Packs de cursos
               </p>
 
               <h2 className="mt-3 text-4xl font-black md:text-5xl">
-                Opciones especiales SERVICAN
+                Ruta completa de formación
               </h2>
 
               <p className="mt-4 max-w-3xl leading-8 text-zinc-400">
-                Además de planes por curso, SERVICAN ofrece paquetes de varios
-                cursos y membresía mensual con contenido exclusivo y beneficios.
+                Los packs combinan los dos cursos principales y sirven para
+                aumentar el valor de la formación completa. La membresía no se
+                repite acá porque queda destacada arriba.
               </p>
             </div>
           </div>
 
-          {paquetes.length === 0 && membresias.length === 0 && (
+          {paquetes.length === 0 && (
             <div className="rounded-[2rem] border border-white/10 bg-black p-8 text-center">
               <h3 className="text-3xl font-black">
-                Todavía no hay paquetes visibles
+                Todavía no hay packs visibles
               </h3>
 
               <p className="mx-auto mt-4 max-w-2xl leading-7 text-zinc-400">
-                Cuando actives paquetes o membresías visibles desde el panel
-                admin, aparecerán en esta sección.
+                Cuando actives Pack Básico, Pack Pro o Pack Plantel desde el
+                panel admin, aparecerán en esta sección.
               </p>
             </div>
           )}
 
-          {(paquetes.length > 0 || membresias.length > 0) && (
+          {paquetes.length > 0 && (
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              {[...paquetes, ...membresias].map((producto) => (
-                <ProductoCard key={producto.id} producto={producto} />
+              {paquetes.map((producto) => (
+                <ProductoPaqueteCard key={producto.id} producto={producto} />
               ))}
             </div>
           )}
@@ -824,12 +1126,12 @@ export default async function CursosPage() {
             </p>
 
             <h2 className="text-4xl font-black md:text-5xl">
-              Cómo se habilita un curso o membresía
+              Cómo se habilita un curso, pack o membresía
             </h2>
 
             <p className="mt-4 leading-8 text-zinc-300">
               El flujo está pensado para que la compra sea clara y el acceso se
-              habilite automáticamente cuando Mercado Pago confirma el pago.
+              habilite cuando Mercado Pago confirma el pago.
             </p>
           </div>
 
@@ -867,8 +1169,8 @@ export default async function CursosPage() {
 
             <p className="mt-5 leading-8 text-zinc-300">
               Esta sección ayuda a que el alumno entienda cómo funciona el
-              registro, la compra, el acceso privado, la membresía y los
-              certificados.
+              registro, la compra, el acceso privado, la membresía, los packs y
+              los certificados.
             </p>
 
             <div className="mt-8 rounded-[2rem] border border-yellow-500/25 bg-yellow-500/10 p-6">
@@ -877,10 +1179,9 @@ export default async function CursosPage() {
               </h3>
 
               <p className="mt-3 leading-7 text-yellow-100">
-                Para comprar necesitás iniciar sesión. En planes grupales, todos
-                los participantes deben tener una cuenta registrada antes de la
-                compra. La membresía se activa solo cuando Mercado Pago confirma
-                el pago.
+                Para comprar necesitás iniciar sesión. En planes Plantel o packs
+                grupales, todos los participantes deben tener una cuenta
+                registrada antes de la compra.
               </p>
             </div>
           </div>
@@ -905,7 +1206,7 @@ export default async function CursosPage() {
       <section className="bg-yellow-500 px-4 py-20 text-black sm:px-6 lg:px-8">
         <div className="mx-auto max-w-5xl text-center">
           <h2 className="text-4xl font-black md:text-6xl">
-            ¿No sabés qué curso elegir?
+            ¿No sabés qué opción elegir?
           </h2>
 
           <p className="mx-auto mt-5 max-w-2xl text-lg leading-8">
@@ -950,8 +1251,12 @@ export default async function CursosPage() {
             Cursos
           </Link>
 
-          <Link href="/verificar-certificado" className="hover:text-yellow-500">
-            Verificar certificado
+          <Link href="#membresia" className="hover:text-yellow-500">
+            Membresía
+          </Link>
+
+          <Link href="#paquetes" className="hover:text-yellow-500">
+            Packs
           </Link>
 
           <Link href="/inscripcion" className="hover:text-yellow-500">
