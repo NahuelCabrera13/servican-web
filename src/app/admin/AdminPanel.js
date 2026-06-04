@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import BotonCerrarSesion from "@/app/components/BotonCerrarSesion";
+import AdminMembresiaAccesosRapidos from "@/app/components/AdminMembresiaAccesosRapidos";
 
 const ESTADOS = [
   "pendiente",
@@ -900,7 +901,7 @@ export default function AdminPanel({ usuario, perfil }) {
                   Panel alumno
                 </Link>
 
-<BotonCerrarSesion className="..." />
+                <BotonCerrarSesion className="rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-3 text-sm font-bold text-red-100 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60" />
               </div>
             </div>
           </div>
@@ -939,6 +940,8 @@ export default function AdminPanel({ usuario, perfil }) {
             />
           </div>
         </header>
+
+        <AdminMembresiaAccesosRapidos />
 
         <nav className="mb-8 grid gap-3 rounded-[2rem] border border-white/10 bg-zinc-950 p-3 md:grid-cols-4">
           <TabButton
@@ -1971,9 +1974,11 @@ function ResumenCard({ titulo, valor, alerta = false }) {
 
 function AdminShortcut({ href, icono, titulo, descripcion, color = "neutral" }) {
   const colores = {
-    yellow: "border-yellow-500/30 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-100",
+    yellow:
+      "border-yellow-500/30 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-100",
     blue: "border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-100",
-    green: "border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-green-100",
+    green:
+      "border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-green-100",
     neutral: "border-white/10 bg-white/10 hover:bg-white/20 text-white",
   };
 

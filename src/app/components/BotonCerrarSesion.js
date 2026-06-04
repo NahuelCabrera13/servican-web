@@ -16,7 +16,9 @@ export default function BotonCerrarSesion({
 
     try {
       const supabase = createClient();
+
       await supabase.auth.signOut();
+
       window.location.href = "/";
     } catch (error) {
       console.error("Error cerrando sesión:", error);
