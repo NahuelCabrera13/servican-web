@@ -5,6 +5,8 @@ import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const MINUTOS_ENTRE_VERIFICACIONES = 2;
+
 function crearSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -80,7 +82,7 @@ function normalizarEstadoMercadoPago(status) {
   return "pausada";
 }
 
-function calcularFechaFin(preapproval) {
+function calcularFechaFin(preapproval, membresiaActual) {
   if (preapproval?.next_payment_date) {
     const fecha = new Date(preapproval.next_payment_date);
 
@@ -89,9 +91,31 @@ function calcularFechaFin(preapproval) {
     }
   }
 
+  if (membresiaActual?.fecha_fin) {
+    return membresiaActual.fecha_fin;
+  }
+
   const fecha = new Date();
   fecha.setDate(fecha.getDate() + 32);
   return fecha.toISOString();
+}
+
+function puedeVerificarMercadoPago(membresia) {
+  if (!membresia?.updated_at) {
+    return true;
+  }
+
+  const ultimaActualizacion = new Date(membresia.updated_at);
+
+  if (Number.isNaN(ultimaActualizacion.getTime())) {
+    return true;
+  }
+
+  const ahora = new Date();
+  const diferenciaMs = ahora.getTime() - ultimaActualizacion.getTime();
+  const diferenciaMinutos = diferenciaMs / 1000 / 60;
+
+  return diferenciaMinutos >= MINUTOS_ENTRE_VERIFICACIONES;
 }
 
 async function consultarPreapprovalMercadoPago(preapprovalId) {
@@ -164,73 +188,56 @@ async function obtenerUltimaMembresia(supabaseAdmin, userId) {
   return membresia;
 }
 
-async function sincronizarMembresiaSiHaceFalta(supabaseAdmin, membresia) {
-  if (!membresia) {
-    return null;
-  }
+async function actualizarSoloVerificacion(supabaseAdmin, membresia, preapproval) {
+  const detalle = {
+    ...(membresia.detalle || {}),
+    ultima_verificacion_automatica: {
+      fecha: new Date().toISOString(),
+      preapproval_id: preapproval.id || membresia.mercadopago_preapproval_id,
+      status: preapproval.status || null,
+      next_payment_date: preapproval.next_payment_date || null,
+    },
+  };
 
-  if (membresia.estado === "activa") {
-    return membresia;
-  }
-
-  if (!membresia.mercadopago_preapproval_id) {
-    return membresia;
-  }
-
-  const preapproval = await consultarPreapprovalMercadoPago(
-    membresia.mercadopago_preapproval_id
-  );
-
-  if (!preapproval) {
-    return membresia;
-  }
-
-  const estadoMembresia = normalizarEstadoMercadoPago(preapproval.status);
-
-  if (estadoMembresia === membresia.estado) {
-    const { data: actualizada, error } = await supabaseAdmin
-      .from("membresias_accesos")
-      .update({
-        mercadopago_status: preapproval.status || membresia.mercadopago_status,
-        proximo_cobro_at:
-          preapproval.next_payment_date || membresia.proximo_cobro_at,
-        detalle: {
-          ...(membresia.detalle || {}),
-          ultima_verificacion_automatica: {
-            fecha: new Date().toISOString(),
-            preapproval_id: preapproval.id || membresia.mercadopago_preapproval_id,
-            status: preapproval.status || null,
-            next_payment_date: preapproval.next_payment_date || null,
-          },
-        },
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", membresia.id)
-      .select(
-        `
-        id,
-        estado,
-        fecha_inicio,
-        fecha_fin,
-        descuento_porcentaje,
-        curso_pequeno_disponible,
-        curso_pequeno_usado,
-        mercadopago_preapproval_id,
-        mercadopago_status,
-        ultimo_pago_estado,
-        proximo_cobro_at,
-        cancelada_at,
-        updated_at
+  const { data: actualizada, error } = await supabaseAdmin
+    .from("membresias_accesos")
+    .update({
+      mercadopago_status: preapproval.status || membresia.mercadopago_status,
+      proximo_cobro_at:
+        preapproval.next_payment_date || membresia.proximo_cobro_at,
+      detalle,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", membresia.id)
+    .select(
       `
-      )
-      .single();
+      id,
+      user_id,
+      estado,
+      fecha_inicio,
+      fecha_fin,
+      descuento_porcentaje,
+      curso_pequeno_disponible,
+      curso_pequeno_usado,
+      mercadopago_preapproval_id,
+      mercadopago_status,
+      ultimo_pago_estado,
+      proximo_cobro_at,
+      cancelada_at,
+      updated_at
+    `
+    )
+    .single();
 
-    if (error) {
-      throw new Error(`No se pudo actualizar verificación: ${error.message}`);
-    }
-
-    return actualizada;
+  if (error) {
+    throw new Error(`No se pudo actualizar verificación: ${error.message}`);
   }
+
+  return actualizada;
+}
+
+async function actualizarCambioDeEstado(supabaseAdmin, membresia, preapproval) {
+  const estadoMembresia = normalizarEstadoMercadoPago(preapproval.status);
 
   const detalle = {
     ...(membresia.detalle || {}),
@@ -255,10 +262,15 @@ async function sincronizarMembresiaSiHaceFalta(supabaseAdmin, membresia) {
       preapproval.id || membresia.mercadopago_preapproval_id,
     mercadopago_status: preapproval.status || null,
     fecha_fin:
-      estadoMembresia === "activa" ? calcularFechaFin(preapproval) : null,
-    proximo_cobro_at: preapproval.next_payment_date || null,
+      estadoMembresia === "activa"
+        ? calcularFechaFin(preapproval, membresia)
+        : membresia.fecha_fin || null,
+    proximo_cobro_at:
+      preapproval.next_payment_date || membresia.proximo_cobro_at || null,
     cancelada_at:
-      estadoMembresia === "cancelada" ? new Date().toISOString() : null,
+      estadoMembresia === "cancelada"
+        ? new Date().toISOString()
+        : membresia.cancelada_at || null,
     detalle,
     updated_at: new Date().toISOString(),
   };
@@ -270,6 +282,7 @@ async function sincronizarMembresiaSiHaceFalta(supabaseAdmin, membresia) {
     .select(
       `
       id,
+      user_id,
       estado,
       fecha_inicio,
       fecha_fin,
@@ -293,6 +306,40 @@ async function sincronizarMembresiaSiHaceFalta(supabaseAdmin, membresia) {
   return actualizada;
 }
 
+async function sincronizarMembresiaSiHaceFalta(supabaseAdmin, membresia) {
+  if (!membresia) {
+    return null;
+  }
+
+  if (!membresia.mercadopago_preapproval_id) {
+    return membresia;
+  }
+
+  if (membresia.estado === "activa") {
+    return membresia;
+  }
+
+  if (!puedeVerificarMercadoPago(membresia)) {
+    return membresia;
+  }
+
+  const preapproval = await consultarPreapprovalMercadoPago(
+    membresia.mercadopago_preapproval_id
+  );
+
+  if (!preapproval) {
+    return membresia;
+  }
+
+  const estadoMembresia = normalizarEstadoMercadoPago(preapproval.status);
+
+  if (estadoMembresia === membresia.estado) {
+    return actualizarSoloVerificacion(supabaseAdmin, membresia, preapproval);
+  }
+
+  return actualizarCambioDeEstado(supabaseAdmin, membresia, preapproval);
+}
+
 export async function GET() {
   try {
     const usuario = await obtenerUsuarioActual();
@@ -302,6 +349,10 @@ export async function GET() {
         {
           ok: false,
           error: "Tenés que iniciar sesión para ver tu membresía.",
+          requiere_login: true,
+          tiene_membresia: false,
+          membresia_activa: false,
+          membresia: null,
         },
         { status: 401 }
       );
@@ -319,9 +370,14 @@ export async function GET() {
       membresiaActual
     );
 
+    const membresiaActiva =
+      String(membresiaSincronizada?.estado || "").toLowerCase() === "activa";
+
     return NextResponse.json({
       ok: true,
+      requiere_login: false,
       tiene_membresia: Boolean(membresiaSincronizada),
+      membresia_activa: membresiaActiva,
       membresia: membresiaSincronizada,
     });
   } catch (error) {
@@ -332,6 +388,10 @@ export async function GET() {
         ok: false,
         error:
           error?.message || "No se pudo consultar el estado de la membresía.",
+        requiere_login: false,
+        tiene_membresia: false,
+        membresia_activa: false,
+        membresia: null,
       },
       { status: 500 }
     );

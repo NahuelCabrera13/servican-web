@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseServerClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const BUCKET_MEMBRESIA = "membresia-galeria";
+const DURACION_URL_FIRMADA_SEGUNDOS = 60 * 60;
 
 function crearSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -45,6 +47,7 @@ async function obtenerMembresiaActiva(supabaseAdmin, userId) {
     .select(
       `
       id,
+      user_id,
       estado,
       fecha_inicio,
       fecha_fin,
@@ -104,7 +107,9 @@ async function obtenerContenidos(supabaseAdmin) {
 function esUrlHttp(valor) {
   const texto = String(valor || "").trim();
 
-  if (!texto) return false;
+  if (!texto) {
+    return false;
+  }
 
   try {
     const url = new URL(texto);
@@ -121,37 +126,52 @@ function esRutaLocal(valor) {
 function esRutaStoragePrivada(valor) {
   const texto = String(valor || "").trim();
 
-  if (!texto) return false;
-  if (texto === "#") return false;
-  if (esUrlHttp(texto)) return false;
-  if (esRutaLocal(texto)) return false;
+  if (!texto) {
+    return false;
+  }
+
+  if (texto === "#") {
+    return false;
+  }
+
+  if (esUrlHttp(texto)) {
+    return false;
+  }
+
+  if (esRutaLocal(texto)) {
+    return false;
+  }
 
   return true;
 }
 
+async function crearUrlFirmada(supabaseAdmin, ruta) {
+  if (!esRutaStoragePrivada(ruta)) {
+    return ruta;
+  }
+
+  const { data, error } = await supabaseAdmin.storage
+    .from(BUCKET_MEMBRESIA)
+    .createSignedUrl(ruta, DURACION_URL_FIRMADA_SEGUNDOS);
+
+  if (error || !data?.signedUrl) {
+    console.error("No se pudo firmar archivo privado:", {
+      ruta,
+      error: error?.message,
+    });
+
+    return ruta;
+  }
+
+  return data.signedUrl;
+}
+
 async function firmarContenido(supabaseAdmin, contenido) {
-  let urlFinal = contenido.url;
-  let portadaFinal = contenido.portada_url;
-
-  if (contenido.tipo === "foto" && esRutaStoragePrivada(contenido.url)) {
-    const { data, error } = await supabaseAdmin.storage
-      .from(BUCKET_MEMBRESIA)
-      .createSignedUrl(contenido.url, 60 * 60);
-
-    if (!error && data?.signedUrl) {
-      urlFinal = data.signedUrl;
-    }
-  }
-
-  if (esRutaStoragePrivada(contenido.portada_url)) {
-    const { data, error } = await supabaseAdmin.storage
-      .from(BUCKET_MEMBRESIA)
-      .createSignedUrl(contenido.portada_url, 60 * 60);
-
-    if (!error && data?.signedUrl) {
-      portadaFinal = data.signedUrl;
-    }
-  }
+  const urlFinal = await crearUrlFirmada(supabaseAdmin, contenido.url);
+  const portadaFinal = await crearUrlFirmada(
+    supabaseAdmin,
+    contenido.portada_url
+  );
 
   return {
     ...contenido,
@@ -161,13 +181,11 @@ async function firmarContenido(supabaseAdmin, contenido) {
 }
 
 async function firmarContenidos(supabaseAdmin, contenidos) {
-  const resultado = [];
-
-  for (const contenido of contenidos || []) {
-    resultado.push(await firmarContenido(supabaseAdmin, contenido));
-  }
-
-  return resultado;
+  return Promise.all(
+    (contenidos || []).map((contenido) =>
+      firmarContenido(supabaseAdmin, contenido)
+    )
+  );
 }
 
 export async function GET() {
@@ -179,6 +197,10 @@ export async function GET() {
         {
           ok: false,
           error: "Tenés que iniciar sesión para ver la galería privada.",
+          requiere_login: true,
+          requiere_membresia_activa: false,
+          membresia: null,
+          contenidos: [],
         },
         { status: 401 }
       );
@@ -197,6 +219,7 @@ export async function GET() {
           ok: false,
           error:
             "Necesitás una membresía activa para acceder a la galería privada.",
+          requiere_login: false,
           requiere_membresia_activa: true,
           membresia: null,
           contenidos: [],
@@ -213,6 +236,8 @@ export async function GET() {
 
     return NextResponse.json({
       ok: true,
+      requiere_login: false,
+      requiere_membresia_activa: false,
       membresia,
       contenidos: contenidosFirmados,
       total: contenidosFirmados.length,
@@ -224,6 +249,10 @@ export async function GET() {
       {
         ok: false,
         error: error?.message || "No se pudo cargar la galería privada.",
+        requiere_login: false,
+        requiere_membresia_activa: false,
+        membresia: null,
+        contenidos: [],
       },
       { status: 500 }
     );
