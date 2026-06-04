@@ -55,6 +55,18 @@ function validarId(id) {
   return numero;
 }
 
+function obtenerIdProductoDesdeBody(body) {
+  return validarId(
+    body?.id ||
+      body?.producto_id ||
+      body?.productoId ||
+      body?.plan_id ||
+      body?.planId ||
+      body?.producto?.id ||
+      body?.plan?.id
+  );
+}
+
 async function sincronizarCursosDelProducto({
   supabase,
   productoId,
@@ -362,10 +374,15 @@ export async function PATCH(request) {
   try {
     const body = await request.json();
 
-    const id = validarId(body.id);
+    const id = obtenerIdProductoDesdeBody(body);
 
     if (!id) {
-      return crearRespuestaError("Falta el ID del producto.", 400);
+      console.error("PATCH /api/admin/productos sin ID válido:", body);
+
+      return crearRespuestaError(
+        "Falta el ID del producto. No se pudo identificar qué plan actualizar.",
+        400
+      );
     }
 
     const { data: productoExiste, error: errorExiste } = await supabase
@@ -577,7 +594,8 @@ export async function DELETE(request) {
 
   try {
     const body = await request.json();
-    const id = validarId(body.id);
+
+    const id = obtenerIdProductoDesdeBody(body);
 
     if (!id) {
       return crearRespuestaError("Falta el ID del producto.", 400);
@@ -590,7 +608,10 @@ export async function DELETE(request) {
       .maybeSingle();
 
     if (errorExiste) {
-      console.error("Error verificando producto antes de eliminar:", errorExiste);
+      console.error(
+        "Error verificando producto antes de eliminar:",
+        errorExiste
+      );
 
       return crearRespuestaError("No se pudo verificar el producto.", 500);
     }
