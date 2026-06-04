@@ -523,121 +523,127 @@ export default function AdminPanel({ usuario, perfil }) {
     setFormProducto(PRODUCTO_INICIAL);
   }
 
-  function editarProducto(producto) {
-    setProductoEditandoId(producto.id);
-    setTabActiva("productos");
+function editarProducto(producto) {
+  const idProducto = producto.id || producto.producto_id || producto.productoId;
 
-    const cursosAsociados = Array.isArray(producto.producto_cursos)
-      ? producto.producto_cursos.map((item) => item.curso_id)
-      : [];
+  setProductoEditandoId(idProducto);
+  setTabActiva("productos");
 
-    setFormProducto({
-      id: producto.id,
-      nombre: producto.nombre || "",
-      slug: producto.slug || "",
-      descripcion: producto.descripcion || "",
-      tipo_producto: producto.tipo_producto || "curso_plan",
-      plan: producto.plan || "basico",
-      curso_id: producto.curso_id || "",
-      curso_ids: cursosAsociados,
-      precio: producto.precio || 0,
-      moneda: producto.moneda || "UYU",
-      cantidad_maxima_usuarios: producto.cantidad_maxima_usuarios || 1,
-      requiere_participantes: Boolean(producto.requiere_participantes),
-      requiere_correos_registrados:
-        producto.requiere_correos_registrados === undefined
-          ? true
-          : Boolean(producto.requiere_correos_registrados),
-      es_recurrente: Boolean(producto.es_recurrente),
-      activo: Boolean(producto.activo),
-      visible_en_web: Boolean(producto.visible_en_web),
-      destacado: Boolean(producto.destacado),
-      orden: producto.orden || 0,
-      texto_boton: producto.texto_boton || "Comprar",
+  const cursosAsociados = Array.isArray(producto.producto_cursos)
+    ? producto.producto_cursos.map((item) => item.curso_id)
+    : [];
+
+  setFormProducto({
+    id: idProducto,
+    nombre: producto.nombre || "",
+    slug: producto.slug || "",
+    descripcion: producto.descripcion || "",
+    tipo_producto: producto.tipo_producto || "curso_plan",
+    plan: producto.plan || "basico",
+    curso_id: producto.curso_id || "",
+    curso_ids: cursosAsociados,
+    precio: producto.precio || 0,
+    moneda: producto.moneda || "UYU",
+    cantidad_maxima_usuarios: producto.cantidad_maxima_usuarios || 1,
+    requiere_participantes: Boolean(producto.requiere_participantes),
+    requiere_correos_registrados:
+      producto.requiere_correos_registrados === undefined
+        ? true
+        : Boolean(producto.requiere_correos_registrados),
+    es_recurrente: Boolean(producto.es_recurrente),
+    activo: Boolean(producto.activo),
+    visible_en_web: Boolean(producto.visible_en_web),
+    destacado: Boolean(producto.destacado),
+    orden: producto.orden || 0,
+    texto_boton: producto.texto_boton || "Comprar",
+  });
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth",
+  });
+}
+
+async function guardarProducto(event) {
+  event.preventDefault();
+
+  setCargando(true);
+  setError("");
+  setMensaje("");
+
+  const idProducto = productoEditandoId || formProducto.id || null;
+
+  const cursoIds =
+    formProducto.tipo_producto === "paquete"
+      ? formProducto.curso_ids
+      : formProducto.curso_id
+        ? [Number(formProducto.curso_id)]
+        : [];
+
+  const cuerpo = {
+    id: idProducto,
+    producto_id: idProducto,
+    productoId: idProducto,
+    nombre: formProducto.nombre,
+    slug: formProducto.slug,
+    descripcion: formProducto.descripcion,
+    tipo_producto: formProducto.tipo_producto,
+    plan: formProducto.plan,
+    curso_id:
+      formProducto.tipo_producto === "curso_plan" && formProducto.curso_id
+        ? Number(formProducto.curso_id)
+        : null,
+    curso_ids: cursoIds,
+    precio: Number(formProducto.precio || 0),
+    moneda: formProducto.moneda || "UYU",
+    cantidad_maxima_usuarios: Number(
+      formProducto.cantidad_maxima_usuarios || 1
+    ),
+    requiere_participantes: Boolean(formProducto.requiere_participantes),
+    requiere_correos_registrados: Boolean(
+      formProducto.requiere_correos_registrados
+    ),
+    es_recurrente: Boolean(formProducto.es_recurrente),
+    activo: Boolean(formProducto.activo),
+    visible_en_web: Boolean(formProducto.visible_en_web),
+    destacado: Boolean(formProducto.destacado),
+    orden: Number(formProducto.orden || 0),
+    texto_boton: formProducto.texto_boton || "Comprar",
+    nivel_acceso: formProducto.plan || "basico",
+    beneficios_pro:
+      formProducto.plan === "pro" || formProducto.plan === "plantel",
+  };
+
+  const metodo = idProducto ? "PATCH" : "POST";
+
+  try {
+    const respuesta = await fetchAdmin("/api/admin/productos", {
+      method: metodo,
+      body: JSON.stringify(cuerpo),
     });
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  }
+    const data = await respuesta.json();
 
-  async function guardarProducto(event) {
-    event.preventDefault();
-
-    setCargando(true);
-    setError("");
-    setMensaje("");
-
-    const cursoIds =
-      formProducto.tipo_producto === "paquete"
-        ? formProducto.curso_ids
-        : formProducto.curso_id
-          ? [Number(formProducto.curso_id)]
-          : [];
-
-    const cuerpo = {
-      id: productoEditandoId,
-      nombre: formProducto.nombre,
-      slug: formProducto.slug,
-      descripcion: formProducto.descripcion,
-      tipo_producto: formProducto.tipo_producto,
-      plan: formProducto.plan,
-      curso_id:
-        formProducto.tipo_producto === "curso_plan" && formProducto.curso_id
-          ? Number(formProducto.curso_id)
-          : null,
-      curso_ids: cursoIds,
-      precio: Number(formProducto.precio || 0),
-      moneda: formProducto.moneda || "UYU",
-      cantidad_maxima_usuarios: Number(
-        formProducto.cantidad_maxima_usuarios || 1
-      ),
-      requiere_participantes: Boolean(formProducto.requiere_participantes),
-      requiere_correos_registrados: Boolean(
-        formProducto.requiere_correos_registrados
-      ),
-      es_recurrente: Boolean(formProducto.es_recurrente),
-      activo: Boolean(formProducto.activo),
-      visible_en_web: Boolean(formProducto.visible_en_web),
-      destacado: Boolean(formProducto.destacado),
-      orden: Number(formProducto.orden || 0),
-      texto_boton: formProducto.texto_boton || "Comprar",
-      nivel_acceso: formProducto.plan || "basico",
-      beneficios_pro:
-        formProducto.plan === "pro" || formProducto.plan === "plantel",
-    };
-
-    const metodo = productoEditandoId ? "PATCH" : "POST";
-
-    try {
-      const respuesta = await fetchAdmin("/api/admin/productos", {
-        method: metodo,
-        body: JSON.stringify(cuerpo),
-      });
-
-      const data = await respuesta.json();
-
-      if (!respuesta.ok) {
-        setError(data?.error || "No se pudo guardar el producto.");
-        return;
-      }
-
-      setMensaje(
-        productoEditandoId
-          ? "Producto actualizado correctamente."
-          : "Producto creado correctamente."
-      );
-
-      resetearFormularioProducto();
-      await cargarProductos();
-    } catch (error) {
-      console.error("Error guardando producto:", error);
-      setError("Error de conexión al guardar producto.");
-    } finally {
-      setCargando(false);
+    if (!respuesta.ok) {
+      setError(data?.error || "No se pudo guardar el producto.");
+      return;
     }
+
+    setMensaje(
+      idProducto
+        ? "Producto actualizado correctamente."
+        : "Producto creado correctamente."
+    );
+
+    resetearFormularioProducto();
+    await cargarProductos();
+  } catch (error) {
+    console.error("Error guardando producto:", error);
+    setError("Error de conexión al guardar producto.");
+  } finally {
+    setCargando(false);
   }
+}
 
   async function eliminarProducto(id) {
     const confirmar = window.confirm(

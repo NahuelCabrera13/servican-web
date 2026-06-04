@@ -45,7 +45,21 @@ function crearRespuestaError(mensaje, status = 500) {
   );
 }
 
-function validarId(id) {
+function validarIdProducto(id) {
+  const texto = String(id || "").trim();
+
+  if (!texto) {
+    return null;
+  }
+
+  if (texto.length > 120) {
+    return null;
+  }
+
+  return texto;
+}
+
+function validarIdCurso(id) {
   const numero = Number(id);
 
   if (!Number.isInteger(numero) || numero <= 0) {
@@ -56,7 +70,7 @@ function validarId(id) {
 }
 
 function obtenerIdProductoDesdeBody(body) {
-  return validarId(
+  return validarIdProducto(
     body?.id ||
       body?.producto_id ||
       body?.productoId ||
@@ -74,9 +88,9 @@ async function sincronizarCursosDelProducto({
   nivelAcceso,
   beneficiosPro,
 }) {
-  const idProducto = validarId(productoId);
+  const idProducto = validarIdProducto(productoId);
   const cursosLimpios = limpiarArray(cursoIds)
-    .map((cursoId) => validarId(cursoId))
+    .map((cursoId) => validarIdCurso(cursoId))
     .filter(Boolean);
 
   if (!idProducto) {
@@ -164,7 +178,7 @@ export async function GET(request) {
     }
 
     if (cursoId) {
-      const cursoIdValido = validarId(cursoId);
+      const cursoIdValido = validarIdCurso(cursoId);
 
       if (!cursoIdValido) {
         return crearRespuestaError("ID de curso inválido.", 400);
@@ -240,7 +254,7 @@ export async function POST(request) {
 
     const tipoProducto = String(body.tipo_producto || "curso_plan").trim();
     const plan = body.plan ? String(body.plan).trim() : null;
-    const cursoId = body.curso_id ? validarId(body.curso_id) : null;
+    const cursoId = body.curso_id ? validarIdCurso(body.curso_id) : null;
 
     if (body.curso_id && !cursoId) {
       return crearRespuestaError("ID de curso inválido.", 400);
@@ -454,7 +468,7 @@ export async function PATCH(request) {
     }
 
     if (body.curso_id !== undefined) {
-      const cursoId = body.curso_id ? validarId(body.curso_id) : null;
+      const cursoId = body.curso_id ? validarIdCurso(body.curso_id) : null;
 
       if (body.curso_id && !cursoId) {
         return crearRespuestaError("ID de curso inválido.", 400);
