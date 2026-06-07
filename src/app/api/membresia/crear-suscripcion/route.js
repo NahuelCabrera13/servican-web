@@ -5,8 +5,6 @@ import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const SLUG_MEMBRESIA = "membresia-mensual-servican";
-
 function crearRespuestaError(mensaje, status = 400, extra = {}) {
   return NextResponse.json(
     {
@@ -16,6 +14,17 @@ function crearRespuestaError(mensaje, status = 400, extra = {}) {
     },
     { status }
   );
+}
+
+function crearErrorMercadoPago(mensaje, statusHttp, requestId, respuesta) {
+  const error = new Error(mensaje || "Mercado Pago no pudo crear la suscripción.");
+
+  error.mercadoPago = true;
+  error.statusHttp = statusHttp || 500;
+  error.requestId = requestId || "";
+  error.respuesta = respuesta || null;
+
+  return error;
 }
 
 function crearSupabaseAdmin() {
@@ -54,11 +63,35 @@ function limpiarSiteUrl(siteUrl) {
   }
 }
 
+function esLocalhost(urlTexto) {
+  try {
+    const url = new URL(urlTexto);
+
+    return (
+      url.hostname === "localhost" ||
+      url.hostname === "127.0.0.1" ||
+      url.hostname === "0.0.0.0"
+    );
+  } catch {
+    return false;
+  }
+}
+
 function obtenerSiteUrl(request) {
   const desdeVariable = limpiarSiteUrl(process.env.NEXT_PUBLIC_SITE_URL);
 
   if (desdeVariable) {
     return desdeVariable;
+  }
+
+  const vercelUrl = limpiarSiteUrl(process.env.VERCEL_URL);
+
+  if (vercelUrl) {
+    if (vercelUrl.startsWith("http://") || vercelUrl.startsWith("https://")) {
+      return vercelUrl;
+    }
+
+    return `https://${vercelUrl}`;
   }
 
   const origen = request?.headers?.get("origin");
@@ -80,52 +113,26 @@ function normalizarPrecio(precio) {
   return Math.round(numero * 100) / 100;
 }
 
-function membresiaSigueVigente(membresia) {
-  if (!membresia) {
-    return false;
-  }
-
-  if (membresia.estado !== "activa") {
-    return false;
-  }
-
-  if (!membresia.fecha_fin) {
-    return true;
-  }
-
-  const fechaFin = new Date(membresia.fecha_fin);
-
-  if (Number.isNaN(fechaFin.getTime())) {
-    return false;
-  }
-
-  return fechaFin.getTime() > Date.now();
+function normalizarEmail(email) {
+  return String(email || "").trim().toLowerCase();
 }
 
-function productoDisponible(producto) {
-  if (!producto) {
+function emailValido(email) {
+  const valor = normalizarEmail(email);
+
+  if (!valor) {
     return false;
   }
 
-  if (!producto.activo || !producto.visible_en_web) {
-    return false;
-  }
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor);
+}
 
-  if (producto.tipo_producto !== "membresia") {
-    return false;
-  }
+function calcularFechaFinSuscripcion() {
+  const fecha = new Date();
 
-  if (producto.plan !== "mensual") {
-    return false;
-  }
+  fecha.setFullYear(fecha.getFullYear() + 5);
 
-  if (!producto.es_recurrente) {
-    return false;
-  }
-
-  const precio = normalizarPrecio(producto.precio);
-
-  return precio > 0;
+  return fecha.toISOString();
 }
 
 async function obtenerUsuarioActual() {
@@ -172,19 +179,15 @@ async function obtenerProductoMembresia(supabaseAdmin) {
       moneda,
       es_recurrente,
       activo,
-      visible_en_web,
-      texto_boton,
-      updated_at
+      visible_en_web
     `
     )
-    .eq("slug", SLUG_MEMBRESIA)
+    .eq("slug", "membresia-mensual-servican")
     .eq("tipo_producto", "membresia")
     .eq("plan", "mensual")
     .eq("es_recurrente", true)
     .eq("activo", true)
     .eq("visible_en_web", true)
-    .order("updated_at", { ascending: false })
-    .limit(1)
     .maybeSingle();
 
   if (error) {
@@ -207,13 +210,13 @@ async function buscarMembresiaActivaOPausada(supabaseAdmin, userId) {
       fecha_fin,
       mercadopago_preapproval_id,
       mercadopago_status,
-      created_at,
-      updated_at
+      detalle,
+      created_at
     `
     )
     .eq("user_id", userId)
     .in("estado", ["activa", "pausada"])
-    .order("updated_at", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
@@ -257,12 +260,27 @@ async function consultarPreapprovalMercadoPago(preapprovalId) {
   return data;
 }
 
-async function intentarReutilizarMembresiaPausada(membresiaExistente) {
+async function intentarReutilizarMembresiaPausada(
+  membresiaExistente,
+  payerEmailUsado
+) {
   if (
     !membresiaExistente ||
     membresiaExistente.estado !== "pausada" ||
     !membresiaExistente.mercadopago_preapproval_id
   ) {
+    return null;
+  }
+
+  const emailGuardado = normalizarEmail(
+    membresiaExistente?.detalle?.payer_email_usado ||
+      membresiaExistente?.detalle?.preapproval?.payer_email ||
+      ""
+  );
+
+  const emailNuevo = normalizarEmail(payerEmailUsado);
+
+  if (emailGuardado && emailNuevo && emailGuardado !== emailNuevo) {
     return null;
   }
 
@@ -275,32 +293,64 @@ async function intentarReutilizarMembresiaPausada(membresiaExistente) {
   }
 
   const estadoMp = String(preapproval.status || "").toLowerCase();
-  const estadosReutilizables = ["pending", "pendiente", "paused", "pausado"];
 
-  if (!estadosReutilizables.includes(estadoMp)) {
-    return null;
+  if (
+    estadoMp === "pending" ||
+    estadoMp === "pendiente" ||
+    estadoMp === "paused"
+  ) {
+    const initPoint = preapproval.init_point || preapproval.sandbox_init_point;
+
+    if (initPoint) {
+      return {
+        ok: true,
+        reutilizada: true,
+        init_point: initPoint,
+        preapproval_id: preapproval.id,
+        membresia: membresiaExistente,
+      };
+    }
   }
 
-  const initPoint = preapproval.init_point || preapproval.sandbox_init_point;
+  return null;
+}
 
-  if (!initPoint) {
-    return null;
+function crearBodyPreapproval({ producto, usuario, siteUrl, payerEmail }) {
+  const precio = normalizarPrecio(producto.precio);
+  const moneda = normalizarMoneda(producto.moneda);
+  const emailComprador = normalizarEmail(payerEmail || usuario.email);
+
+  if (precio <= 0) {
+    throw new Error("El producto de membresía no tiene un precio válido.");
   }
+
+  if (!emailValido(emailComprador)) {
+    throw new Error("El correo de Mercado Pago no es válido.");
+  }
+
+  const externalReference = `MEMB|${producto.id}|${usuario.id}`;
 
   return {
-    ok: true,
-    reutilizada: true,
-    init_point: initPoint,
-    preapproval_id: preapproval.id || membresiaExistente.mercadopago_preapproval_id,
-    membresia: membresiaExistente,
+    reason: producto.nombre || "Membresía mensual SERVICAN",
+    external_reference: externalReference,
+    payer_email: emailComprador,
+    auto_recurring: {
+      frequency: 1,
+      frequency_type: "months",
+      end_date: calcularFechaFinSuscripcion(),
+      transaction_amount: precio,
+      currency_id: moneda,
+    },
+    back_url: `${siteUrl}/panel/membresia`,
+    status: "pending",
   };
 }
 
 async function crearPreapprovalMercadoPago({
   producto,
   usuario,
-  perfil,
   siteUrl,
+  payerEmail,
 }) {
   const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
 
@@ -308,61 +358,73 @@ async function crearPreapprovalMercadoPago({
     throw new Error("Falta MERCADOPAGO_ACCESS_TOKEN.");
   }
 
-  const precio = normalizarPrecio(producto.precio);
-  const moneda = normalizarMoneda(producto.moneda);
+  const body = crearBodyPreapproval({
+    producto,
+    usuario,
+    siteUrl,
+    payerEmail,
+  });
 
-  if (precio <= 0) {
-    throw new Error("El producto de membresía no tiene un precio válido.");
-  }
-
-  if (!usuario.email) {
-    throw new Error("Tu usuario no tiene email válido.");
-  }
-
-  const externalReference = `MEMB|${producto.id}|${usuario.id}`;
-
-  const body = {
-    reason: producto.nombre || "Membresía mensual SERVICAN",
-    external_reference: externalReference,
-    payer_email: usuario.email,
-    auto_recurring: {
-      frequency: 1,
-      frequency_type: "months",
-      transaction_amount: precio,
-      currency_id: moneda,
-    },
-    back_url: `${siteUrl}/panel/membresia`,
-    notification_url: `${siteUrl}/api/membresia/webhook`,
-    status: "pending",
-    metadata: {
-      tipo: "membresia",
-      producto_id: producto.id,
-      producto_slug: producto.slug,
-      comprador_user_id: usuario.id,
-      perfil_email: perfil?.email || usuario.email,
-      perfil_nombre: perfil?.nombre || null,
-    },
-  };
+  console.log("Creando preapproval Mercado Pago:", {
+    reason: body.reason,
+    external_reference: body.external_reference,
+    payer_email: body.payer_email,
+    auto_recurring: body.auto_recurring,
+    back_url: body.back_url,
+    status: body.status,
+    site_local: esLocalhost(siteUrl),
+  });
 
   const respuesta = await fetch("https://api.mercadopago.com/preapproval", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
+      "X-Idempotency-Key": `memb-${producto.id}-${usuario.id}-${Date.now()}`,
     },
     body: JSON.stringify(body),
-    cache: "no-store",
   });
 
-  const data = await respuesta.json().catch(() => null);
+  const requestId =
+    respuesta.headers.get("x-request-id") ||
+    respuesta.headers.get("x-meli-request-id") ||
+    respuesta.headers.get("x-amzn-requestid") ||
+    "";
+
+  const texto = await respuesta.text();
+  let data = null;
+
+  try {
+    data = texto ? JSON.parse(texto) : null;
+  } catch {
+    data = {
+      raw: texto,
+    };
+  }
 
   if (!respuesta.ok) {
-    console.error("Mercado Pago rechazó la creación de preapproval:", data);
+    console.error("Mercado Pago rechazó la creación de preapproval:", {
+      statusHttp: respuesta.status,
+      requestId,
+      respuesta: data,
+      bodyEnviado: {
+        reason: body.reason,
+        external_reference: body.external_reference,
+        payer_email: body.payer_email,
+        auto_recurring: body.auto_recurring,
+        back_url: body.back_url,
+        status: body.status,
+      },
+    });
 
-    throw new Error(
+    throw crearErrorMercadoPago(
       data?.message ||
         data?.error ||
-        "Mercado Pago no pudo crear la suscripción."
+        data?.cause?.[0]?.description ||
+        "Mercado Pago no pudo crear la suscripción.",
+      respuesta.status,
+      requestId,
+      data
     );
   }
 
@@ -374,6 +436,7 @@ async function guardarAccesoPendiente({
   usuario,
   producto,
   preapproval,
+  payerEmail,
 }) {
   const preapprovalId = preapproval?.id || null;
 
@@ -385,10 +448,10 @@ async function guardarAccesoPendiente({
     origen: "mercadopago_preapproval_pending",
     producto_id: producto.id,
     producto_nombre: producto.nombre,
-    producto_slug: producto.slug,
     producto_precio: producto.precio,
     producto_moneda: producto.moneda,
-    creado_desde: "api_membresia_crear_suscripcion",
+    payer_email_usado: normalizarEmail(payerEmail),
+    user_email_servican: normalizarEmail(usuario.email),
     preapproval: {
       id: preapproval.id,
       status: preapproval.status || null,
@@ -420,11 +483,9 @@ async function guardarAccesoPendiente({
     .select(
       `
       id,
-      user_id,
       estado,
       mercadopago_preapproval_id,
-      mercadopago_status,
-      updated_at
+      mercadopago_status
     `
     )
     .single();
@@ -445,11 +506,16 @@ export async function POST(request) {
     if (!usuario) {
       return crearRespuestaError(
         "Tenés que iniciar sesión antes de contratar la membresía.",
-        401,
-        {
-          requiere_login: true,
-        }
+        401
       );
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const mercadopagoEmail = normalizarEmail(body?.mercadopagoEmail);
+    const payerEmail = mercadopagoEmail || normalizarEmail(usuario.email);
+
+    if (!emailValido(payerEmail)) {
+      return crearRespuestaError("El correo de Mercado Pago no es válido.", 400);
     }
 
     const siteUrl = obtenerSiteUrl(request);
@@ -471,7 +537,7 @@ export async function POST(request) {
 
     const producto = await obtenerProductoMembresia(supabaseAdmin);
 
-    if (!producto || !productoDisponible(producto)) {
+    if (!producto) {
       return crearRespuestaError(
         "La membresía mensual no está disponible para comprar.",
         404
@@ -483,18 +549,20 @@ export async function POST(request) {
       usuario.id
     );
 
-    if (membresiaSigueVigente(membresiaExistente)) {
-      return crearRespuestaError(
-        "Ya tenés una membresía activa.",
-        409,
-        {
-          membresia: membresiaExistente,
-        }
-      );
+    if (
+      membresiaExistente?.estado === "activa" &&
+      (!membresiaExistente.fecha_fin ||
+        new Date(membresiaExistente.fecha_fin).getTime() > Date.now())
+    ) {
+      return crearRespuestaError("Ya tenés una membresía activa.", 409, {
+        membresia: membresiaExistente,
+      });
     }
 
-    const membresiaReutilizable =
-      await intentarReutilizarMembresiaPausada(membresiaExistente);
+    const membresiaReutilizable = await intentarReutilizarMembresiaPausada(
+      membresiaExistente,
+      payerEmail
+    );
 
     if (membresiaReutilizable) {
       return NextResponse.json(membresiaReutilizable);
@@ -503,8 +571,8 @@ export async function POST(request) {
     const preapproval = await crearPreapprovalMercadoPago({
       producto,
       usuario,
-      perfil,
       siteUrl,
+      payerEmail,
     });
 
     const acceso = await guardarAccesoPendiente({
@@ -512,6 +580,7 @@ export async function POST(request) {
       usuario,
       producto,
       preapproval,
+      payerEmail,
     });
 
     const initPoint = preapproval.init_point || preapproval.sandbox_init_point;
@@ -521,20 +590,31 @@ export async function POST(request) {
         "Mercado Pago no devolvió un enlace de pago válido.",
         500,
         {
-          membresia: acceso,
+          acceso,
         }
       );
     }
 
     return NextResponse.json({
       ok: true,
-      reutilizada: false,
       init_point: initPoint,
       preapproval_id: preapproval.id,
       membresia: acceso,
     });
   } catch (error) {
     console.error("Error creando suscripción de membresía:", error);
+
+    if (error?.mercadoPago) {
+      return crearRespuestaError(
+        error?.message || "Mercado Pago no pudo crear la suscripción.",
+        500,
+        {
+          mp_status: error.statusHttp || 500,
+          mp_request_id: error.requestId || "",
+          mp_respuesta: error.respuesta || null,
+        }
+      );
+    }
 
     return crearRespuestaError(
       error?.message || "No se pudo crear la suscripción de membresía.",
